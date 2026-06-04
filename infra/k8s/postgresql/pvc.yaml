@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgresql-backup-storage
+  namespace: eduai
+  labels:
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: eduai
+  annotations:
+    # This PVC is used by the pg_dump backup CronJob.
+    # The StatefulSet has its own volumeClaimTemplate (postgresql-data).
+    purpose: "postgresql-backups"
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp3
+  resources:
+    requests:
+      storage: 50Gi
+---
+# Automated backup CronJob
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgresql-backup
+  namespace: eduai
+  labels:
+    app.kubernetes.io/name: postgresql-backup
+    app.kubernetes.io/component: database
+    app.kubernetes.io/part-of: eduai
+spec:
+  schedule: "0 2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: pg-dump
+              image: postgres:16-alpine
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: eduai-secrets
+                      key: DB_PASSWORD
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: eduai-secrets
+                      key: AWS_ACCESS_KEY_ID
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: eduai-secrets
+                      key: AWS_SECRET_ACCESS_KEY
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+                  BACKUP_FILE="/backup/eduai_${TIMESTAMP}.sql.gz"
+                  pg_dump -h postgresql -U eduai -d eduai | gzip > "${BACKUP_FILE}"
+                  echo "Backup created: ${BACKUP_FILE}"
+                  # Upload to S3 (requires aws-cli in a custom image in production)
+                  # aws s3 cp "${BACKUP_FILE}" "s3://eduai-backups/postgresql/${BACKUP_FILE##*/}"
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /backup
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 128Mi
+                limits:
+                  cpu: 500m
+                  memory: 512Mi
+          volumes:
+            - name: backup-storage
+              persistentVolumeClaim:
+                claimName: postgresql-backup-storage

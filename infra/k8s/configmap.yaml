@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: eduai-config
+  namespace: eduai
+  labels:
+    app.kubernetes.io/name: eduai
+    app.kubernetes.io/component: config
+data:
+  # Application
+  NODE_ENV: "production"
+  APP_URL: "https://app.eduai.io"
+  API_URL: "https://api.eduai.io"
+  API_PORT: "4000"
+  WEB_PORT: "3000"
+
+  # CORS
+  ALLOWED_ORIGINS: "https://app.eduai.io,https://api.eduai.io"
+
+  # Logging
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+
+  # Elasticsearch
+  ELASTICSEARCH_URL: "http://elasticsearch:9200"
+  ELASTICSEARCH_INDEX_PREFIX: "eduai"
+
+  # Redis (non-secret connection parts)
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+
+  # PostgreSQL (non-secret connection parts)
+  DB_HOST: "postgresql"
+  DB_PORT: "5432"
+  DB_NAME: "eduai"
+  DB_SCHEMA: "public"
+  DB_POOL_MIN: "2"
+  DB_POOL_MAX: "20"
+
+  # Rate limiting
+  THROTTLE_TTL: "60"
+  THROTTLE_LIMIT: "100"
+
+  # File uploads
+  MAX_FILE_SIZE_MB: "100"
+  UPLOAD_PROVIDER: "s3"
+  AWS_REGION: "us-east-1"
+  S3_BUCKET_ASSETS: "eduai-assets-production"
+  CLOUDFRONT_DOMAIN: "assets.eduai.io"
+
+  # Email
+  MAIL_FROM: "noreply@eduai.io"
+  MAIL_FROM_NAME: "EduAI"
+
+  # Feature flags
+  FEATURE_AI_TUTOR: "true"
+  FEATURE_LIVE_SESSIONS: "true"
+  FEATURE_CERTIFICATES: "true"
+  FEATURE_ANALYTICS: "true"
+
+  # OpenTelemetry
+  OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+  OTEL_SERVICE_NAME: "eduai-api"
+
+  # Pagination defaults
+  DEFAULT_PAGE_SIZE: "20"
+  MAX_PAGE_SIZE: "100"

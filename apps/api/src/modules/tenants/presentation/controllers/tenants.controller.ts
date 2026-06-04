@@ -1,0 +1,100 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Delete,
+  Body,
+  Param,
+  Query,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { TenantsService, CreateTenantDto, UpdateTenantDto } from '../../tenants.service';
+import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../core/guards/roles.guard';
+import { Roles } from '../../../core/decorators/roles.decorator';
+import { CurrentUser, CurrentUserPayload } from '../../../core/decorators/current-user.decorator';
+import { TenantId } from '../../../core/decorators/tenant.decorator';
+import { PaginationDto } from '../../../core/pagination/pagination.dto';
+import { UserRole } from '@prisma/client';
+import { IsOptional, IsString } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+
+class UpdateSettingsDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  settings: Record<string, unknown>;
+}
+
+@ApiTags('Tenants')
+@ApiBearerAuth('JWT-auth')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Controller('tenants')
+export class TenantsController {
+  constructor(private readonly tenantsService: TenantsService) {}
+
+  @Get()
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'List all tenants (Super Admin only)' })
+  findAll(@Query() pagination: PaginationDto) {
+    return this.tenantsService.findAll(pagination);
+  }
+
+  @Get(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get tenant by ID' })
+  findById(@Param('id') id: string) {
+    return this.tenantsService.findById(id);
+  }
+
+  @Get('me/details')
+  @ApiOperation({ summary: 'Get current tenant details' })
+  getCurrentTenant(@TenantId() tenantId: string) {
+    return this.tenantsService.findById(tenantId);
+  }
+
+  @Get('me/stats')
+  @Roles(UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.UNIVERSITY_ADMIN)
+  @ApiOperation({ summary: 'Get current tenant statistics' })
+  getStats(@TenantId() tenantId: string) {
+    return this.tenantsService.getStats(tenantId);
+  }
+
+  @Post()
+  @Roles(UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Create new tenant (Super Admin only)' })
+  create(@Body() dto: CreateTenantDto) {
+    return this.tenantsService.create(dto);
+  }
+
+  @Put(':id')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  @ApiOperation({ summary: 'Update tenant' })
+  update(@Param('id') id: string, @Body() dto: UpdateTenantDto) {
+    return this.tenantsService.update(id, dto);
+  }
+
+  @Put('me/settings')
+  @Roles(UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.UNIVERSITY_ADMIN)
+  @ApiOperation({ summary: 'Update current tenant settings' })
+  updateSettings(
+    @TenantId() tenantId: string,
+    @Body() dto: UpdateSettingsDto,
+  ) {
+    return this.tenantsService.updateSettings(tenantId, dto.settings);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.SUPER_ADMIN)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete tenant (Super Admin only)' })
+  delete(
+    @Param('id') id: string,
+    @CurrentUser() user: CurrentUserPayload,
+  ) {
+    return this.tenantsService.delete(id, user.id);
+  }
+}
