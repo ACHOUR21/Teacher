@@ -20,6 +20,14 @@ import {
   Zap,
   Shield,
   BookMarked,
+  Bell,
+  MessageSquare,
+  Award,
+  Trophy,
+  Puzzle,
+  ShoppingBag,
+  Building2,
+  University,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/uiStore';
@@ -42,84 +50,50 @@ const navSections: NavSection[] = [
   {
     title: 'Overview',
     items: [
-      {
-        label: 'Dashboard',
-        href: '/dashboard',
-        icon: LayoutDashboard,
-      },
+      { label: 'Dashboard', href: '/', icon: LayoutDashboard },
     ],
   },
   {
     title: 'Learning',
     items: [
-      {
-        label: 'Courses',
-        href: '/dashboard/courses',
-        icon: BookOpen,
-      },
-      {
-        label: 'Live Classes',
-        href: '/dashboard/live',
-        icon: Video,
-      },
-      {
-        label: 'AI Tutor',
-        href: '/dashboard/ai-tutor',
-        icon: Bot,
-        badge: 'AI',
-      },
+      { label: 'Courses', href: '/courses', icon: BookOpen },
+      { label: 'Live Classes', href: '/live', icon: Video },
+      { label: 'AI Tutor', href: '/ai-tutor', icon: Bot, badge: 'AI' },
+      { label: 'Certificates', href: '/certificates', icon: Award },
+    ],
+  },
+  {
+    title: 'Community',
+    items: [
+      { label: 'Messages', href: '/messages', icon: MessageSquare },
+      { label: 'Notifications', href: '/notifications', icon: Bell },
+      { label: 'Gamification', href: '/gamification', icon: Trophy },
+      { label: 'Marketplace', href: '/marketplace', icon: ShoppingBag },
     ],
   },
   {
     title: 'People',
     items: [
-      {
-        label: 'Students',
-        href: '/dashboard/students',
-        icon: GraduationCap,
-        roles: ['super_admin', 'tenant_admin', 'teacher'],
-      },
-      {
-        label: 'Teachers',
-        href: '/dashboard/teachers',
-        icon: UserCircle,
-        roles: ['super_admin', 'tenant_admin'],
-      },
-      {
-        label: 'Parents',
-        href: '/dashboard/parents',
-        icon: Users,
-        roles: ['super_admin', 'tenant_admin', 'teacher'],
-      },
+      { label: 'Students', href: '/students', icon: GraduationCap, roles: ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] },
+      { label: 'Teachers', href: '/teachers', icon: UserCircle, roles: ['SUPER_ADMIN', 'SCHOOL_ADMIN'] },
+      { label: 'Parents', href: '/parents', icon: Users, roles: ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] },
+    ],
+  },
+  {
+    title: 'Institution',
+    items: [
+      { label: 'School ERP', href: '/school-erp', icon: Building2, roles: ['SUPER_ADMIN', 'SCHOOL_ADMIN'] },
+      { label: 'University ERP', href: '/university-erp', icon: University, roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN'] },
+      { label: 'Plugins', href: '/plugins', icon: Puzzle, roles: ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
     ],
   },
   {
     title: 'Administration',
     items: [
-      {
-        label: 'Analytics',
-        href: '/dashboard/analytics',
-        icon: BarChart3,
-        roles: ['super_admin', 'tenant_admin', 'teacher'],
-      },
-      {
-        label: 'Billing',
-        href: '/dashboard/billing',
-        icon: CreditCard,
-        roles: ['super_admin', 'tenant_admin'],
-      },
-      {
-        label: 'Settings',
-        href: '/dashboard/settings',
-        icon: Settings,
-        roles: ['super_admin', 'tenant_admin'],
-      },
-      {
-        label: 'Users',
-        href: '/dashboard/users',
-        icon: Shield,
-        roles: ['super_admin', 'tenant_admin'],
-      },
+      { label: 'Analytics', href: '/analytics', icon: BarChart3, roles: ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] },
+      { label: 'Billing', href: '/billing', icon: CreditCard, roles: ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
+      { label: 'Settings', href: '/settings', icon: Settings, roles: ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
+      { label: 'Users', href: '/users', icon: Shield, roles: ['SUPER_ADMIN', 'SCHOOL_ADMIN'] },
     ],
   },
 ];
