@@ -24,6 +24,13 @@ import { AuditModule } from './modules/audit/audit.module';
 import { HealthModule } from './modules/health/health.module';
 import { SchoolErpModule } from './modules/school-erp/school-erp.module';
 import { UniversityErpModule } from './modules/university-erp/university-erp.module';
+import { TeachersModule } from './modules/teachers/teachers.module';
+import { StudentsModule } from './modules/students/students.module';
+import { ParentsModule } from './modules/parents/parents.module';
+import { MessagingModule } from './modules/messaging/messaging.module';
+import { MarketplaceModule } from './modules/marketplace/marketplace.module';
+import { WhiteLabelModule } from './modules/white-label/white-label.module';
+import { ApiEcosystemModule } from './modules/api-ecosystem/api-ecosystem.module';
 import { TenantMiddleware } from './modules/tenants/middleware/tenant.middleware';
 
 @Module({
@@ -56,6 +63,13 @@ import { TenantMiddleware } from './modules/tenants/middleware/tenant.middleware
     HealthModule,
     SchoolErpModule,
     UniversityErpModule,
+    TeachersModule,
+    StudentsModule,
+    ParentsModule,
+    MessagingModule,
+    MarketplaceModule,
+    WhiteLabelModule,
+    ApiEcosystemModule,
   ],
   providers: [
     {
