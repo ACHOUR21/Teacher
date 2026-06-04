@@ -1,0 +1,179 @@
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: "gp3"
+
+# ── API ──────────────────────────────────────────────────────────────────────
+api:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: eduai/api
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 4000
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 4000
+    initialDelaySeconds: 30
+    periodSeconds: 15
+
+  readinessProbe:
+    httpGet:
+      path: /health
+      port: 4000
+    initialDelaySeconds: 10
+    periodSeconds: 10
+
+  env:
+    NODE_ENV: "production"
+    API_PORT: "4000"
+
+  podAnnotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "4000"
+    prometheus.io/path: "/metrics"
+
+# ── Web ──────────────────────────────────────────────────────────────────────
+web:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: eduai/web
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  service:
+    type: ClusterIP
+    port: 3000
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 8
+    targetCPUUtilizationPercentage: 70
+
+  env:
+    NODE_ENV: "production"
+    PORT: "3000"
+    NEXT_TELEMETRY_DISABLED: "1"
+
+# ── Worker ───────────────────────────────────────────────────────────────────
+worker:
+  enabled: true
+  replicaCount: 2
+
+  image:
+    repository: eduai/worker
+    tag: "latest"
+    pullPolicy: IfNotPresent
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+
+  autoscaling:
+    enabled: false
+
+  env:
+    NODE_ENV: "production"
+    WORKER_CONCURRENCY: "5"
+    WORKER_QUEUES: "email,notifications,ai-processing,video-processing,report-generation,certificate-generation"
+
+# ── Ingress ──────────────────────────────────────────────────────────────────
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+  hosts:
+    api: "api.eduai.io"
+    web: "app.eduai.io"
+    wildcard: "*.eduai.io"
+  tls:
+    enabled: true
+    secretNames:
+      api: "api-eduai-io-tls"
+      web: "app-eduai-io-tls"
+      wildcard: "wildcard-eduai-io-tls"
+
+# ── Config ───────────────────────────────────────────────────────────────────
+config:
+  appUrl: "https://app.eduai.io"
+  apiUrl: "https://api.eduai.io"
+  elasticsearchUrl: "http://elasticsearch:9200"
+  redisHost: "redis"
+  redisPort: "6379"
+  dbHost: "postgresql"
+  dbPort: "5432"
+  dbName: "eduai"
+  logLevel: "info"
+  awsRegion: "us-east-1"
+  s3BucketAssets: "eduai-assets-production"
+  cloudfrontDomain: "assets.eduai.io"
+
+# ── Secrets (external ref — use with External Secrets Operator) ───────────────
+externalSecrets:
+  enabled: false
+  secretStoreName: "aws-secretsmanager"
+  refreshInterval: "1h"
+  remoteSecrets:
+    - remoteKey: "/production/eduai/app-secrets"
+      secretName: "eduai-secrets"
+
+# ── Service Account ──────────────────────────────────────────────────────────
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# ── Pod Disruption Budget ─────────────────────────────────────────────────────
+podDisruptionBudget:
+  api:
+    enabled: true
+    minAvailable: 1
+  web:
+    enabled: true
+    minAvailable: 1
+  worker:
+    enabled: true
+    minAvailable: 1
+
+# ── Namespace ────────────────────────────────────────────────────────────────
+namespace: "eduai"
