@@ -1,0 +1,859 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// === TENANCY ===
+model Tenant {
+  id           String      @id @default(cuid())
+  name         String
+  slug         String      @unique
+  domain       String?     @unique
+  type         TenantType
+  plan         SubscriptionPlan @default(FREE_TRIAL)
+  isActive     Boolean     @default(true)
+  logoUrl      String?
+  settings     Json        @default("{}")
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  users        User[]
+  schools      School[]
+  universities University[]
+  subscription Subscription?
+  whiteLabel   WhiteLabel?
+  apiKeys      ApiKey[]
+  auditLogs    AuditLog[]
+}
+
+// === USERS & AUTH ===
+model User {
+  id                String    @id @default(cuid())
+  tenantId          String
+  email             String
+  emailVerified     Boolean   @default(false)
+  passwordHash      String
+  firstName         String
+  lastName          String
+  avatarUrl         String?
+  phone             String?
+  phoneVerified     Boolean   @default(false)
+  role              UserRole  @default(STUDENT)
+  isActive          Boolean   @default(true)
+  mfaEnabled        Boolean   @default(false)
+  mfaSecret         String?
+  lastLoginAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  tenant            Tenant    @relation(fields: [tenantId], references: [id])
+  sessions          UserSession[]
+  devices           UserDevice[]
+  profile           UserProfile?
+  teacherProfile    Teacher?
+  studentProfile    Student?
+  parentProfile     Parent?
+  notifications     Notification[]
+  sentMessages      Message[]   @relation("SentMessages")
+  achievements      UserAchievement[]
+  aiConversations   AIConversation[]
+  auditLogs         AuditLog[]
+  @@unique([tenantId, email])
+  @@index([tenantId])
+}
+
+model UserProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  bio         String?
+  timezone    String   @default("UTC")
+  language    String   @default("en")
+  dateOfBirth DateTime?
+  gender      String?
+  address     Json?
+  socialLinks Json     @default("{}")
+  preferences Json     @default("{}")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserSession {
+  id           String   @id @default(cuid())
+  userId       String
+  refreshToken String   @unique
+  deviceId     String?
+  ipAddress    String?
+  userAgent    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
+
+model UserDevice {
+  id          String   @id @default(cuid())
+  userId      String
+  deviceId    String   @unique
+  deviceName  String?
+  deviceType  String?
+  fcmToken    String?
+  isActive    Boolean  @default(true)
+  lastSeenAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
+
+// === RBAC ===
+model Role {
+  id          String           @id @default(cuid())
+  tenantId    String?
+  name        String
+  description String?
+  isSystem    Boolean          @default(false)
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now())
+  @@unique([tenantId, name])
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  resource    String
+  action      String
+  description String?
+  roles       RolePermission[]
+  @@unique([resource, action])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  @@id([roleId, permissionId])
+}
+
+// === SCHOOL ERP ===
+model School {
+  id          String       @id @default(cuid())
+  tenantId    String
+  name        String
+  code        String?
+  address     Json?
+  phone       String?
+  email       String?
+  logoUrl     String?
+  settings    Json         @default("{}")
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  tenant      Tenant       @relation(fields: [tenantId], references: [id])
+  departments Department[]
+  classes     SchoolClass[]
+  teachers    Teacher[]
+  students    Student[]
+  @@index([tenantId])
+}
+
+model Department {
+  id        String   @id @default(cuid())
+  schoolId  String
+  name      String
+  code      String?
+  headId    String?
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classes   SchoolClass[]
+  @@unique([schoolId, name])
+}
+
+model SchoolClass {
+  id           String     @id @default(cuid())
+  schoolId     String
+  departmentId String?
+  name         String
+  grade        String
+  section      String?
+  academicYear String
+  capacity     Int        @default(30)
+  teacherId    String?
+  school       School     @relation(fields: [schoolId], references: [id])
+  department   Department? @relation(fields: [departmentId], references: [id])
+  students     Student[]
+  timetables   Timetable[]
+  @@index([schoolId])
+}
+
+model Timetable {
+  id          String      @id @default(cuid())
+  classId     String
+  subjectId   String?
+  teacherId   String?
+  dayOfWeek   Int
+  startTime   String
+  endTime     String
+  room        String?
+  class       SchoolClass @relation(fields: [classId], references: [id])
+}
+
+// === UNIVERSITY ERP ===
+model University {
+  id          String                @id @default(cuid())
+  tenantId    String
+  name        String
+  code        String?
+  address     Json?
+  settings    Json                  @default("{}")
+  isActive    Boolean               @default(true)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  tenant      Tenant                @relation(fields: [tenantId], references: [id])
+  faculties   Faculty[]
+  programs    AcademicProgram[]
+  @@index([tenantId])
+}
+
+model Faculty {
+  id           String              @id @default(cuid())
+  universityId String
+  name         String
+  code         String?
+  university   University          @relation(fields: [universityId], references: [id])
+  departments  UniDepartment[]
+}
+
+model UniDepartment {
+  id        String   @id @default(cuid())
+  facultyId String
+  name      String
+  faculty   Faculty  @relation(fields: [facultyId], references: [id])
+  programs  AcademicProgram[]
+}
+
+model AcademicProgram {
+  id             String        @id @default(cuid())
+  universityId   String
+  departmentId   String?
+  name           String
+  code           String?
+  degree         String
+  durationYears  Int
+  university     University    @relation(fields: [universityId], references: [id])
+  department     UniDepartment? @relation(fields: [departmentId], references: [id])
+  enrollments    Enrollment[]
+}
+
+model Enrollment {
+  id          String           @id @default(cuid())
+  studentId   String
+  programId   String
+  status      EnrollmentStatus @default(ACTIVE)
+  startedAt   DateTime         @default(now())
+  completedAt DateTime?
+  student     Student          @relation(fields: [studentId], references: [id])
+  program     AcademicProgram  @relation(fields: [programId], references: [id])
+  @@unique([studentId, programId])
+}
+
+// === TEACHERS ===
+model Teacher {
+  id              String    @id @default(cuid())
+  userId          String    @unique
+  schoolId        String?
+  employeeId      String?
+  subjects        String[]
+  bio             String?
+  qualifications  Json      @default("[]")
+  yearsExperience Int       @default(0)
+  rating          Float     @default(0)
+  isVerified      Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  user            User      @relation(fields: [userId], references: [id])
+  school          School?   @relation(fields: [schoolId], references: [id])
+  courses         Course[]
+  liveSessions    LiveSession[]
+}
+
+// === STUDENTS ===
+model Student {
+  id              String     @id @default(cuid())
+  userId          String     @unique
+  schoolId        String?
+  studentId       String?
+  grade           String?
+  classId         String?
+  gpa             Float?
+  createdAt       DateTime   @default(now())
+  user            User       @relation(fields: [userId], references: [id])
+  school          School?    @relation(fields: [schoolId], references: [id])
+  class           SchoolClass? @relation(fields: [classId], references: [id])
+  enrollments     Enrollment[]
+  courseProgress  CourseProgress[]
+  submissions     Submission[]
+  parentLinks     ParentStudent[]
+  certificates    IssuedCertificate[]
+}
+
+// === PARENTS ===
+model Parent {
+  id        String          @id @default(cuid())
+  userId    String          @unique
+  createdAt DateTime        @default(now())
+  user      User            @relation(fields: [userId], references: [id])
+  children  ParentStudent[]
+}
+
+model ParentStudent {
+  parentId     String
+  studentId    String
+  relationship String  @default("parent")
+  parent       Parent  @relation(fields: [parentId], references: [id])
+  student      Student @relation(fields: [studentId], references: [id])
+  @@id([parentId, studentId])
+}
+
+// === COURSES & CONTENT ===
+model Course {
+  id           String         @id @default(cuid())
+  tenantId     String
+  teacherId    String?
+  title        String
+  slug         String
+  description  String?
+  thumbnailUrl String?
+  category     String?
+  tags         String[]
+  level        CourseLevel    @default(BEGINNER)
+  language     String         @default("en")
+  price        Decimal        @default(0)
+  isPublished  Boolean        @default(false)
+  isFeatured   Boolean        @default(false)
+  totalDuration Int           @default(0)
+  totalLessons  Int           @default(0)
+  rating        Float         @default(0)
+  enrollCount   Int           @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  teacher      Teacher?       @relation(fields: [teacherId], references: [id])
+  sections     CourseSection[]
+  progress     CourseProgress[]
+  reviews      Review[]
+  certificates CertificateTemplate[]
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+}
+
+model CourseSection {
+  id       String   @id @default(cuid())
+  courseId String
+  title    String
+  position Int
+  course   Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons  Lesson[]
+}
+
+model Lesson {
+  id          String        @id @default(cuid())
+  sectionId   String
+  title       String
+  description String?
+  contentType ContentType
+  contentUrl  String?
+  duration    Int           @default(0)
+  position    Int
+  isPreview   Boolean       @default(false)
+  section     CourseSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  assignments Assignment[]
+  quizzes     Quiz[]
+}
+
+model Quiz {
+  id        String       @id @default(cuid())
+  lessonId  String?
+  title     String
+  questions Json
+  timeLimit Int?
+  lesson    Lesson?      @relation(fields: [lessonId], references: [id])
+  attempts  QuizAttempt[]
+}
+
+model QuizAttempt {
+  id        String   @id @default(cuid())
+  quizId    String
+  userId    String
+  answers   Json
+  score     Float
+  passed    Boolean
+  createdAt DateTime @default(now())
+  quiz      Quiz     @relation(fields: [quizId], references: [id])
+}
+
+model CourseProgress {
+  id              String   @id @default(cuid())
+  studentId       String
+  courseId        String
+  completedLessons String[]
+  progressPercent Float    @default(0)
+  lastAccessedAt  DateTime @default(now())
+  completedAt     DateTime?
+  student         Student  @relation(fields: [studentId], references: [id])
+  course          Course   @relation(fields: [courseId], references: [id])
+  @@unique([studentId, courseId])
+}
+
+// === ASSIGNMENTS ===
+model Assignment {
+  id          String           @id @default(cuid())
+  lessonId    String?
+  teacherId   String?
+  title       String
+  description String?
+  dueDate     DateTime?
+  maxScore    Float            @default(100)
+  attachments String[]
+  createdAt   DateTime         @default(now())
+  lesson      Lesson?          @relation(fields: [lessonId], references: [id])
+  submissions Submission[]
+}
+
+model Submission {
+  id           String           @id @default(cuid())
+  assignmentId String
+  studentId    String
+  content      String?
+  attachments  String[]
+  status       AssignmentStatus @default(PENDING)
+  score        Float?
+  feedback     String?
+  submittedAt  DateTime         @default(now())
+  gradedAt     DateTime?
+  assignment   Assignment       @relation(fields: [assignmentId], references: [id])
+  student      Student          @relation(fields: [studentId], references: [id])
+  @@unique([assignmentId, studentId])
+}
+
+// === LIVE CLASSROOM ===
+model LiveSession {
+  id           String            @id @default(cuid())
+  teacherId    String
+  title        String
+  description  String?
+  scheduledAt  DateTime
+  startedAt    DateTime?
+  endedAt      DateTime?
+  status       LiveSessionStatus @default(SCHEDULED)
+  recordingUrl String?
+  maxParticipants Int            @default(100)
+  settings     Json              @default("{}")
+  createdAt    DateTime          @default(now())
+  teacher      Teacher           @relation(fields: [teacherId], references: [id])
+  participants LiveParticipant[]
+}
+
+model LiveParticipant {
+  id        String      @id @default(cuid())
+  sessionId String
+  userId    String
+  joinedAt  DateTime    @default(now())
+  leftAt    DateTime?
+  role      String      @default("student")
+  session   LiveSession @relation(fields: [sessionId], references: [id])
+}
+
+// === CERTIFICATES ===
+model CertificateTemplate {
+  id          String             @id @default(cuid())
+  courseId    String?
+  name        String
+  design      Json
+  fields      Json
+  course      Course?            @relation(fields: [courseId], references: [id])
+  issued      IssuedCertificate[]
+}
+
+model IssuedCertificate {
+  id           String              @id @default(cuid())
+  templateId   String
+  studentId    String
+  verifyCode   String              @unique @default(cuid())
+  metadata     Json                @default("{}")
+  issuedAt     DateTime            @default(now())
+  template     CertificateTemplate @relation(fields: [templateId], references: [id])
+  student      Student             @relation(fields: [studentId], references: [id])
+}
+
+// === NOTIFICATIONS ===
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  data      Json             @default("{}")
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
+
+// === MESSAGING ===
+model Conversation {
+  id           String                    @id @default(cuid())
+  type         String                    @default("direct")
+  name         String?
+  createdAt    DateTime                  @default(now())
+  participants ConversationParticipant[]
+  messages     Message[]
+}
+
+model ConversationParticipant {
+  conversationId String
+  userId         String
+  joinedAt       DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  @@id([conversationId, userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String
+  type           String       @default("text")
+  attachments    String[]
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id])
+  @@index([conversationId])
+}
+
+// === GAMIFICATION ===
+model Achievement {
+  id          String            @id @default(cuid())
+  name        String
+  description String?
+  iconUrl     String?
+  type        String
+  criteria    Json
+  points      Int               @default(0)
+  users       UserAchievement[]
+}
+
+model UserAchievement {
+  userId        String
+  achievementId String
+  earnedAt      DateTime    @default(now())
+  user          User        @relation(fields: [userId], references: [id])
+  achievement   Achievement @relation(fields: [achievementId], references: [id])
+  @@id([userId, achievementId])
+}
+
+model UserPoints {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  total     Int      @default(0)
+  level     Int      @default(1)
+  updatedAt DateTime @updatedAt
+}
+
+// === MARKETPLACE ===
+model Review {
+  id        String   @id @default(cuid())
+  courseId  String
+  userId    String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  course    Course   @relation(fields: [courseId], references: [id])
+  @@unique([courseId, userId])
+}
+
+// === BILLING ===
+model Subscription {
+  id                   String             @id @default(cuid())
+  tenantId             String             @unique
+  plan                 SubscriptionPlan
+  status               SubscriptionStatus @default(TRIALING)
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  paypalSubscriptionId String?
+  currentPeriodStart   DateTime
+  currentPeriodEnd     DateTime
+  cancelAtPeriodEnd    Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  tenant               Tenant             @relation(fields: [tenantId], references: [id])
+  invoices             Invoice[]
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  subscriptionId String
+  amount         Decimal
+  currency       String        @default("USD")
+  status         PaymentStatus @default(PENDING)
+  stripeInvoiceId String?
+  pdf            String?
+  issuedAt       DateTime      @default(now())
+  paidAt         DateTime?
+  subscription   Subscription  @relation(fields: [subscriptionId], references: [id])
+}
+
+model Coupon {
+  id             String    @id @default(cuid())
+  code           String    @unique
+  discountType   String
+  discountValue  Decimal
+  maxUses        Int?
+  usedCount      Int       @default(0)
+  validFrom      DateTime
+  validUntil     DateTime?
+  isActive       Boolean   @default(true)
+  stripeCouponId String?
+  createdAt      DateTime  @default(now())
+}
+
+// === AI ===
+model AIConversation {
+  id        String      @id @default(cuid())
+  userId    String
+  module    AIModuleType
+  title     String?
+  context   Json        @default("{}")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  user      User        @relation(fields: [userId], references: [id])
+  messages  AIMessage[]
+  @@index([userId])
+}
+
+model AIMessage {
+  id             String         @id @default(cuid())
+  conversationId String
+  role           String
+  content        String
+  tokens         Int            @default(0)
+  createdAt      DateTime       @default(now())
+  conversation   AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+model AIUsage {
+  id        String       @id @default(cuid())
+  tenantId  String
+  userId    String?
+  module    AIModuleType
+  tokens    Int
+  cost      Decimal
+  createdAt DateTime     @default(now())
+  @@index([tenantId])
+}
+
+// === WHITE LABEL ===
+model WhiteLabel {
+  id          String   @id @default(cuid())
+  tenantId    String   @unique
+  brandName   String
+  domain      String?
+  logoUrl     String?
+  faviconUrl  String?
+  primaryColor   String  @default("#2563EB")
+  secondaryColor String  @default("#7C3AED")
+  customCss   String?
+  emailFrom   String?
+  settings    Json     @default("{}")
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+}
+
+// === API ECOSYSTEM ===
+model ApiKey {
+  id          String    @id @default(cuid())
+  tenantId    String
+  name        String
+  keyHash     String    @unique
+  keyPrefix   String
+  scopes      String[]
+  rateLimit   Int       @default(1000)
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+}
+
+model WebhookEndpoint {
+  id         String   @id @default(cuid())
+  tenantId   String
+  url        String
+  events     String[]
+  secret     String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+}
+
+// === AUDIT ===
+model AuditLog {
+  id         String      @id @default(cuid())
+  tenantId   String
+  userId     String?
+  action     AuditAction
+  resource   String
+  resourceId String?
+  before     Json?
+  after      Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime    @default(now())
+  tenant     Tenant      @relation(fields: [tenantId], references: [id])
+  user       User?       @relation(fields: [userId], references: [id])
+  @@index([tenantId, createdAt])
+}
+
+// === PLUGINS ===
+model Plugin {
+  id          String          @id @default(cuid())
+  name        String
+  slug        String          @unique
+  description String?
+  version     String
+  authorId    String?
+  category    String?
+  price       Decimal         @default(0)
+  isActive    Boolean         @default(true)
+  manifest    Json
+  createdAt   DateTime        @default(now())
+  installed   InstalledPlugin[]
+}
+
+model InstalledPlugin {
+  id        String   @id @default(cuid())
+  tenantId  String
+  pluginId  String
+  settings  Json     @default("{}")
+  isActive  Boolean  @default(true)
+  installedAt DateTime @default(now())
+  plugin    Plugin   @relation(fields: [pluginId], references: [id])
+  @@unique([tenantId, pluginId])
+}
+
+// === ENUMS ===
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  SCHOOL_ADMIN
+  UNIVERSITY_ADMIN
+  TEACHER
+  STUDENT
+  PARENT
+  GUEST
+}
+
+enum TenantType {
+  SCHOOL
+  UNIVERSITY
+  CORPORATE
+  INDIVIDUAL
+}
+
+enum SubscriptionPlan {
+  FREE_TRIAL
+  STARTER
+  PROFESSIONAL
+  BUSINESS
+  ENTERPRISE
+  LIFETIME
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  PAST_DUE
+  CANCELLED
+  TRIALING
+}
+
+enum ContentType {
+  VIDEO
+  DOCUMENT
+  QUIZ
+  ASSIGNMENT
+  LIVE_SESSION
+  AUDIO
+  SCORM
+  INTERACTIVE
+}
+
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  EXPERT
+}
+
+enum AssignmentStatus {
+  PENDING
+  SUBMITTED
+  GRADED
+  RETURNED
+  LATE
+}
+
+enum NotificationType {
+  EMAIL
+  SMS
+  PUSH
+  IN_APP
+}
+
+enum LiveSessionStatus {
+  SCHEDULED
+  LIVE
+  ENDED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  WITHDRAWN
+  SUSPENDED
+}
+
+enum AIModuleType {
+  TUTOR
+  HOMEWORK_ASSISTANT
+  EXAM_GENERATOR
+  LESSON_GENERATOR
+  CURRICULUM_GENERATOR
+  FLASHCARDS
+  MIND_MAP
+  RESEARCH_ASSISTANT
+  TRANSLATOR
+  SPEECH_TO_TEXT
+  TEXT_TO_SPEECH
+  RECOMMENDATION
+  CAREER_ADVISOR
+  PERFORMANCE_PREDICTION
+  DROPOUT_PREDICTION
+  CONTENT_MODERATION
+  PLAGIARISM_DETECTION
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  VIEW
+  EXPORT
+  IMPORT
+}

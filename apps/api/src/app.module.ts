@@ -1,0 +1,70 @@
+import { Module, MiddlewareConsumer, NestModule, RequestMethod } from '@nestjs/common';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
+import { ConfigAppModule } from './modules/config/config.module';
+import { DatabaseModule } from './modules/database/database.module';
+import { CacheModule } from './modules/cache/cache.module';
+import { QueueModule } from './modules/queue/queue.module';
+import { CoreModule } from './modules/core/core.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { TenantsModule } from './modules/tenants/tenants.module';
+import { UsersModule } from './modules/users/users.module';
+import { BillingModule } from './modules/billing/billing.module';
+import { CoursesModule } from './modules/courses/courses.module';
+import { LiveModule } from './modules/live/live.module';
+import { AiModule } from './modules/ai/ai.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { StorageModule } from './modules/storage/storage.module';
+import { SearchModule } from './modules/search/search.module';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
+import { CertificatesModule } from './modules/certificates/certificates.module';
+import { GamificationModule } from './modules/gamification/gamification.module';
+import { AuditModule } from './modules/audit/audit.module';
+import { HealthModule } from './modules/health/health.module';
+import { TenantMiddleware } from './modules/tenants/middleware/tenant.middleware';
+
+@Module({
+  imports: [
+    ConfigAppModule,
+    ThrottlerModule.forRoot([
+      { name: 'short', ttl: 1000, limit: 10 },
+      { name: 'medium', ttl: 10000, limit: 100 },
+      { name: 'long', ttl: 60000, limit: 500 },
+    ]),
+    ScheduleModule.forRoot(),
+    DatabaseModule,
+    CacheModule,
+    QueueModule,
+    CoreModule,
+    AuthModule,
+    TenantsModule,
+    UsersModule,
+    BillingModule,
+    CoursesModule,
+    LiveModule,
+    AiModule,
+    NotificationsModule,
+    StorageModule,
+    SearchModule,
+    AnalyticsModule,
+    CertificatesModule,
+    GamificationModule,
+    AuditModule,
+    HealthModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
+})
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(TenantMiddleware)
+      .exclude({ path: 'health', method: RequestMethod.GET })
+      .forRoutes('*');
+  }
+}
