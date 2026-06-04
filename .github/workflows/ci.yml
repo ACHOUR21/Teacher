@@ -1,0 +1,105 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-typecheck:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run lint
+      - run: pnpm --filter @eduai/shared build
+      - run: pnpm --filter @eduai/ai build
+      - run: pnpm --filter @eduai/api prisma generate
+        env:
+          DATABASE_URL: postgresql://test:test@localhost:5432/test
+      - run: pnpm --filter @eduai/web build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000
+
+  test-api:
+    name: API Tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: eduai
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: eduai_test
+        ports: ['5432:5432']
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ['6379:6379']
+        options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @eduai/shared build
+      - name: Generate Prisma client
+        working-directory: apps/api
+        run: pnpm prisma generate
+        env:
+          DATABASE_URL: postgresql://eduai:password@localhost:5432/eduai_test
+      - name: Run migrations
+        working-directory: apps/api
+        run: pnpm prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://eduai:password@localhost:5432/eduai_test
+      - name: Run tests
+        run: pnpm --filter @eduai/api test -- --coverage
+        env:
+          DATABASE_URL: postgresql://eduai:password@localhost:5432/eduai_test
+          DIRECT_URL: postgresql://eduai:password@localhost:5432/eduai_test
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: test-secret-that-is-at-least-64-chars-long-for-testing-only-xyzabc
+          JWT_REFRESH_SECRET: test-refresh-secret-at-least-64-chars-for-testing-purposes-xyzabc
+          JWT_ACCESS_EXPIRES_IN: 15m
+          JWT_REFRESH_EXPIRES_IN: 7d
+          NODE_ENV: test
+
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v3
+        with: { version: 9 }
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'pnpm' }
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm audit --audit-level=high
+        continue-on-error: true
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: '.'
+          format: sarif
+          output: trivy-results.sarif
+        continue-on-error: true
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
+        continue-on-error: true

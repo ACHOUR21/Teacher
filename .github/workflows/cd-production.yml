@@ -1,0 +1,117 @@
+name: Deploy to Production
+
+on:
+  release:
+    types: [published]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com
+  EKS_CLUSTER: eduai-production
+  NAMESPACE: eduai-production
+
+jobs:
+  build-and-push:
+    name: Build Production Images
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set image tag from release
+        id: meta
+        run: echo "version=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+
+      - name: Build and push API
+        uses: docker/build-push-action@v5
+        with:
+          context: apps/api
+          file: infra/docker/api.Dockerfile
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/eduai-api:${{ github.event.release.tag_name }}
+            ${{ env.ECR_REGISTRY }}/eduai-api:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push Web
+        uses: docker/build-push-action@v5
+        with:
+          context: apps/web
+          file: infra/docker/web.Dockerfile
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/eduai-web:${{ github.event.release.tag_name }}
+            ${{ env.ECR_REGISTRY }}/eduai-web:latest
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER }} --region ${{ env.AWS_REGION }}
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Run database migrations
+        run: |
+          kubectl run prisma-migrate-prod-${{ github.run_id }} \
+            --image=${{ env.ECR_REGISTRY }}/eduai-api:${{ needs.build-and-push.outputs.image_tag }} \
+            --namespace=${{ env.NAMESPACE }} \
+            --restart=Never \
+            --env="DATABASE_URL=${{ secrets.PROD_DATABASE_URL }}" \
+            --command -- npx prisma migrate deploy
+          kubectl wait --for=condition=completed pod/prisma-migrate-prod-${{ github.run_id }} --timeout=180s -n ${{ env.NAMESPACE }}
+          kubectl delete pod prisma-migrate-prod-${{ github.run_id }} -n ${{ env.NAMESPACE }}
+
+      - name: Deploy with Helm (production values)
+        run: |
+          helm upgrade --install eduai infra/helm/eduai \
+            --namespace ${{ env.NAMESPACE }} \
+            --create-namespace \
+            --values infra/helm/eduai/values.yaml \
+            --values infra/helm/eduai/values.production.yaml \
+            --set api.image.tag=${{ needs.build-and-push.outputs.image_tag }} \
+            --set web.image.tag=${{ needs.build-and-push.outputs.image_tag }} \
+            --set api.image.repository=${{ env.ECR_REGISTRY }}/eduai-api \
+            --set web.image.repository=${{ env.ECR_REGISTRY }}/eduai-web \
+            --atomic --wait --timeout=15m
+
+      - name: Notify Slack on success
+        if: success()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: '{"text":"✅ EduAI ${{ github.event.release.tag_name }} deployed to production successfully!"}'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Notify Slack on failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1
+        with:
+          payload: '{"text":"🚨 EduAI production deployment FAILED for ${{ github.event.release.tag_name }}"}'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

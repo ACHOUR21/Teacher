@@ -1,0 +1,84 @@
+groups:
+  - name: eduai.api
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          rate(http_requests_total{status=~"5.."}[5m]) /
+          rate(http_requests_total[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate on EduAI API"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+
+      - alert: HighLatencyP95
+        expr: |
+          histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High p95 latency on EduAI API"
+          description: "p95 latency is {{ $value }}s"
+
+      - alert: APIDown
+        expr: up{job="eduai-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "EduAI API is down"
+          description: "The API has been unreachable for over 1 minute"
+
+  - name: eduai.database
+    rules:
+      - alert: DatabaseConnectionPoolHigh
+        expr: pg_stat_activity_count > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL connection pool near capacity"
+          description: "{{ $value }} active connections"
+
+      - alert: DatabaseReplicationLag
+        expr: pg_replication_lag > 300
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL replication lag is high"
+          description: "Replication lag is {{ $value }}s"
+
+  - name: eduai.infrastructure
+    rules:
+      - alert: HighMemoryUsage
+        expr: |
+          (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value | humanizePercentage }}"
+
+      - alert: DiskSpaceLow
+        expr: |
+          (1 - (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"})) > 0.9
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk space critically low"
+          description: "Only {{ $value | humanizePercentage }} disk used"
+
+      - alert: PodCrashLooping
+        expr: |
+          increase(kube_pod_container_status_restarts_total[15m]) > 3
+        labels:
+          severity: critical
+        annotations:
+          summary: "Pod is crash looping"
+          description: "{{ $labels.namespace }}/{{ $labels.pod }} restarted {{ $value }} times"

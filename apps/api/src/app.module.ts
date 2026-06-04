@@ -22,6 +22,8 @@ import { CertificatesModule } from './modules/certificates/certificates.module';
 import { GamificationModule } from './modules/gamification/gamification.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { HealthModule } from './modules/health/health.module';
+import { SchoolErpModule } from './modules/school-erp/school-erp.module';
+import { UniversityErpModule } from './modules/university-erp/university-erp.module';
 import { TenantMiddleware } from './modules/tenants/middleware/tenant.middleware';
 
 @Module({
@@ -52,6 +54,8 @@ import { TenantMiddleware } from './modules/tenants/middleware/tenant.middleware
     GamificationModule,
     AuditModule,
     HealthModule,
+    SchoolErpModule,
+    UniversityErpModule,
   ],
   providers: [
     {
