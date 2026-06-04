@@ -28,6 +28,7 @@ import {
   ShoppingBag,
   Building2,
   University,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/uiStore';
@@ -59,6 +60,7 @@ const navSections: NavSection[] = [
       { label: 'Courses', href: '/courses', icon: BookOpen },
       { label: 'Live Classes', href: '/live', icon: Video },
       { label: 'AI Tutor', href: '/ai-tutor', icon: Bot, badge: 'AI' },
+      { label: 'AI Agents', href: '/ai-agents', icon: Sparkles, badge: 'NEW' },
       { label: 'Certificates', href: '/certificates', icon: Award },
     ],
   },
