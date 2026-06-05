@@ -252,8 +252,8 @@ services:
       - .env.local
     environment:
       NODE_ENV: development
-      DATABASE_URL: postgresql://eduai:eduai_dev_pass@postgres:5432/eduai_dev
-      DIRECT_URL: postgresql://eduai:eduai_dev_pass@postgres:5432/eduai_dev
+      DATABASE_URL: postgresql://eduai:password@postgres:5432/eduai_db
+      DIRECT_URL: postgresql://eduai:password@postgres:5432/eduai_db
       REDIS_HOST: redis
       REDIS_PORT: "6379"
       S3_ENDPOINT: http://minio:9000
@@ -314,7 +314,7 @@ services:
       - .env.local
     environment:
       NODE_ENV: development
-      DATABASE_URL: postgresql://eduai:eduai_dev_pass@postgres:5432/eduai_dev
+      DATABASE_URL: postgresql://eduai:password@postgres:5432/eduai_db
       REDIS_HOST: redis
       REDIS_PORT: "6379"
     networks:
@@ -375,7 +375,7 @@ services:
     image: grafana/loki:2.9.5
     container_name: eduai_loki
     restart: unless-stopped
-    command: -config.file=/etc/loki/local-config.yaml
+    command: -config.file=/etc/loki/loki-config.yaml
     ports:
       - "3100:3100"
     volumes:
