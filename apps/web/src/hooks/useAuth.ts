@@ -9,6 +9,7 @@ interface LoginCredentials {
   email: string;
   password: string;
   rememberMe?: boolean;
+  tenantId?: string;
 }
 
 interface RegisterData {
@@ -53,7 +54,9 @@ export function useAuth() {
     async (credentials: LoginCredentials) => {
       setLoading(true);
       try {
-        const data = await apiPost<AuthResponse>('/auth/login', credentials);
+        const { tenantId, ...body } = credentials;
+        const headers = tenantId ? { 'x-tenant-id': tenantId } : undefined;
+        const data = await apiPost<AuthResponse>('/auth/login', body, { headers });
         if (data.requiresMfa) {
           return { requiresMfa: true };
         }
@@ -72,7 +75,7 @@ export function useAuth() {
       setLoading(true);
       try {
         const { tenantId, ...body } = data;
-        await apiPost('/auth/register', body, { headers: { 'TenantId': tenantId } });
+        await apiPost('/auth/register', body, { headers: { 'x-tenant-id': tenantId } });
         router.push('/login?registered=true');
         return { success: true };
       } finally {

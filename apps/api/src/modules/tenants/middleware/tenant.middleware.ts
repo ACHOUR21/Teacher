@@ -83,8 +83,8 @@ export class TenantMiddleware implements NestMiddleware {
   }
 
   private extractTenantIdentifier(req: Request): string | null {
-    // 1. X-Tenant-ID header (highest priority)
-    const headerTenantId = req.headers['x-tenant-id'] as string;
+    // 1. X-Tenant-ID or TenantId header (highest priority)
+    const headerTenantId = (req.headers['x-tenant-id'] || req.headers['tenantid']) as string;
     if (headerTenantId) return headerTenantId;
 
     // 2. Subdomain extraction (e.g., acme.eduai.app)
