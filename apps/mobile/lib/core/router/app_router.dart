@@ -18,6 +18,9 @@ import '../../features/notifications/presentation/screens/notifications_screen.d
 import '../../features/gamification/presentation/screens/gamification_screen.dart';
 import '../../features/messages/presentation/screens/messages_screen.dart';
 import '../../features/marketplace/presentation/screens/marketplace_screen.dart';
+import '../../features/billing/presentation/screens/billing_screen.dart';
+import '../../features/ai_agents/presentation/screens/ai_agents_screen.dart';
+import '../../features/settings/presentation/screens/settings_screen.dart';
 import 'splash_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -141,6 +144,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/home/marketplace',
             builder: (context, state) => const MarketplaceScreen(),
+          ),
+          GoRoute(
+            path: '/home/billing',
+            builder: (context, state) => const BillingScreen(),
+          ),
+          GoRoute(
+            path: '/home/ai-agents',
+            builder: (context, state) => const AiAgentsScreen(),
+          ),
+          GoRoute(
+            path: '/home/settings',
+            builder: (context, state) => const SettingsScreen(),
           ),
         ],
       ),
