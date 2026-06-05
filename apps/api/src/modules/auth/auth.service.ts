@@ -102,6 +102,8 @@ export class AuthService {
       lastName: result.user.lastName,
       role: result.user.role,
       tenantId: result.user.tenantId,
+      tenantName: result.tenant.name,
+      tenantSlug: result.tenant.slug,
       mfaEnabled: result.user.mfaEnabled,
     });
 
@@ -138,7 +140,7 @@ export class AuthService {
 
     const tokens = await this.generateTokens(user);
 
-    const tenant = await this.prisma.tenant.findUnique({ where: { id: cmd.tenantId }, select: { name: true } });
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: cmd.tenantId }, select: { name: true, slug: true } });
     this.notifications.sendWelcomeEmail(user.email, user.firstName, tenant?.name ?? 'EduAI').catch(() => {});
 
     return {
@@ -149,6 +151,8 @@ export class AuthService {
         lastName: user.lastName,
         role: user.role,
         tenantId: user.tenantId,
+        tenantName: tenant?.name ?? '',
+        tenantSlug: tenant?.slug ?? '',
         mfaEnabled: user.mfaEnabled,
       }),
       tokens,
@@ -158,6 +162,7 @@ export class AuthService {
   async login(cmd: LoginCommand): Promise<{ user: AuthUser; tokens: AuthTokens; requiresMfa?: boolean }> {
     const user = await this.prisma.user.findUnique({
       where: { tenantId_email: { tenantId: cmd.tenantId, email: cmd.email.toLowerCase() } },
+      include: { tenant: { select: { name: true, slug: true } } },
     });
 
     if (!user || !user.isActive) {
@@ -216,6 +221,8 @@ export class AuthService {
         lastName: user.lastName,
         role: user.role,
         tenantId: user.tenantId,
+        tenantName: user.tenant?.name ?? '',
+        tenantSlug: user.tenant?.slug ?? '',
         mfaEnabled: false,
         avatarUrl: user.avatarUrl ?? undefined,
       }),

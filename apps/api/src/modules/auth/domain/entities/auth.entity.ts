@@ -20,6 +20,8 @@ export class AuthUser {
   lastName: string;
   role: UserRole;
   tenantId: string;
+  tenantName: string;
+  tenantSlug: string;
   mfaEnabled: boolean;
   avatarUrl?: string;
 

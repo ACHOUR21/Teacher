@@ -2,12 +2,53 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { Users, BookOpen, Video, DollarSign, TrendingUp, Award } from 'lucide-react';
+import { Users, BookOpen, Video, DollarSign, TrendingUp, Award, Link2, Copy, Check } from 'lucide-react';
 import { api } from '@/lib/api';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/authStore';
+import { useState } from 'react';
+
+function InviteCard() {
+  const user = useAuthStore((s) => s.user);
+  const [copied, setCopied] = useState(false);
+
+  if (!user?.tenantSlug) return null;
+
+  const joinUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/join/${user.tenantSlug}`;
+
+  const copy = () => {
+    navigator.clipboard.writeText(joinUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <Card>
+      <CardContent className="py-4">
+        <div className="flex items-center gap-4">
+          <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
+            <Link2 className="h-5 w-5 text-indigo-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-gray-900">Student invite link</p>
+            <p className="text-xs text-gray-500 truncate mt-0.5">{joinUrl}</p>
+          </div>
+          <button
+            onClick={copy}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-gray-100 hover:bg-gray-200 transition-colors shrink-0"
+          >
+            {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+            {copied ? 'Copied!' : 'Copy link'}
+          </button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function DashboardPage() {
   const { data: overview } = useQuery({
@@ -62,6 +103,8 @@ export default function DashboardPage() {
           color="orange"
         />
       </div>
+
+      <InviteCard />
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">

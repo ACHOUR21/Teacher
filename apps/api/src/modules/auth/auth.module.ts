@@ -12,6 +12,7 @@ import { RolesGuard } from '../core/guards/roles.guard';
 import { Reflector } from '@nestjs/core';
 import { APP_GUARD } from '@nestjs/core';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { TenantsModule } from '../tenants/tenants.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
       inject: [ConfigService],
     }),
     NotificationsModule,
+    TenantsModule,
   ],
   controllers: [AuthController],
   providers: [

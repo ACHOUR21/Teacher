@@ -9,6 +9,7 @@ import {
   UseGuards,
   Ip,
   Headers,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -26,11 +27,15 @@ import { CurrentUser, CurrentUserPayload } from '../../../core/decorators/curren
 import { Public } from '../../../core/decorators/public.decorator';
 import { TenantId } from '../../../core/decorators/tenant.decorator';
 import { Request as ExpressRequest } from 'express';
+import { TenantsService } from '../../../tenants/tenants.service';
 
 @ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly tenantsService: TenantsService,
+  ) {}
 
   @Public()
   @Post('tenant/register')
@@ -53,6 +58,14 @@ export class AuthController {
       ipAddress: ip,
       userAgent,
     });
+  }
+
+  @Public()
+  @Get('tenant/lookup')
+  @ApiOperation({ summary: 'Look up a tenant by slug (for student join flow)' })
+  @ApiResponse({ status: 200, description: 'Tenant public info' })
+  async lookupTenant(@Query('slug') slug: string) {
+    return this.tenantsService.findBySlug(slug);
   }
 
   @Public()

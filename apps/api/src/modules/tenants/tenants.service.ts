@@ -61,6 +61,15 @@ export class TenantsService {
     return paginate(items, total, pagination.page, limit);
   }
 
+  async findBySlug(slug: string) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { slug },
+      select: { id: true, name: true, slug: true, type: true, logoUrl: true, isActive: true },
+    });
+    if (!tenant || !tenant.isActive) throw new NotFoundException('School not found');
+    return tenant;
+  }
+
   async findById(id: string) {
     const cacheKey = `tenant:${id}:full`;
     const cached = await this.redis.getObject<unknown>(cacheKey);

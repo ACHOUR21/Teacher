@@ -17,6 +17,7 @@ interface RegisterData {
   email: string;
   password: string;
   role: 'teacher' | 'student' | 'parent';
+  tenantId: string;
 }
 
 interface AuthResponse {
@@ -34,7 +35,12 @@ interface AuthResponse {
     mfaEnabled: boolean;
     createdAt: string;
   };
-  accessToken: string;
+  tokens: {
+    accessToken: string;
+    refreshToken: string;
+    expiresIn: number;
+    tokenType: string;
+  };
   requiresMfa?: boolean;
 }
 
@@ -51,7 +57,7 @@ export function useAuth() {
         if (data.requiresMfa) {
           return { requiresMfa: true };
         }
-        login(data.user, data.accessToken);
+        login(data.user, data.tokens.accessToken);
         router.push('/');
         return { success: true };
       } finally {
@@ -65,7 +71,8 @@ export function useAuth() {
     async (data: RegisterData) => {
       setLoading(true);
       try {
-        await apiPost('/auth/register', data);
+        const { tenantId, ...body } = data;
+        await apiPost('/auth/register', body, { headers: { 'TenantId': tenantId } });
         router.push('/login?registered=true');
         return { success: true };
       } finally {
@@ -95,7 +102,7 @@ export function useAuth() {
       setLoading(true);
       try {
         const data = await apiPost<AuthResponse>('/auth/mfa/verify', { code });
-        login(data.user, data.accessToken);
+        login(data.user, data.tokens.accessToken);
         router.push('/');
         return { success: true };
       } finally {

@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class MarketplaceService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async browseCourses(query: {
     search?: string;
@@ -80,6 +84,11 @@ export class MarketplaceService {
       this.prisma.courseProgress.create({ data: { studentId: student.id, courseId } }),
       this.prisma.course.update({ where: { id: courseId }, data: { enrollCount: { increment: 1 } } }),
     ]);
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { email: true, firstName: true } });
+    if (user) {
+      this.notifications.sendCourseEnrollmentEmail(user.email, user.firstName, course.title, courseId).catch(() => {});
+    }
 
     return progress;
   }

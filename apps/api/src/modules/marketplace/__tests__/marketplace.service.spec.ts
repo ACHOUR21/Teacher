@@ -4,6 +4,7 @@ import { MarketplaceService } from '../marketplace.service';
 import { PrismaService } from '../../database/prisma.service';
 import { SearchService } from '../../search/search.service';
 import { BillingService } from '../../billing/billing.service';
+import { NotificationsService } from '../../notifications/notifications.service';
 
 const mockPrisma = {
   course: { findMany: jest.fn(), findUnique: jest.fn(), count: jest.fn(), update: jest.fn() },
@@ -11,10 +12,14 @@ const mockPrisma = {
   review: { findFirst: jest.fn(), findUnique: jest.fn(), create: jest.fn(), findMany: jest.fn(), aggregate: jest.fn(), count: jest.fn() },
   courseProgress: { create: jest.fn(), upsert: jest.fn(), findUnique: jest.fn() },
   student: { findFirst: jest.fn() },
+  user: { findUnique: jest.fn() },
   $transaction: jest.fn((cb: any) => cb(mockPrisma)),
 };
 const mockSearch = { searchCourses: jest.fn().mockResolvedValue({ hits: [], total: 0 }) };
 const mockBilling = {};
+const mockNotifications = {
+  sendCourseEnrollmentEmail: jest.fn().mockResolvedValue(undefined),
+};
 
 describe('MarketplaceService', () => {
   let service: MarketplaceService;
@@ -26,6 +31,7 @@ describe('MarketplaceService', () => {
         { provide: PrismaService, useValue: mockPrisma },
         { provide: SearchService, useValue: mockSearch },
         { provide: BillingService, useValue: mockBilling },
+        { provide: NotificationsService, useValue: mockNotifications },
       ],
     }).compile();
 
@@ -69,6 +75,7 @@ describe('MarketplaceService', () => {
       mockPrisma.$transaction.mockImplementationOnce((arr: Promise<any>[]) => Promise.all(arr));
       mockPrisma.courseProgress.create.mockResolvedValueOnce({ id: 'progress-1', studentId: 'student-1', courseId: 'c-free' });
       mockPrisma.course.update.mockResolvedValueOnce({ id: 'c-free' });
+      mockPrisma.user.findUnique.mockResolvedValueOnce({ email: 'user@test.com', firstName: 'Jane' });
 
       const result = await service.purchaseCourse('user-1', 'c-free');
 
