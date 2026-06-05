@@ -104,7 +104,7 @@ export class CoursesService {
   }
 
   async search(tenantId: string, query: string, filters?: Record<string, unknown>) {
-    return this.searchService.searchCourses(query, { tenantId, ...filters });
+    return this.searchService.searchCourses(query, tenantId, filters as any);
   }
 
   async findById(id: string, tenantId: string) {
@@ -196,7 +196,7 @@ export class CoursesService {
     await this.redis.del(`course:${id}`);
 
     if (updated.isPublished) {
-      await this.searchService.indexCourse(updated);
+      await this.searchService.indexCourse({ ...updated, teacherName: '' });
     }
 
     return updated;
@@ -219,7 +219,7 @@ export class CoursesService {
     });
 
     await this.redis.del(`course:${id}`);
-    await this.searchService.indexCourse(published);
+    await this.searchService.indexCourse({ ...published, teacherName: '' });
     return published;
   }
 

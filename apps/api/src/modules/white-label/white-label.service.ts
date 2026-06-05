@@ -1,6 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { RedisService } from '../cache/redis.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class WhiteLabelService {
@@ -30,10 +31,12 @@ export class WhiteLabelService {
     emailFrom?: string;
     settings?: Record<string, unknown>;
   }) {
+    const { settings, ...rest } = dto;
+    const jsonSettings = settings as Prisma.InputJsonValue | undefined;
     const result = await this.prisma.whiteLabel.upsert({
       where: { tenantId },
-      update: dto,
-      create: { tenantId, brandName: dto.brandName ?? 'EduAI', ...dto },
+      update: { ...rest, ...(jsonSettings !== undefined && { settings: jsonSettings }) },
+      create: { tenantId, brandName: rest.brandName ?? 'EduAI', ...rest, ...(jsonSettings !== undefined && { settings: jsonSettings }) },
     });
 
     await this.cache.del(`white-label:${tenantId}`);

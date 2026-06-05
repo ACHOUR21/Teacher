@@ -3,8 +3,10 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { IoAdapter } from '@nestjs/platform-socket.io';
-import * as helmet from 'helmet';
-import * as compression from 'compression';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const helmet = require('helmet');
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const compression = require('compression');
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './modules/core/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './modules/core/interceptors/logging.interceptor';
@@ -18,8 +20,8 @@ async function bootstrap() {
   });
 
   // Security
-  app.use((helmet as any).default());
-  app.use((compression as any)());
+  app.use(helmet());
+  app.use(compression());
 
   // CORS with tenant-aware origins
   app.enableCors({

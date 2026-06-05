@@ -1,8 +1,8 @@
-import { Resolver, Query, Mutation, Args, ID, Context } from '@nestjs/graphql';
+import { Resolver, Query, Mutation, Args, ID } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { CoursesService } from '../../courses/courses.service';
 import { GqlAuthGuard } from '../guards/gql-auth.guard';
-import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { CurrentUser } from '../../core/decorators/current-user.decorator';
 import { Course, CoursePage } from '../types/course.types';
 import { CreateCourseInput, CourseFilterInput } from '../inputs/course.input';
 
@@ -23,14 +23,16 @@ export class CoursesResolver {
       limit,
       skip: (page - 1) * limit,
       search: filter.search,
-    }, filter.level as any, filter.category);
+      sortBy: 'createdAt',
+      sortOrder: 'desc' as any,
+    }, { level: filter.level as any, category: filter.category ?? undefined });
 
     return {
-      data: result.data as Course[],
+      data: (result as any).items as Course[],
       meta: {
-        total: result.total,
-        page: result.page,
-        totalPages: result.totalPages,
+        total: (result as any).total,
+        page: (result as any).page,
+        totalPages: (result as any).totalPages,
         limit,
       },
     };
@@ -38,30 +40,29 @@ export class CoursesResolver {
 
   @Query(() => Course, { name: 'course', description: 'Get a single course by ID' })
   @UseGuards(GqlAuthGuard)
-  async getCourse(
+  getCourse(
     @Args('id', { type: () => ID }) id: string,
     @CurrentUser() user: { tenantId: string },
-  ): Promise<Course> {
-    return this.coursesService.findOne(user.tenantId, id) as Promise<Course>;
+  ) {
+    return this.coursesService.findById(id, user.tenantId);
   }
 
   @Mutation(() => Course, { name: 'createCourse', description: 'Create a new course' })
   @UseGuards(GqlAuthGuard)
-  async createCourse(
+  createCourse(
     @Args('input') input: CreateCourseInput,
     @CurrentUser() user: { id: string; tenantId: string; role: string },
-  ): Promise<Course> {
-    return this.coursesService.create(user.tenantId, user.id, input as any) as Promise<Course>;
+  ) {
+    return this.coursesService.create(user.tenantId, user.id, input as any);
   }
 
-  @Mutation(() => Boolean, { name: 'publishCourse', description: 'Publish or unpublish a course' })
+  @Mutation(() => Boolean, { name: 'publishCourse', description: 'Publish a course' })
   @UseGuards(GqlAuthGuard)
   async publishCourse(
     @Args('id', { type: () => ID }) id: string,
-    @Args('published') published: boolean,
-    @CurrentUser() user: { id: string; tenantId: string; role: string },
+    @CurrentUser() user: { id: string; tenantId: string },
   ): Promise<boolean> {
-    await this.coursesService.publish(user.tenantId, id, user.id, user.role as any);
+    await this.coursesService.publish(id, user.tenantId);
     return true;
   }
 
@@ -69,9 +70,9 @@ export class CoursesResolver {
   @UseGuards(GqlAuthGuard)
   async deleteCourse(
     @Args('id', { type: () => ID }) id: string,
-    @CurrentUser() user: { id: string; tenantId: string; role: string },
+    @CurrentUser() user: { id: string; tenantId: string },
   ): Promise<boolean> {
-    await this.coursesService.delete(user.tenantId, id, user.id, user.role as any);
+    await this.coursesService.delete(id, user.tenantId);
     return true;
   }
 }

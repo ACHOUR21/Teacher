@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.20.0",
-    "@eduai/shared": "*",
+    "@eduai/shared": "workspace:*",
     "openai": "^4.40.0",
     "tiktoken": "^1.0.15"
   },

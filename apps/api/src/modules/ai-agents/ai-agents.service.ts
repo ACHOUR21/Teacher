@@ -1,13 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import Anthropic from '@anthropic-ai/sdk';
 import { ConfigService } from '@nestjs/config';
+import { AIModuleType } from '@prisma/client';
 
 type AgentType = 'STUDY_PLANNER' | 'HOMEWORK_ASSISTANT' | 'RESEARCH_ASSISTANT' | 'CAREER_ADVISOR' | 'PERFORMANCE_COACH';
 
 interface AgentConfig {
   systemPrompt: string;
-  tools: Anthropic.Tool[];
+  tools: any[];
 }
 
 @Injectable()
@@ -18,7 +19,7 @@ export class AiAgentsService {
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
   ) {
-    this.anthropic = new Anthropic({ apiKey: this.config.get('ANTHROPIC_API_KEY') });
+    this.anthropic = new Anthropic({ apiKey: this.config.get('ANTHROPIC_API_KEY') ?? 'placeholder-key' });
   }
 
   private getAgentConfig(type: AgentType): AgentConfig {
@@ -171,7 +172,7 @@ export class AiAgentsService {
 
     history.push({ role: 'user', content: message });
 
-    const response = await this.anthropic.messages.create({
+    const response = await (this.anthropic.messages.create as any)({
       model: 'claude-opus-4-8',
       max_tokens: 2048,
       system: config.systemPrompt,
@@ -182,7 +183,7 @@ export class AiAgentsService {
     let reply = '';
     const toolResults: { tool: string; input: any; output: string }[] = [];
 
-    for (const block of response.content) {
+    for (const block of response.content as any[]) {
       if (block.type === 'text') {
         reply = block.text;
       } else if (block.type === 'tool_use') {
@@ -192,7 +193,7 @@ export class AiAgentsService {
     }
 
     if (toolResults.length > 0 && !reply) {
-      const followUp = await this.anthropic.messages.create({
+      const followUp = await (this.anthropic.messages.create as any)({
         model: 'claude-opus-4-8',
         max_tokens: 2048,
         system: config.systemPrompt,
@@ -201,19 +202,19 @@ export class AiAgentsService {
           { role: 'assistant', content: response.content },
           {
             role: 'user',
-            content: toolResults.map(tr => ({
-              type: 'tool_result' as const,
+            content: toolResults.map((tr: any) => ({
+              type: 'tool_result',
               tool_use_id: tr.tool,
               content: tr.output,
             })),
           },
         ],
       });
-      reply = followUp.content.find(b => b.type === 'text')?.text ?? '';
+      reply = (followUp.content as any[]).find((b: any) => b.type === 'text')?.text ?? '';
     }
 
     const convId = sessionId ?? (await this.prisma.aIConversation.create({
-      data: { tenantId, userId, module: 'AI_AGENTS', title: `${agentType} - ${new Date().toLocaleDateString()}` },
+      data: { tenantId, userId, module: AIModuleType.AI_AGENTS, title: `${agentType} - ${new Date().toLocaleDateString()}` },
     })).id;
 
     await this.prisma.$transaction([
@@ -223,7 +224,7 @@ export class AiAgentsService {
         data: {
           tenantId,
           userId,
-          module: 'AI_AGENTS',
+          module: AIModuleType.AI_AGENTS,
           inputTokens: response.usage.input_tokens,
           outputTokens: response.usage.output_tokens,
           cost: (response.usage.input_tokens * 0.000015 + response.usage.output_tokens * 0.000075),
@@ -237,23 +238,24 @@ export class AiAgentsService {
 
   private async executeTool(toolName: string, input: Record<string, any>, userId: string, tenantId: string): Promise<string> {
     switch (toolName) {
-      case 'get_student_schedule':
+      case 'get_student_schedule': {
         const enrollments = await this.prisma.enrollment.findMany({
-          where: { userId, course: { tenantId } },
-          include: { course: { select: { title: true, sections: { include: { lessons: { select: { title: true } } } } } } },
+          where: { studentId: userId },
+          select: { id: true, programId: true, status: true, startedAt: true },
           take: 5,
         });
-        return JSON.stringify(enrollments.map(e => ({ course: e.course.title })));
-
-      case 'get_performance_metrics':
+        return JSON.stringify(enrollments.map(e => ({ programId: e.programId, status: e.status })));
+      }
+      case 'get_performance_metrics': {
         const progress = await this.prisma.courseProgress.findMany({
-          where: { userId },
-          include: { course: { select: { title: true } } },
+          where: { studentId: userId },
+          select: { courseId: true, progressPercent: true, lastAccessedAt: true },
         });
         return JSON.stringify(progress.map(p => ({
-          course: p.course.title,
+          courseId: p.courseId,
           percent: p.progressPercent,
         })));
+      }
 
       default:
         return JSON.stringify({ message: `Tool ${toolName} executed`, input });
@@ -265,7 +267,7 @@ export class AiAgentsService {
       where: {
         tenantId,
         userId,
-        module: 'AI_AGENTS',
+        module: AIModuleType.AI_AGENTS,
         ...(agentType && { title: { contains: agentType } }),
       },
       orderBy: { updatedAt: 'desc' },

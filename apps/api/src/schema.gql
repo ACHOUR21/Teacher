@@ -1,0 +1,175 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type AIModuleUsage {
+  module: String!
+  requestCount: Int!
+  totalCost: Float!
+  totalTokens: Int!
+}
+
+type Course {
+  category: String
+  createdAt: DateTime!
+  description: String
+  durationMinutes: Int!
+  enrollCount: Int!
+  id: ID!
+  isPublished: Boolean!
+  language: String
+  level: String!
+  price: Float!
+  rating: Float
+  slug: String!
+  tags: [String!]!
+  teacher: UserBrief
+  thumbnailUrl: String
+  title: String!
+  totalLessons: Int!
+}
+
+input CourseFilterInput {
+  category: String
+  level: String
+  limit: Int
+  page: Int
+  search: String
+}
+
+type CoursePage {
+  data: [Course!]!
+  meta: PaginationMeta!
+}
+
+input CreateCourseInput {
+  category: String
+  description: String
+  language: String
+  level: String
+  price: Float
+  tags: [String!]
+  thumbnailUrl: String
+  title: String!
+}
+
+type DailyGrowth {
+  count: Int!
+  date: String!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type MonthlyRevenue {
+  month: String!
+  revenue: Float!
+}
+
+type Mutation {
+  """Assign a role to a user (ADMIN+)"""
+  assignRole(role: String!, userId: ID!): User!
+
+  """Create a new course"""
+  createCourse(input: CreateCourseInput!): Course!
+
+  """Deactivate a user account"""
+  deactivateUser(id: ID!): Boolean!
+
+  """Delete a course"""
+  deleteCourse(id: ID!): Boolean!
+
+  """Publish a course"""
+  publishCourse(id: ID!): Boolean!
+}
+
+type PaginationMeta {
+  limit: Int!
+  page: Int!
+  total: Int!
+  totalPages: Int!
+}
+
+type PlatformStats {
+  activeSessions: Int!
+  totalCourses: Int!
+  totalRevenue: Float!
+  totalUsers: Int!
+}
+
+type Query {
+  """AI token usage by module"""
+  aiUsageStats: [AIModuleUsage!]!
+
+  """Get a single course by ID"""
+  course(id: ID!): Course!
+
+  """List courses for the authenticated tenant"""
+  courses(filter: CourseFilterInput): CoursePage!
+
+  """Get current authenticated user"""
+  me: User!
+
+  """Platform-wide statistics"""
+  platformStats: PlatformStats!
+
+  """Monthly revenue breakdown"""
+  revenueAnalytics(months: Int = 6): [MonthlyRevenue!]!
+
+  """Student engagement metrics"""
+  studentActivity(days: Int = 7): StudentActivity!
+
+  """Get a user by ID"""
+  user(id: ID!): User!
+
+  """Daily user registrations over N days"""
+  userGrowth(days: Int = 30): [DailyGrowth!]!
+
+  """List users in the tenant"""
+  users(limit: Int = 20, page: Int = 1, role: String, search: String): UserPage!
+}
+
+type StudentActivity {
+  activeStudents: Int!
+  completions: Int!
+  submissions: Int!
+}
+
+type User {
+  avatarUrl: String
+  createdAt: DateTime!
+  email: String!
+  emailVerified: Boolean!
+  firstName: String!
+  id: ID!
+  isActive: Boolean!
+  lastLoginAt: DateTime
+  lastName: String!
+  mfaEnabled: Boolean!
+  phone: String
+  profile: UserProfile
+  role: String!
+}
+
+type UserBrief {
+  avatarUrl: String
+  email: String!
+  firstName: String!
+  id: ID!
+  isActive: Boolean!
+  lastName: String!
+  role: String!
+}
+
+type UserPage {
+  data: [User!]!
+  meta: PaginationMeta!
+}
+
+type UserProfile {
+  bio: String
+  language: String!
+  timezone: String!
+}

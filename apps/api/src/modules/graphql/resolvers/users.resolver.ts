@@ -2,7 +2,7 @@ import { Resolver, Query, Mutation, Args, ID, Int } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { UsersService } from '../../users/users.service';
 import { GqlAuthGuard } from '../guards/gql-auth.guard';
-import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { CurrentUser } from '../../core/decorators/current-user.decorator';
 import { User, UserPage } from '../types/user.types';
 import { UserRole } from '@prisma/client';
 
@@ -23,21 +23,21 @@ export class UsersResolver {
   async getUsers(
     @Args('page', { type: () => Int, nullable: true, defaultValue: 1 }) page: number,
     @Args('limit', { type: () => Int, nullable: true, defaultValue: 20 }) limit: number,
-    @Args('search', { nullable: true }) search: string | undefined,
-    @Args('role', { nullable: true }) role: string | undefined,
+    @Args('search', { type: () => String, nullable: true }) search: string | undefined,
+    @Args('role', { type: () => String, nullable: true }) role: string | undefined,
     @CurrentUser() user: { tenantId: string },
   ): Promise<UserPage> {
     const result = await this.usersService.findAll(
       user.tenantId,
-      { page, limit, skip: (page - 1) * limit, search },
+      { page, limit, skip: (page - 1) * limit, search, sortBy: 'createdAt', sortOrder: 'desc' as any },
       role as UserRole | undefined,
     );
     return {
-      data: result.data as User[],
+      data: (result as any).items as User[],
       meta: {
-        total: result.total,
-        page: result.page,
-        totalPages: result.totalPages,
+        total: (result as any).total,
+        page: (result as any).page,
+        totalPages: (result as any).totalPages,
         limit,
       },
     };

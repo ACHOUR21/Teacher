@@ -21,13 +21,14 @@ model Tenant {
   settings     Json        @default("{}")
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
-  users        User[]
-  schools      School[]
-  universities University[]
-  subscription Subscription?
-  whiteLabel   WhiteLabel?
-  apiKeys      ApiKey[]
-  auditLogs    AuditLog[]
+  users           User[]
+  schools         School[]
+  universities    University[]
+  subscription    Subscription?
+  whiteLabel      WhiteLabel?
+  apiKeys         ApiKey[]
+  auditLogs       AuditLog[]
+  aiConversations AIConversation[]
 }
 
 // === USERS & AUTH ===
@@ -56,11 +57,15 @@ model User {
   teacherProfile    Teacher?
   studentProfile    Student?
   parentProfile     Parent?
-  notifications     Notification[]
-  sentMessages      Message[]   @relation("SentMessages")
-  achievements      UserAchievement[]
-  aiConversations   AIConversation[]
-  auditLogs         AuditLog[]
+  notifications            Notification[]
+  sentMessages             Message[]                  @relation("SentMessages")
+  achievements             UserAchievement[]
+  aiConversations          AIConversation[]
+  auditLogs                AuditLog[]
+  liveParticipants         LiveParticipant[]
+  conversationParticipants ConversationParticipant[]
+  reviews                  Review[]
+  points                   UserPoints?
   @@unique([tenantId, email])
   @@index([tenantId])
 }
@@ -459,6 +464,7 @@ model LiveParticipant {
   leftAt    DateTime?
   role      String      @default("student")
   session   LiveSession @relation(fields: [sessionId], references: [id])
+  user      User        @relation(fields: [userId], references: [id])
 }
 
 // === CERTIFICATES ===
@@ -512,6 +518,7 @@ model ConversationParticipant {
   userId         String
   joinedAt       DateTime     @default(now())
   conversation   Conversation @relation(fields: [conversationId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
   @@id([conversationId, userId])
 }
 
@@ -556,6 +563,7 @@ model UserPoints {
   total     Int      @default(0)
   level     Int      @default(1)
   updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
 }
 
 // === MARKETPLACE ===
@@ -567,6 +575,7 @@ model Review {
   comment   String?
   createdAt DateTime @default(now())
   course    Course   @relation(fields: [courseId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
   @@unique([courseId, userId])
 }
 
@@ -618,15 +627,18 @@ model Coupon {
 // === AI ===
 model AIConversation {
   id        String      @id @default(cuid())
+  tenantId  String
   userId    String
   module    AIModuleType
   title     String?
   context   Json        @default("{}")
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
+  tenant    Tenant      @relation(fields: [tenantId], references: [id])
   user      User        @relation(fields: [userId], references: [id])
   messages  AIMessage[]
   @@index([userId])
+  @@index([tenantId])
 }
 
 model AIMessage {
@@ -640,13 +652,16 @@ model AIMessage {
 }
 
 model AIUsage {
-  id        String       @id @default(cuid())
-  tenantId  String
-  userId    String?
-  module    AIModuleType
-  tokens    Int
-  cost      Decimal
-  createdAt DateTime     @default(now())
+  id           String       @id @default(cuid())
+  tenantId     String
+  userId       String?
+  module       AIModuleType
+  tokens       Int          @default(0)
+  inputTokens  Int          @default(0)
+  outputTokens Int          @default(0)
+  cost         Decimal      @default(0)
+  model        String?
+  createdAt    DateTime     @default(now())
   @@index([tenantId])
 }
 
@@ -712,28 +727,31 @@ model AuditLog {
 
 // === PLUGINS ===
 model Plugin {
-  id          String          @id @default(cuid())
-  name        String
-  slug        String          @unique
-  description String?
-  version     String
-  authorId    String?
-  category    String?
-  price       Decimal         @default(0)
-  isActive    Boolean         @default(true)
-  manifest    Json
-  createdAt   DateTime        @default(now())
-  installed   InstalledPlugin[]
+  id           String          @id @default(cuid())
+  name         String
+  slug         String          @unique
+  description  String?
+  version      String
+  authorId     String?
+  category     String?
+  price        Decimal         @default(0)
+  isActive     Boolean         @default(true)
+  installCount Int             @default(0)
+  manifest     Json
+  createdAt    DateTime        @default(now())
+  installed    InstalledPlugin[]
 }
 
 model InstalledPlugin {
-  id        String   @id @default(cuid())
-  tenantId  String
-  pluginId  String
-  settings  Json     @default("{}")
-  isActive  Boolean  @default(true)
+  id          String   @id @default(cuid())
+  tenantId    String
+  pluginId    String
+  settings    Json     @default("{}")
+  config      Json     @default("{}")
+  isActive    Boolean  @default(true)
+  isEnabled   Boolean  @default(true)
   installedAt DateTime @default(now())
-  plugin    Plugin   @relation(fields: [pluginId], references: [id])
+  plugin      Plugin   @relation(fields: [pluginId], references: [id])
   @@unique([tenantId, pluginId])
 }
 
@@ -845,6 +863,7 @@ enum AIModuleType {
   DROPOUT_PREDICTION
   CONTENT_MODERATION
   PLAGIARISM_DETECTION
+  AI_AGENTS
 }
 
 enum AuditAction {

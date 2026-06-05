@@ -11,8 +11,8 @@ export class AiService {
   private readonly openai: OpenAI;
 
   constructor(private readonly prisma: PrismaService) {
-    this.anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    this.anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? 'placeholder-key' });
+    this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? 'placeholder-key' });
   }
 
   private async trackUsage(tenantId: string, userId: string, module: AIModuleType, tokens: number) {
@@ -24,18 +24,18 @@ export class AiService {
     return this.prisma.aIMessage.create({ data: { conversationId, role, content, tokens } });
   }
 
-  async getOrCreateConversation(userId: string, module: AIModuleType, conversationId?: string) {
+  async getOrCreateConversation(userId: string, tenantId: string, module: AIModuleType, conversationId?: string) {
     if (conversationId) {
       return this.prisma.aIConversation.findUnique({ where: { id: conversationId }, include: { messages: { orderBy: { createdAt: 'asc' }, take: 20 } } });
     }
-    return this.prisma.aIConversation.create({ data: { userId, module, title: `${module} Session` }, include: { messages: true } });
+    return this.prisma.aIConversation.create({ data: { tenantId, userId, module, title: `${module} Session` }, include: { messages: true } });
   }
 
   async tutorChat(userId: string, tenantId: string, message: string, subject: string, conversationId?: string) {
-    const conversation = await this.getOrCreateConversation(userId, AIModuleType.TUTOR, conversationId);
+    const conversation = await this.getOrCreateConversation(userId, tenantId, AIModuleType.TUTOR, conversationId);
     await this.saveMessage(conversation!.id, 'user', message);
 
-    const history = (conversation!.messages ?? []).map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+    const history = (conversation!.messages as any[] ?? []).map((m: any) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
     const response = await this.anthropic.messages.create({
       model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',

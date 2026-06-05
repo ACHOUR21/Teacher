@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
-import { LiveSessionStatus } from '@prisma/client';
+import { LiveSessionStatus, Prisma } from '@prisma/client';
 
 @Injectable()
 export class LiveService {
@@ -20,7 +20,7 @@ export class LiveService {
         description: dto.description,
         scheduledAt: dto.scheduledAt,
         maxParticipants: dto.maxParticipants ?? 100,
-        settings: dto.settings ?? {},
+        settings: (dto.settings ?? {}) as Prisma.InputJsonValue,
       },
       include: { teacher: { include: { user: { select: { firstName: true, lastName: true, avatarUrl: true } } } } },
     });

@@ -1,7 +1,8 @@
 import { Controller, Get } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
-import { HealthCheckService, HealthCheck, PrismaHealthIndicator } from '@nestjs/terminus';
+import { HealthCheckService, HealthCheck } from '@nestjs/terminus';
 import { PrismaService } from '../database/prisma.service';
+import { Public } from '../core/decorators/public.decorator';
 
 @ApiTags('Health')
 @Controller('health')
@@ -12,6 +13,7 @@ export class HealthController {
   ) {}
 
   @Get()
+  @Public()
   @HealthCheck()
   @ApiOperation({ summary: 'Check system health' })
   check() {
@@ -26,6 +28,7 @@ export class HealthController {
   }
 
   @Get('ping')
+  @Public()
   @ApiOperation({ summary: 'Simple ping check' })
   ping() {
     return { status: 'ok', timestamp: new Date().toISOString(), version: '1.0.0' };

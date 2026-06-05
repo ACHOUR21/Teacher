@@ -2,7 +2,7 @@ import { Resolver, Query, Args, Int } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
 import { AnalyticsService } from '../../analytics/analytics.service';
 import { GqlAuthGuard } from '../guards/gql-auth.guard';
-import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { CurrentUser } from '../../core/decorators/current-user.decorator';
 import {
   PlatformStats,
   DailyGrowth,

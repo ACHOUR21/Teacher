@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import * as PDFDocument from 'pdfkit';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const PDFDocument = require('pdfkit');
 import { PrismaService } from '../database/prisma.service';
 import { StorageService } from '../storage/storage.service';
 
@@ -53,7 +54,7 @@ export class CertificatesService {
       const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margins: { top: 50, bottom: 50, left: 50, right: 50 } });
       const chunks: Buffer[] = [];
 
-      doc.on('data', chunk => chunks.push(chunk));
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
 

@@ -1,8 +1,8 @@
 import { Controller, Get, Post, Body, Query, UseGuards, Req } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { AiAgentsService } from '../../ai-agents.service';
-import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
-import { TenantGuard } from '../../../tenants/guards/tenant.guard';
+import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+import { TenantGuard } from '../../../core/guards/tenant.guard';
 
 @ApiTags('ai-agents')
 @ApiBearerAuth()

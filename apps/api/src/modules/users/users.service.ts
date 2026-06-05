@@ -8,7 +8,7 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import { RedisService } from '../cache/redis.service';
 import { PaginationDto, paginate } from '../core/pagination/pagination.dto';
-import { UserRole } from '@prisma/client';
+import { UserRole, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 export class UpdateUserDto {
@@ -146,9 +146,9 @@ export class UsersService {
         ...(dto.language && { language: dto.language }),
         ...(dto.dateOfBirth && { dateOfBirth: dto.dateOfBirth }),
         ...(dto.gender !== undefined && { gender: dto.gender }),
-        ...(dto.address && { address: dto.address }),
-        ...(dto.socialLinks && { socialLinks: dto.socialLinks }),
-        ...(dto.preferences && { preferences: dto.preferences }),
+        ...(dto.address && { address: dto.address as Prisma.InputJsonValue }),
+        ...(dto.socialLinks && { socialLinks: dto.socialLinks as Prisma.InputJsonValue }),
+        ...(dto.preferences && { preferences: dto.preferences as Prisma.InputJsonValue }),
       },
       create: {
         userId,
@@ -157,9 +157,9 @@ export class UsersService {
         language: dto.language || 'en',
         dateOfBirth: dto.dateOfBirth,
         gender: dto.gender,
-        address: dto.address,
-        socialLinks: dto.socialLinks || {},
-        preferences: dto.preferences || {},
+        address: dto.address as Prisma.InputJsonValue | undefined,
+        socialLinks: (dto.socialLinks || {}) as Prisma.InputJsonValue,
+        preferences: (dto.preferences || {}) as Prisma.InputJsonValue,
       },
     });
 

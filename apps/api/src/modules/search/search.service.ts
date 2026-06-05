@@ -30,7 +30,7 @@ export class SearchService {
   async searchCourses(query: string, tenantId: string, filters?: { category?: string; level?: string }, page = 1, limit = 20) {
     try {
       const from = (page - 1) * limit;
-      const must: unknown[] = [
+      const must: any[] = [
         { multi_match: { query, fields: ['title^3', 'description', 'tags^2', 'teacherName'], type: 'best_fields', fuzziness: 'AUTO' } },
         { term: { tenantId } },
       ];
@@ -45,7 +45,7 @@ export class SearchService {
       });
 
       return {
-        hits: result.hits.hits.map(h => ({ id: h._id, score: h._score, ...h._source, highlights: h.highlight })),
+        hits: result.hits.hits.map(h => ({ id: h._id, score: h._score, ...(h._source as object), highlights: h.highlight })),
         total: typeof result.hits.total === 'number' ? result.hits.total : result.hits.total?.value ?? 0,
         page,
         limit,

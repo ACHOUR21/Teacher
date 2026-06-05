@@ -8,7 +8,7 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import { RedisService } from '../cache/redis.service';
 import { PaginationDto, paginate } from '../core/pagination/pagination.dto';
-import { UserRole, TenantType } from '@prisma/client';
+import { UserRole, TenantType, Prisma } from '@prisma/client';
 
 export class CreateTenantDto {
   name: string;
@@ -97,7 +97,7 @@ export class TenantsService {
         type: dto.type,
         domain: dto.domain,
         logoUrl: dto.logoUrl,
-        settings: dto.settings || {},
+        settings: (dto.settings || {}) as Prisma.InputJsonValue,
       },
     });
 
@@ -122,7 +122,7 @@ export class TenantsService {
         ...(dto.name && { name: dto.name }),
         ...(dto.domain !== undefined && { domain: dto.domain }),
         ...(dto.logoUrl !== undefined && { logoUrl: dto.logoUrl }),
-        ...(dto.settings && { settings: dto.settings }),
+        ...(dto.settings && { settings: dto.settings as Prisma.InputJsonValue }),
         ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
     });
@@ -187,7 +187,7 @@ export class TenantsService {
 
     const updated = await this.prisma.tenant.update({
       where: { id: tenantId },
-      data: { settings: merged },
+      data: { settings: merged as Prisma.InputJsonValue },
     });
 
     await this.redis.delPattern(`tenant:${tenantId}*`);
