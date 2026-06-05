@@ -31,7 +31,7 @@ export default function MarketplacePage() {
         search: search || undefined,
         category: category !== 'All' ? category : undefined,
         level: level !== 'All' ? level : undefined,
-        sort,
+        sortBy: sort,
         page,
         limit: 12,
       },
@@ -39,7 +39,7 @@ export default function MarketplacePage() {
   });
 
   const enrollMutation = useMutation({
-    mutationFn: (courseId: string) => api.post(`/marketplace/enroll/${courseId}`),
+    mutationFn: (courseId: string) => api.post(`/marketplace/courses/${courseId}/purchase`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['marketplace'] }),
   });
 

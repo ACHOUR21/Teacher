@@ -16,6 +16,7 @@ export class UpdateUserDto {
   lastName?: string;
   phone?: string;
   avatarUrl?: string;
+  isActive?: boolean;
 }
 
 export class UpdateUserProfileDto {
@@ -127,6 +128,7 @@ export class UsersService {
         ...(dto.lastName && { lastName: dto.lastName }),
         ...(dto.phone !== undefined && { phone: dto.phone }),
         ...(dto.avatarUrl !== undefined && { avatarUrl: dto.avatarUrl }),
+        ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       },
     });
 

@@ -27,7 +27,7 @@ export default function AiAgentsPage() {
 
   const { data: agents = [], isLoading } = useQuery({
     queryKey: ['ai-agents'],
-    queryFn: () => api.get('/ai/agents').then(r => r.data as Agent[]),
+    queryFn: () => api.get('/ai/agents').then(r => r.data.data as Agent[]),
   });
 
   const chatMutation = useMutation({
@@ -36,7 +36,7 @@ export default function AiAgentsPage() {
         agentType: selectedAgent?.type,
         message,
         sessionId,
-      }).then(r => r.data),
+      }).then(r => r.data.data),
     onSuccess: (data) => {
       setSessionId(data.sessionId);
       setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);

@@ -106,6 +106,16 @@ export class UsersController {
     return this.usersService.update(id, tenantId, dto);
   }
 
+  @Patch(':id')
+  @ApiOperation({ summary: 'Partial update user details' })
+  partialUpdate(
+    @Param('id') id: string,
+    @TenantId() tenantId: string,
+    @Body() dto: UpdateUserDto,
+  ) {
+    return this.usersService.update(id, tenantId, dto);
+  }
+
   @Put(':id/profile')
   @ApiOperation({ summary: 'Update user extended profile' })
   updateProfile(

@@ -40,7 +40,7 @@ export default function UsersPage() {
 
   const changeRoleMutation = useMutation({
     mutationFn: ({ id, newRole }: { id: string; newRole: string }) =>
-      api.patch(`/users/${id}`, { role: newRole }),
+      api.post(`/users/${id}/roles`, { role: newRole }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); setOpenMenu(null); },
   });
 
