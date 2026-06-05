@@ -5,16 +5,15 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Mail, ArrowLeft, CheckCircle, ArrowRight } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle, ArrowRight, School, ChevronDown } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { apiGet } from '@/lib/api';
 import { toast } from '@/hooks/useToast';
-import { parseErrorMessage } from '@/lib/utils';
+import { parseErrorMessage, cn } from '@/lib/utils';
 
 const forgotSchema = z.object({
-  email: z
-    .string()
-    .min(1, 'Email is required')
-    .email('Please enter a valid email address'),
+  email: z.string().min(1, 'Email is required').email('Please enter a valid email address'),
+  schoolCode: z.string().optional(),
 });
 
 type ForgotFormData = z.infer<typeof forgotSchema>;
@@ -24,6 +23,7 @@ export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState('');
+  const [showSchoolCode, setShowSchoolCode] = useState(false);
 
   const {
     register,
@@ -36,18 +36,25 @@ export default function ForgotPasswordPage() {
   const onSubmit = async (data: ForgotFormData) => {
     setIsLoading(true);
     try {
-      await forgotPassword(data.email);
+      let tenantId: string | undefined;
+      if (data.schoolCode?.trim()) {
+        try {
+          const tenant = await apiGet<{ id: string }>(`/auth/tenant/lookup?slug=${encodeURIComponent(data.schoolCode.trim().toLowerCase())}`);
+          tenantId = tenant.id;
+        } catch {
+          toast.error('School not found', `No school with code "${data.schoolCode}" exists.`);
+          setIsLoading(false);
+          return;
+        }
+      }
+      await forgotPassword(data.email, tenantId);
       setSubmittedEmail(data.email);
       setSubmitted(true);
     } catch (error) {
       const message = parseErrorMessage(error);
-      // Don't reveal if email exists — show success anyway for security
-      if ((error as { statusCode?: number })?.statusCode === 404) {
-        setSubmittedEmail(data.email);
-        setSubmitted(true);
-      } else {
-        toast.error('Something went wrong', message);
-      }
+      setSubmittedEmail(data.email);
+      setSubmitted(true);
+      void message;
     } finally {
       setIsLoading(false);
     }
@@ -114,10 +121,7 @@ export default function ForgotPasswordPage() {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
         <div>
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium text-foreground mb-1.5"
-          >
+          <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1.5">
             Email address
           </label>
           <div className="relative">
@@ -128,15 +132,34 @@ export default function ForgotPasswordPage() {
               type="email"
               autoComplete="email"
               placeholder="you@school.edu"
-              className={`flex h-10 w-full rounded-md border bg-background px-3 py-2 pl-10 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors ${
+              className={cn(
+                'flex h-10 w-full rounded-md border bg-background px-3 py-2 pl-10 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors',
                 errors.email ? 'border-destructive' : 'border-input'
-              }`}
+              )}
             />
           </div>
-          {errors.email && (
-            <p className="mt-1.5 text-xs text-destructive">
-              {errors.email.message}
-            </p>
+          {errors.email && <p className="mt-1.5 text-xs text-destructive">{errors.email.message}</p>}
+        </div>
+
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowSchoolCode(!showSchoolCode)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', showSchoolCode && 'rotate-180')} />
+            {showSchoolCode ? 'Hide school code' : 'Enter school code (optional)'}
+          </button>
+          {showSchoolCode && (
+            <div className="mt-2 relative">
+              <School className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                {...register('schoolCode')}
+                type="text"
+                placeholder="e.g. demo-school"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 pl-10 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
+              />
+            </div>
           )}
         </div>
 

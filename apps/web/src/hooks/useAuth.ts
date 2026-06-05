@@ -96,8 +96,9 @@ export function useAuth() {
     }
   }, [logout, router]);
 
-  const forgotPassword = useCallback(async (email: string) => {
-    return apiPost('/auth/forgot-password', { email });
+  const forgotPassword = useCallback(async (email: string, tenantId?: string) => {
+    const headers = tenantId ? { 'x-tenant-id': tenantId } : undefined;
+    return apiPost('/auth/forgot-password', { email }, { headers });
   }, []);
 
   const verifyMfa = useCallback(
