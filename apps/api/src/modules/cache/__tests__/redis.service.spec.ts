@@ -15,7 +15,7 @@ jest.mock('ioredis', () => {
     quit: jest.fn(),
     on: jest.fn(),
   };
-  return { default: jest.fn(() => mockClient) };
+  return { __esModule: true, default: jest.fn(() => mockClient) };
 });
 
 describe('RedisService', () => {

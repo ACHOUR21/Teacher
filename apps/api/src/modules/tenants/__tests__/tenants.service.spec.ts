@@ -57,7 +57,7 @@ describe('TenantsService', () => {
 
       const result = await service.findAll({ page: 1, limit: 10, skip: 0 });
 
-      expect(result.data).toHaveLength(1);
+      expect(result.items).toHaveLength(1);
       expect(result.total).toBe(1);
     });
   });

@@ -77,7 +77,7 @@ describe('AuditService', () => {
 
       const result = await service.query('tenant-1', { page: 1, limit: 50 });
 
-      expect(result.data).toHaveLength(1);
+      expect(result.items).toHaveLength(1);
       expect(result.total).toBe(1);
       expect(result.totalPages).toBe(1);
     });

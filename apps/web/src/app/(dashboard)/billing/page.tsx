@@ -31,7 +31,7 @@ export default function BillingPage() {
   });
 
   const portalMutation = useMutation({
-    mutationFn: () => api.post('/billing/portal').then(r => r.data.data),
+    mutationFn: () => api.post('/billing/portal', { returnUrl: window.location.href }).then(r => r.data.data),
     onSuccess: (data) => {
       if (data.url) window.location.href = data.url;
     },

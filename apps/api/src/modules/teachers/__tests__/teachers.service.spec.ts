@@ -14,6 +14,11 @@ const mockPrisma = {
   course: {
     findMany: jest.fn(),
     count: jest.fn(),
+    aggregate: jest.fn(),
+  },
+  courseProgress: {
+    count: jest.fn(),
+    findMany: jest.fn(),
   },
   liveSession: {
     findMany: jest.fn(),
@@ -88,11 +93,11 @@ describe('TeachersService', () => {
         userId: 'u-1',
         subjects: ['Mathematics'],
         user: { firstName: 'Jane', lastName: 'Smith' },
-        courses: [{ id: 'c-1', title: 'Algebra I', _count: { enrollments: 25 } }],
+        courses: [{ id: 'c-1', title: 'Algebra I' }],
       };
       mockPrisma.teacher.findUnique.mockResolvedValueOnce(mockTeacher);
 
-      const result = await service.findOne('tenant-1', 't-1');
+      const result = await service.findOne('t-1');
 
       expect(result.id).toBe('t-1');
       expect(result.courses).toHaveLength(1);
@@ -102,29 +107,23 @@ describe('TeachersService', () => {
       mockPrisma.teacher.findUnique.mockResolvedValueOnce(null);
 
       await expect(
-        service.findOne('tenant-1', 'unknown-id'),
+        service.findOne('unknown-id'),
       ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('getPerformanceStats', () => {
     it('should return aggregated performance statistics', async () => {
-      mockPrisma.teacher.findUnique.mockResolvedValueOnce({ id: 't-1', userId: 'u-1' });
       mockPrisma.course.count.mockResolvedValueOnce(5);
-      mockPrisma.course.findMany.mockResolvedValueOnce([
-        { id: 'c-1', _count: { enrollments: 50 } },
-        { id: 'c-2', _count: { enrollments: 30 } },
-      ]);
-      mockPrisma.review.aggregate.mockResolvedValueOnce({ _avg: { rating: 4.7 } });
-      mockPrisma.liveSession.findMany.mockResolvedValueOnce([
-        { id: 's-1', _count: { participants: 20 } },
-      ]);
+      mockPrisma.courseProgress.count.mockResolvedValueOnce(80);
+      mockPrisma.course.aggregate.mockResolvedValueOnce({ _avg: { rating: 4.7 } });
+      mockPrisma.courseProgress.count.mockResolvedValueOnce(60);
 
-      const result = await service.getPerformanceStats('tenant-1', 't-1');
+      const result = await service.getPerformanceStats('t-1');
 
-      expect(result).toHaveProperty('courseCount');
-      expect(result).toHaveProperty('totalEnrollments');
-      expect(result).toHaveProperty('averageRating');
+      expect(result).toHaveProperty('coursesCount');
+      expect(result).toHaveProperty('studentsCount');
+      expect(result).toHaveProperty('avgRating');
     });
   });
 });

@@ -83,7 +83,7 @@ describe('NotificationsService', () => {
 
       const result = await service.getUserNotifications('user-1', { page: 1, limit: 10 });
 
-      expect(result.data).toHaveLength(2);
+      expect(result.items).toHaveLength(2);
       expect(result.total).toBe(2);
     });
   });

@@ -72,7 +72,7 @@ describe('PluginsService', () => {
 
       const result = await service.installPlugin('tenant-1', 'p-1');
 
-      expect(result.pluginId).toBe('p-1');
+      expect(result.id).toBe('ip-1');
     });
 
     it('should throw NotFoundException for unknown plugin', async () => {

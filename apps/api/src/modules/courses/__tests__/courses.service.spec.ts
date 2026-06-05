@@ -2,6 +2,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { CoursesService } from '../courses.service';
 import { PrismaService } from '../../database/prisma.service';
+import { RedisService } from '../../cache/redis.service';
+import { SearchService } from '../../search/search.service';
+
+const mockRedis = { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn(), delPattern: jest.fn() };
+const mockSearch = { indexCourse: jest.fn(), deleteDocument: jest.fn() };
 
 const mockPrisma = {
   course: {
@@ -41,6 +46,8 @@ describe('CoursesService', () => {
       providers: [
         CoursesService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: RedisService, useValue: mockRedis },
+        { provide: SearchService, useValue: mockSearch },
       ],
     }).compile();
 
@@ -59,7 +66,7 @@ describe('CoursesService', () => {
 
       const result = await service.findAll('tenant-1', { page: 1, limit: 10 });
 
-      expect(result.data).toHaveLength(2);
+      expect(result.items).toHaveLength(2);
       expect(result.total).toBe(2);
       expect(mockPrisma.course.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ where: expect.objectContaining({ tenantId: 'tenant-1' }) }),

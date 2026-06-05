@@ -71,8 +71,8 @@ describe('GamificationService', () => {
 
       const result = await service.getLeaderboard('tenant-1', { page: 1, limit: 10 });
 
-      expect(result.data).toHaveLength(3);
-      expect(result.data[0].total).toBeGreaterThanOrEqual(result.data[1].total);
+      expect(result.items).toHaveLength(3);
+      expect(result.items[0].total).toBeGreaterThanOrEqual(result.items[1].total);
     });
   });
 

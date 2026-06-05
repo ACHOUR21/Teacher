@@ -33,6 +33,7 @@ const mockConfig = {
 };
 
 jest.mock('@anthropic-ai/sdk', () => ({
+  __esModule: true,
   default: jest.fn().mockImplementation(() => ({
     messages: {
       create: jest.fn().mockResolvedValue({
@@ -44,6 +45,7 @@ jest.mock('@anthropic-ai/sdk', () => ({
 }));
 
 jest.mock('openai', () => ({
+  __esModule: true,
   default: jest.fn().mockImplementation(() => ({
     embeddings: {
       create: jest.fn().mockResolvedValue({

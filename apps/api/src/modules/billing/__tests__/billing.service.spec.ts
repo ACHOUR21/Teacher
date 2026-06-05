@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
 import { BillingService } from '../billing.service';
 import { PrismaService } from '../../database/prisma.service';
+import { RedisService } from '../../cache/redis.service';
 
 const mockPrisma = {
   subscription: {
@@ -60,7 +61,9 @@ const mockStripe = {
   },
 };
 
-jest.mock('stripe', () => jest.fn().mockImplementation(() => mockStripe));
+jest.mock('stripe', () => ({ __esModule: true, default: jest.fn().mockImplementation(() => mockStripe) }));
+
+const mockRedis = { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn() };
 
 describe('BillingService', () => {
   let service: BillingService;
@@ -71,6 +74,7 @@ describe('BillingService', () => {
         BillingService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: ConfigService, useValue: mockConfig },
+        { provide: RedisService, useValue: mockRedis },
       ],
     }).compile();
 

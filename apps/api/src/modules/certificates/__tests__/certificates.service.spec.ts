@@ -30,7 +30,7 @@ const mockStorage = {
 };
 
 jest.mock('pdfkit', () => {
-  const mockDoc = {
+  const mockDoc: any = {
     pipe: jest.fn().mockReturnThis(),
     end: jest.fn(),
     on: jest.fn((event: string, cb: Function) => { if (event === 'end') cb(); return mockDoc; }),
@@ -44,7 +44,8 @@ jest.mock('pdfkit', () => {
     linearGradient: jest.fn().mockReturnValue({ stop: jest.fn().mockReturnThis() }),
     page: { width: 841.89, height: 595.28 },
   };
-  return jest.fn().mockImplementation(() => mockDoc);
+  const PDFDocumentMock = jest.fn().mockImplementation(() => mockDoc);
+  return { __esModule: true, default: PDFDocumentMock };
 });
 
 describe('CertificatesService', () => {
@@ -129,7 +130,7 @@ describe('CertificatesService', () => {
 
       const result = await service.getUserCertificates('user-1', { page: 1, limit: 10 });
 
-      expect(result.data).toHaveLength(2);
+      expect(result.items).toHaveLength(2);
       expect(result.total).toBe(2);
     });
   });
