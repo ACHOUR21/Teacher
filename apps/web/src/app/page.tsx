@@ -30,7 +30,7 @@ export default function LandingPage() {
           <a href="#pricing" className="hover:text-gray-900">Pricing</a>
           <Link href="/login" className="hover:text-gray-900">Sign In</Link>
         </div>
-        <Link href="/register" className="bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+        <Link href="/start" className="bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
           Get Started Free
         </Link>
       </nav>
@@ -48,7 +48,7 @@ export default function LandingPage() {
           LMS + School ERP + University ERP + AI Tutors + Live Classroom + Marketplace — all in one enterprise-grade SaaS.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link href="/register" className="bg-blue-600 text-white font-semibold px-8 py-3.5 rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+          <Link href="/start" className="bg-blue-600 text-white font-semibold px-8 py-3.5 rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
             Start Free Trial <ArrowRight className="h-4 w-4" />
           </Link>
           <Link href="/login" className="bg-gray-100 text-gray-700 font-semibold px-8 py-3.5 rounded-xl hover:bg-gray-200 transition-colors">
@@ -114,7 +114,7 @@ export default function LandingPage() {
                     </li>
                   ))}
                 </ul>
-                <Link href="/register" className={`block w-full text-center py-3 rounded-xl font-semibold text-sm transition-colors ${plan.featured ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                <Link href="/start" className={`block w-full text-center py-3 rounded-xl font-semibold text-sm transition-colors ${plan.featured ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
                   {plan.price === 'Custom' ? 'Contact Sales' : 'Get Started'}
                 </Link>
               </div>

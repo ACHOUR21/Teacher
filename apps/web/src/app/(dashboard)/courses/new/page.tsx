@@ -2,19 +2,21 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation } from '@tanstack/react-query';
 import { Plus, Trash2, ArrowLeft, GripVertical, ChevronDown, ChevronUp } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
+import { VideoUpload } from '@/components/ui/VideoUpload';
 import { cn } from '@/lib/utils';
 
 const lessonSchema = z.object({
   title: z.string().min(1),
   type: z.enum(['VIDEO', 'ARTICLE', 'QUIZ']),
   duration: z.number().optional(),
+  contentUrl: z.string().optional(),
 });
 
 const sectionSchema = z.object({
@@ -228,38 +230,58 @@ function SectionEditor({ sectionIndex, control, register, isExpanded, onToggle, 
       </div>
 
       {isExpanded && (
-        <div className="px-4 py-3 space-y-2">
-          {lessons.map((lesson, li) => (
-            <div key={lesson.id} className="flex items-center gap-2 group">
-              <GripVertical className="h-4 w-4 text-gray-200 group-hover:text-gray-400 cursor-grab flex-shrink-0" />
-              <input
-                {...register(`sections.${sectionIndex}.lessons.${li}.title`)}
-                placeholder="Lesson title"
-                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <select
-                {...register(`sections.${sectionIndex}.lessons.${li}.type`)}
-                className="px-2 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-              >
-                <option value="VIDEO">Video</option>
-                <option value="ARTICLE">Article</option>
-                <option value="QUIZ">Quiz</option>
-              </select>
-              <input
-                {...register(`sections.${sectionIndex}.lessons.${li}.duration`, { valueAsNumber: true })}
-                type="number"
-                min="1"
-                placeholder="min"
-                className="w-16 px-2 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
-              />
-              <button type="button" onClick={() => remove(li)} className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-100 text-red-400 transition-all">
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          ))}
+        <div className="px-4 py-3 space-y-3">
+          {lessons.map((lesson, li) => {
+            const lessonType = (lesson as any).type;
+            return (
+              <div key={lesson.id} className="space-y-1.5 group">
+                <div className="flex items-center gap-2">
+                  <GripVertical className="h-4 w-4 text-gray-200 group-hover:text-gray-400 cursor-grab flex-shrink-0" />
+                  <input
+                    {...register(`sections.${sectionIndex}.lessons.${li}.title`)}
+                    placeholder="Lesson title"
+                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <select
+                    {...register(`sections.${sectionIndex}.lessons.${li}.type`)}
+                    className="px-2 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  >
+                    <option value="VIDEO">Video</option>
+                    <option value="ARTICLE">Article</option>
+                    <option value="QUIZ">Quiz</option>
+                  </select>
+                  <input
+                    {...register(`sections.${sectionIndex}.lessons.${li}.duration`, { valueAsNumber: true })}
+                    type="number"
+                    min="1"
+                    placeholder="min"
+                    className="w-16 px-2 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                  />
+                  <button type="button" onClick={() => remove(li)} className="p-1 rounded opacity-0 group-hover:opacity-100 hover:bg-red-100 text-red-400 transition-all">
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+                {lessonType === 'VIDEO' && (
+                  <div className="ml-6">
+                    <Controller
+                      name={`sections.${sectionIndex}.lessons.${li}.contentUrl`}
+                      control={control}
+                      render={({ field }) => (
+                        <VideoUpload
+                          value={field.value}
+                          onChange={field.onChange}
+                          folder="lessons"
+                        />
+                      )}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })}
           <button
             type="button"
-            onClick={() => append({ title: '', type: 'VIDEO' })}
+            onClick={() => append({ title: '', type: 'VIDEO', contentUrl: '' })}
             className="w-full py-2 border-2 border-dashed border-gray-200 rounded-lg text-xs text-gray-400 hover:border-blue-300 hover:text-blue-500 transition-colors flex items-center justify-center gap-1"
           >
             <Plus className="h-3.5 w-3.5" /> Add Lesson

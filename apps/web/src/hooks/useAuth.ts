@@ -52,7 +52,7 @@ export function useAuth() {
           return { requiresMfa: true };
         }
         login(data.user, data.accessToken);
-        router.push('/dashboard');
+        router.push('/');
         return { success: true };
       } finally {
         setLoading(false);
@@ -96,7 +96,7 @@ export function useAuth() {
       try {
         const data = await apiPost<AuthResponse>('/auth/mfa/verify', { code });
         login(data.user, data.accessToken);
-        router.push('/dashboard');
+        router.push('/');
         return { success: true };
       } finally {
         setLoading(false);
