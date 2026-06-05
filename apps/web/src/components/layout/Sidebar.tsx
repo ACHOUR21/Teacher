@@ -76,26 +76,26 @@ const navSections: NavSection[] = [
   {
     title: 'People',
     items: [
-      { label: 'Students', href: '/students', icon: GraduationCap, roles: ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] },
-      { label: 'Teachers', href: '/teachers', icon: UserCircle, roles: ['SUPER_ADMIN', 'SCHOOL_ADMIN'] },
-      { label: 'Parents', href: '/parents', icon: Users, roles: ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] },
+      { label: 'Students', href: '/students', icon: GraduationCap, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] },
+      { label: 'Teachers', href: '/teachers', icon: UserCircle, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN'] },
+      { label: 'Parents', href: '/parents', icon: Users, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] },
     ],
   },
   {
     title: 'Institution',
     items: [
-      { label: 'School ERP', href: '/school-erp', icon: Building2, roles: ['SUPER_ADMIN', 'SCHOOL_ADMIN'] },
+      { label: 'School ERP', href: '/school-erp', icon: Building2, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN'] },
       { label: 'University ERP', href: '/university-erp', icon: University, roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN'] },
-      { label: 'Plugins', href: '/plugins', icon: Puzzle, roles: ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
+      { label: 'Plugins', href: '/plugins', icon: Puzzle, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
     ],
   },
   {
     title: 'Administration',
     items: [
-      { label: 'Analytics', href: '/analytics', icon: BarChart3, roles: ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] },
-      { label: 'Billing', href: '/billing', icon: CreditCard, roles: ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
-      { label: 'Settings', href: '/settings', icon: Settings, roles: ['SUPER_ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
-      { label: 'Users', href: '/users', icon: Shield, roles: ['SUPER_ADMIN', 'SCHOOL_ADMIN'] },
+      { label: 'Analytics', href: '/analytics', icon: BarChart3, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] },
+      { label: 'Billing', href: '/billing', icon: CreditCard, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
+      { label: 'Settings', href: '/settings', icon: Settings, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
+      { label: 'Users', href: '/users', icon: Shield, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN'] },
     ],
   },
 ];
