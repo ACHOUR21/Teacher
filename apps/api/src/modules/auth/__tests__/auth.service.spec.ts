@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthService } from '../auth.service';
 import { PrismaService } from '../../database/prisma.service';
 import { RedisService } from '../../cache/redis.service';
+import { NotificationsService } from '../../notifications/notifications.service';
 import * as bcrypt from 'bcrypt';
 
 const mockPrisma = {
@@ -44,6 +45,12 @@ const mockRedis = {
   del: jest.fn(),
 };
 
+const mockNotifications = {
+  sendWelcomeEmail: jest.fn().mockResolvedValue(undefined),
+  sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+  sendCourseEnrollmentEmail: jest.fn().mockResolvedValue(undefined),
+};
+
 describe('AuthService', () => {
   let service: AuthService;
 
@@ -55,6 +62,7 @@ describe('AuthService', () => {
         { provide: JwtService, useValue: mockJwt },
         { provide: ConfigService, useValue: mockConfig },
         { provide: RedisService, useValue: mockRedis },
+        { provide: NotificationsService, useValue: mockNotifications },
       ],
     }).compile();
 

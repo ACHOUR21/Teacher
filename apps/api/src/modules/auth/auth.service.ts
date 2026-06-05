@@ -24,6 +24,7 @@ import {
 } from './domain/entities/auth.entity';
 import { RegisterCommand, CreateTenantAndAdminCommand } from './application/commands/register.command';
 import { LoginCommand } from './application/commands/login.command';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AuthService {
@@ -36,6 +37,7 @@ export class AuthService {
     private jwtService: JwtService,
     private configService: ConfigService,
     private redis: RedisService,
+    private notifications: NotificationsService,
   ) {}
 
   async createTenantAndAdmin(cmd: CreateTenantAndAdminCommand): Promise<{ user: AuthUser; tokens: AuthTokens }> {
@@ -104,6 +106,7 @@ export class AuthService {
     });
 
     this.logger.log(`New tenant created: ${cmd.tenantSlug} by ${cmd.adminEmail}`);
+    this.notifications.sendWelcomeEmail(cmd.adminEmail, cmd.adminFirstName, result.tenant.name).catch(() => {});
     return { user: authUser, tokens };
   }
 
@@ -134,6 +137,9 @@ export class AuthService {
     });
 
     const tokens = await this.generateTokens(user);
+
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: cmd.tenantId }, select: { name: true } });
+    this.notifications.sendWelcomeEmail(user.email, user.firstName, tenant?.name ?? 'EduAI').catch(() => {});
 
     return {
       user: new AuthUser({
@@ -362,8 +368,8 @@ export class AuthService {
     const resetToken = uuidv4();
     await this.redis.set(`pwd:reset:${resetToken}`, user.id, 3600);
 
-    // In production, send email via notification service
-    this.logger.log(`Password reset token generated for ${email}: ${resetToken}`);
+    this.logger.log(`Password reset token generated for ${email}`);
+    this.notifications.sendPasswordResetEmail(user.email, user.firstName, resetToken).catch(() => {});
   }
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
