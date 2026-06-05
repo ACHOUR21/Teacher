@@ -24,6 +24,12 @@ export class UniversityErpController {
     return this.universityErpService.getUniversities(req.tenant?.id);
   }
 
+  @Get('universities/:id/faculties')
+  @ApiOperation({ summary: 'List faculties in university' })
+  faculties(@Param('id') id: string) {
+    return this.universityErpService.getFaculties(id);
+  }
+
   @Post('universities/:id/faculties')
   @Roles('ADMIN', 'UNIVERSITY_ADMIN')
   @ApiOperation({ summary: 'Create a faculty' })

@@ -133,7 +133,7 @@ export default function BillingPage() {
                 </tr>
               </thead>
               <tbody>
-                {(invoices ?? []).map((inv: any) => (
+                {(invoices?.invoices ?? []).map((inv: any) => (
                   <tr key={inv.id} className="border-b border-gray-50 hover:bg-gray-50">
                     <td className="py-3 px-4 font-mono text-xs">{inv.id.slice(0, 8).toUpperCase()}</td>
                     <td className="py-3 px-4 text-gray-600">{new Date(inv.issuedAt).toLocaleDateString()}</td>
@@ -151,7 +151,7 @@ export default function BillingPage() {
                     </td>
                   </tr>
                 ))}
-                {!invoices?.length && (
+                {!invoices?.invoices?.length && (
                   <tr><td colSpan={5} className="py-8 text-center text-gray-400">No invoices yet</td></tr>
                 )}
               </tbody>

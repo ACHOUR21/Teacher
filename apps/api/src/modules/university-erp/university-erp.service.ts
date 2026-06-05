@@ -17,6 +17,13 @@ export class UniversityErpService {
     });
   }
 
+  async getFaculties(universityId: string) {
+    return this.prisma.faculty.findMany({
+      where: { universityId },
+      include: { _count: { select: { departments: true } } },
+    });
+  }
+
   async createFaculty(universityId: string, dto: { name: string; code?: string }) {
     return this.prisma.faculty.create({ data: { universityId, ...dto } });
   }

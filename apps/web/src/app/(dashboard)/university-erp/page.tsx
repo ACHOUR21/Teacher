@@ -2,41 +2,41 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { GraduationCap, BookOpen, Users, Building2, Award, CalendarCheck, ChevronRight } from 'lucide-react';
+import { GraduationCap, BookOpen, Users, Building2, Award, ChevronRight } from 'lucide-react';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 export default function UniversityErpPage() {
   const [activeSection, setActiveSection] = useState('overview');
+  const [selectedUniversityId, setSelectedUniversityId] = useState<string | null>(null);
 
-  const { data: overview } = useQuery({
-    queryKey: ['university-erp-overview'],
-    queryFn: () => api.get('/university-erp/overview').then(r => r.data.data),
+  const { data: universities } = useQuery({
+    queryKey: ['university-erp-universities'],
+    queryFn: () => api.get('/university-erp/universities').then(r => {
+      const data = r.data.data as any[];
+      if (data?.length && !selectedUniversityId) setSelectedUniversityId(data[0].id);
+      return data;
+    }),
   });
 
+  const universityId = selectedUniversityId ?? (universities?.[0]?.id ?? null);
+
   const { data: faculties } = useQuery({
-    queryKey: ['faculties'],
-    queryFn: () => api.get('/university-erp/faculties').then(r => r.data.data?.data ?? []),
-    enabled: activeSection === 'faculties',
+    queryKey: ['university-faculties', universityId],
+    queryFn: () => api.get(`/university-erp/universities/${universityId}/faculties`).then(r => r.data.data ?? []),
+    enabled: !!universityId && activeSection === 'faculties',
   });
 
   const { data: programs } = useQuery({
-    queryKey: ['academic-programs'],
-    queryFn: () => api.get('/university-erp/programs').then(r => r.data.data?.data ?? []),
-    enabled: activeSection === 'programs',
-  });
-
-  const { data: enrollments } = useQuery({
-    queryKey: ['university-enrollments'],
-    queryFn: () => api.get('/university-erp/enrollments').then(r => r.data.data?.data ?? []),
-    enabled: activeSection === 'enrollments',
+    queryKey: ['university-programs', universityId],
+    queryFn: () => api.get(`/university-erp/universities/${universityId}/programs`).then(r => r.data.data ?? []),
+    enabled: !!universityId && activeSection === 'programs',
   });
 
   const SECTIONS = [
     { id: 'overview', label: 'Overview', icon: Building2 },
     { id: 'faculties', label: 'Faculties', icon: GraduationCap },
     { id: 'programs', label: 'Programs', icon: BookOpen },
-    { id: 'enrollments', label: 'Enrollments', icon: CalendarCheck },
   ];
 
   const DEGREE_COLORS: Record<string, string> = {
@@ -46,6 +46,9 @@ export default function UniversityErpPage() {
     DIPLOMA: 'bg-green-100 text-green-700',
     CERTIFICATE: 'bg-amber-100 text-amber-700',
   };
+
+  const totalFaculties = (universities as any[])?.reduce((sum: number, u: any) => sum + (u._count?.faculties ?? 0), 0) ?? 0;
+  const totalPrograms = (universities as any[])?.reduce((sum: number, u: any) => sum + (u._count?.programs ?? 0), 0) ?? 0;
 
   return (
     <div className="space-y-6">
@@ -77,10 +80,10 @@ export default function UniversityErpPage() {
         <div className="space-y-5">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
-              { label: 'Students', value: overview?.studentCount ?? '—', icon: Users, color: 'text-blue-500 bg-blue-50' },
-              { label: 'Faculty Members', value: overview?.facultyCount ?? '—', icon: GraduationCap, color: 'text-purple-500 bg-purple-50' },
-              { label: 'Programs', value: overview?.programCount ?? '—', icon: BookOpen, color: 'text-green-500 bg-green-50' },
-              { label: 'Degrees Awarded', value: overview?.degreesAwarded ?? '—', icon: Award, color: 'text-amber-500 bg-amber-50' },
+              { label: 'Universities', value: (universities as any[])?.length ?? '—', icon: Building2, color: 'text-blue-500 bg-blue-50' },
+              { label: 'Faculties', value: totalFaculties || '—', icon: GraduationCap, color: 'text-purple-500 bg-purple-50' },
+              { label: 'Programs', value: totalPrograms || '—', icon: BookOpen, color: 'text-green-500 bg-green-50' },
+              { label: 'Degrees Awarded', value: '—', icon: Award, color: 'text-amber-500 bg-amber-50' },
             ].map(stat => (
               <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-5">
                 <div className={cn('h-9 w-9 rounded-xl flex items-center justify-center mb-3', stat.color.split(' ')[1])}>
@@ -94,11 +97,10 @@ export default function UniversityErpPage() {
 
           <div className="bg-white rounded-xl border border-gray-200 p-5">
             <h3 className="font-semibold text-gray-900 mb-4">Quick Navigation</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
                 { label: 'View Faculties', icon: GraduationCap, section: 'faculties' },
                 { label: 'Manage Programs', icon: BookOpen, section: 'programs' },
-                { label: 'Student Enrollments', icon: CalendarCheck, section: 'enrollments' },
               ].map(action => (
                 <button
                   key={action.label}
@@ -114,6 +116,37 @@ export default function UniversityErpPage() {
               ))}
             </div>
           </div>
+
+          {/* Universities list */}
+          {(universities as any[])?.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <h3 className="font-semibold text-gray-900 mb-4">Universities</h3>
+              <div className="space-y-3">
+                {(universities as any[]).map((uni: any) => (
+                  <button
+                    key={uni.id}
+                    onClick={() => setSelectedUniversityId(uni.id)}
+                    className={cn(
+                      'w-full flex items-center gap-4 p-3 rounded-xl border transition-all text-left',
+                      universityId === uni.id ? 'border-purple-300 bg-purple-50' : 'border-gray-100 hover:bg-gray-50',
+                    )}
+                  >
+                    <div className="h-10 w-10 rounded-xl bg-purple-100 flex items-center justify-center flex-shrink-0">
+                      <Building2 className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900 text-sm">{uni.name}</p>
+                      {uni.code && <p className="text-xs text-gray-500">{uni.code}</p>}
+                    </div>
+                    <div className="text-xs text-gray-500 flex gap-3">
+                      <span>{uni._count?.faculties ?? 0} faculties</span>
+                      <span>{uni._count?.programs ?? 0} programs</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -130,10 +163,8 @@ export default function UniversityErpPage() {
               </div>
               <h3 className="font-semibold text-gray-900">{faculty.name}</h3>
               {faculty.code && <p className="text-xs text-gray-500 mt-1">{faculty.code}</p>}
-              {faculty.description && <p className="text-sm text-gray-600 mt-2 line-clamp-2">{faculty.description}</p>}
               <div className="flex items-center gap-4 mt-4 text-xs text-gray-500">
                 <span>{faculty._count?.departments ?? 0} departments</span>
-                <span>{faculty._count?.students ?? 0} students</span>
               </div>
             </div>
           ))}
@@ -149,8 +180,8 @@ export default function UniversityErpPage() {
                 <th className="text-left py-3.5 px-4 font-medium text-gray-600">Program</th>
                 <th className="text-left py-3.5 px-4 font-medium text-gray-600">Degree</th>
                 <th className="text-left py-3.5 px-4 font-medium text-gray-600">Duration</th>
-                <th className="text-left py-3.5 px-4 font-medium text-gray-600">Credits</th>
-                <th className="text-left py-3.5 px-4 font-medium text-gray-600">Faculty</th>
+                <th className="text-left py-3.5 px-4 font-medium text-gray-600">Enrollments</th>
+                <th className="text-left py-3.5 px-4 font-medium text-gray-600">Department</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -160,56 +191,13 @@ export default function UniversityErpPage() {
                 <tr key={prog.id} className="hover:bg-gray-50">
                   <td className="py-3.5 px-4 font-medium text-gray-900">{prog.name}</td>
                   <td className="py-3.5 px-4">
-                    <span className={cn('px-2 py-1 rounded-full text-xs font-medium', DEGREE_COLORS[prog.degreeType] ?? 'bg-gray-100 text-gray-600')}>
-                      {prog.degreeType}
+                    <span className={cn('px-2 py-1 rounded-full text-xs font-medium', DEGREE_COLORS[prog.degree] ?? 'bg-gray-100 text-gray-600')}>
+                      {prog.degree}
                     </span>
                   </td>
                   <td className="py-3.5 px-4 text-gray-600">{prog.durationYears ? `${prog.durationYears}y` : '—'}</td>
-                  <td className="py-3.5 px-4 text-gray-600">{prog.totalCredits ?? '—'}</td>
-                  <td className="py-3.5 px-4 text-gray-600">{prog.faculty?.name ?? '—'}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Enrollments */}
-      {activeSection === 'enrollments' && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="text-left py-3.5 px-4 font-medium text-gray-600">Student</th>
-                <th className="text-left py-3.5 px-4 font-medium text-gray-600">Program</th>
-                <th className="text-left py-3.5 px-4 font-medium text-gray-600">Year</th>
-                <th className="text-left py-3.5 px-4 font-medium text-gray-600">Status</th>
-                <th className="text-left py-3.5 px-4 font-medium text-gray-600">GPA</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {(!enrollments || (enrollments as any[]).length === 0) ? (
-                <tr><td colSpan={5} className="py-12 text-center text-gray-400">No enrollments found</td></tr>
-              ) : (enrollments as any[]).map((enroll: any) => (
-                <tr key={enroll.id} className="hover:bg-gray-50">
-                  <td className="py-3.5 px-4">
-                    <div className="flex items-center gap-2">
-                      <div className="h-7 w-7 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs">
-                        {enroll.student?.user?.firstName?.[0]}{enroll.student?.user?.lastName?.[0]}
-                      </div>
-                      <span className="font-medium">{enroll.student?.user?.firstName} {enroll.student?.user?.lastName}</span>
-                    </div>
-                  </td>
-                  <td className="py-3.5 px-4 text-gray-600">{enroll.program?.name ?? '—'}</td>
-                  <td className="py-3.5 px-4 text-gray-600">{enroll.year ? `Year ${enroll.year}` : '—'}</td>
-                  <td className="py-3.5 px-4">
-                    <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium',
-                      enroll.status === 'ACTIVE' ? 'bg-green-100 text-green-700' :
-                      enroll.status === 'GRADUATED' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600')}>
-                      {enroll.status}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-gray-600">{enroll.gpa?.toFixed(2) ?? '—'}</td>
+                  <td className="py-3.5 px-4 text-gray-600">{prog._count?.enrollments ?? 0}</td>
+                  <td className="py-3.5 px-4 text-gray-600">{prog.department?.name ?? '—'}</td>
                 </tr>
               ))}
             </tbody>

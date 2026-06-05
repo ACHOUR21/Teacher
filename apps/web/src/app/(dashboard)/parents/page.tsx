@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Users, BookOpen, BarChart2, Search, ChevronRight, TrendingUp, AlertCircle } from 'lucide-react';
+import { Users, Search, ChevronRight } from 'lucide-react';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -13,16 +13,10 @@ export default function ParentsPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['parents', search, page],
-    queryFn: () => api.get('/parents', { params: { search: search || undefined, page, limit: 20 } }).then(r => r.data.data),
+    queryFn: () => api.get('/users', { params: { search: search || undefined, page, limit: 20, role: 'PARENT' } }).then(r => r.data.data),
   });
 
-  const { data: childProgress } = useQuery({
-    queryKey: ['parent-children', selected?.id],
-    queryFn: () => api.get(`/parents/${selected?.id}/children`).then(r => r.data.data),
-    enabled: !!selected,
-  });
-
-  const parents: any[] = data?.data ?? [];
+  const parents: any[] = data?.items ?? [];
 
   return (
     <div className="space-y-6">
@@ -70,16 +64,16 @@ export default function ParentsPage() {
                 )}
               >
                 <div className="h-9 w-9 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
-                  {parent.user?.firstName?.[0]}{parent.user?.lastName?.[0]}
+                  {parent.firstName?.[0]}{parent.lastName?.[0]}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-gray-900 truncate">
-                    {parent.user?.firstName} {parent.user?.lastName}
+                    {parent.firstName} {parent.lastName}
                   </p>
-                  <p className="text-xs text-gray-500 truncate">{parent.user?.email}</p>
+                  <p className="text-xs text-gray-500 truncate">{parent.email}</p>
                 </div>
-                <div className="text-xs text-gray-400">
-                  {parent._count?.children ?? 0} child{parent._count?.children !== 1 ? 'ren' : ''}
+                <div className={cn('text-xs px-1.5 py-0.5 rounded-full', parent.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500')}>
+                  {parent.isActive ? 'Active' : 'Inactive'}
                 </div>
                 <ChevronRight className="h-4 w-4 text-gray-300" />
               </button>
@@ -118,13 +112,13 @@ export default function ParentsPage() {
               <div className="bg-white rounded-xl border border-gray-200 p-5">
                 <div className="flex items-center gap-4">
                   <div className="h-14 w-14 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white text-xl font-bold">
-                    {selected.user?.firstName?.[0]}{selected.user?.lastName?.[0]}
+                    {selected.firstName?.[0]}{selected.lastName?.[0]}
                   </div>
                   <div>
                     <p className="text-lg font-semibold text-gray-900">
-                      {selected.user?.firstName} {selected.user?.lastName}
+                      {selected.firstName} {selected.lastName}
                     </p>
-                    <p className="text-sm text-gray-500">{selected.user?.email}</p>
+                    <p className="text-sm text-gray-500">{selected.email}</p>
                     <p className="text-xs text-gray-400 mt-1">
                       Member since {new Date(selected.createdAt).toLocaleDateString()}
                     </p>
@@ -132,26 +126,27 @@ export default function ParentsPage() {
                 </div>
               </div>
 
-              {/* Children Progress */}
+              {/* Account Info */}
               <div className="bg-white rounded-xl border border-gray-200 p-5">
                 <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <BookOpen className="h-4 w-4 text-blue-500" /> Children's Progress
+                  <Users className="h-4 w-4 text-purple-500" /> Account Details
                 </h3>
-                {!childProgress ? (
-                  <div className="space-y-3">
-                    {[1, 2].map(i => (
-                      <div key={i} className="h-16 bg-gray-100 rounded-xl animate-pulse" />
-                    ))}
+                <div className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Status</span>
+                    <span className={cn('font-medium', selected.isActive ? 'text-green-600' : 'text-gray-400')}>
+                      {selected.isActive ? 'Active' : 'Inactive'}
+                    </span>
                   </div>
-                ) : childProgress.length === 0 ? (
-                  <p className="text-sm text-gray-400">No children linked yet</p>
-                ) : (
-                  <div className="space-y-3">
-                    {childProgress.map((child: any) => (
-                      <ChildCard key={child.id} child={child} />
-                    ))}
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Email verified</span>
+                    <span className="font-medium">{selected.emailVerified ? 'Yes' : 'No'}</span>
                   </div>
-                )}
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Last login</span>
+                    <span className="font-medium">{selected.lastLoginAt ? new Date(selected.lastLoginAt).toLocaleDateString() : 'Never'}</span>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -161,56 +156,3 @@ export default function ParentsPage() {
   );
 }
 
-function ChildCard({ child }: { child: any }) {
-  const avgProgress = child.courseProgress?.length
-    ? Math.round(child.courseProgress.reduce((a: number, c: any) => a + (c.progressPercent ?? 0), 0) / child.courseProgress.length)
-    : 0;
-
-  return (
-    <div className="border border-gray-100 rounded-xl p-4">
-      <div className="flex items-center gap-3 mb-3">
-        <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-semibold">
-          {child.user?.firstName?.[0]}{child.user?.lastName?.[0]}
-        </div>
-        <div>
-          <p className="text-sm font-medium text-gray-900">{child.user?.firstName} {child.user?.lastName}</p>
-          <p className="text-xs text-gray-500">{child.grade ? `Grade ${child.grade}` : 'Student'}</p>
-        </div>
-        <div className="ml-auto flex items-center gap-1.5">
-          {avgProgress >= 70 ? (
-            <TrendingUp className="h-4 w-4 text-green-500" />
-          ) : avgProgress < 40 ? (
-            <AlertCircle className="h-4 w-4 text-red-400" />
-          ) : (
-            <BarChart2 className="h-4 w-4 text-amber-400" />
-          )}
-          <span className={cn(
-            'text-sm font-semibold',
-            avgProgress >= 70 ? 'text-green-600' : avgProgress < 40 ? 'text-red-500' : 'text-amber-600',
-          )}>
-            {avgProgress}% avg
-          </span>
-        </div>
-      </div>
-      <div className="space-y-2">
-        {(child.courseProgress ?? []).slice(0, 3).map((cp: any) => (
-          <div key={cp.id}>
-            <div className="flex justify-between text-xs text-gray-500 mb-1">
-              <span className="truncate max-w-[200px]">{cp.course?.title}</span>
-              <span>{cp.progressPercent}%</span>
-            </div>
-            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className={cn('h-full rounded-full', cp.progressPercent >= 70 ? 'bg-green-500' : 'bg-blue-500')}
-                style={{ width: `${cp.progressPercent}%` }}
-              />
-            </div>
-          </div>
-        ))}
-        {(child.courseProgress?.length ?? 0) > 3 && (
-          <p className="text-xs text-gray-400">+{child.courseProgress.length - 3} more courses</p>
-        )}
-      </div>
-    </div>
-  );
-}

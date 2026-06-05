@@ -8,30 +8,38 @@ import { cn } from '@/lib/utils';
 
 export default function SchoolErpPage() {
   const [activeSection, setActiveSection] = useState('overview');
+  const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
   const qc = useQueryClient();
 
+  const { data: schools } = useQuery({
+    queryKey: ['school-erp-schools'],
+    queryFn: () => api.get('/school-erp/schools').then(r => r.data.data as any[]),
+    onSuccess: (data: any[]) => {
+      if (data?.length && !selectedSchoolId) setSelectedSchoolId(data[0].id);
+    },
+  } as any);
+
+  const schoolId = selectedSchoolId ?? (schools?.[0]?.id ?? null);
+
   const { data: overview } = useQuery({
-    queryKey: ['school-erp-overview'],
-    queryFn: () => api.get('/school-erp/overview').then(r => r.data.data),
+    queryKey: ['school-erp-stats', schoolId],
+    queryFn: () => api.get(`/school-erp/schools/${schoolId}/stats`).then(r => r.data.data),
+    enabled: !!schoolId,
   });
 
   const { data: classes } = useQuery({
-    queryKey: ['school-classes'],
-    queryFn: () => api.get('/school-erp/classes').then(r => r.data.data?.data ?? []),
-    enabled: activeSection === 'classes',
+    queryKey: ['school-classes', schoolId],
+    queryFn: () => api.get(`/school-erp/schools/${schoolId}/classes`).then(r => r.data.data ?? []),
+    enabled: !!schoolId && activeSection === 'classes',
   });
 
   const { data: departments } = useQuery({
-    queryKey: ['school-departments'],
-    queryFn: () => api.get('/school-erp/departments').then(r => r.data.data?.data ?? []),
-    enabled: activeSection === 'departments',
+    queryKey: ['school-departments', schoolId],
+    queryFn: () => api.get(`/school-erp/schools/${schoolId}/departments`).then(r => r.data.data ?? []),
+    enabled: !!schoolId && activeSection === 'departments',
   });
 
-  const { data: timetable } = useQuery({
-    queryKey: ['school-timetable'],
-    queryFn: () => api.get('/school-erp/timetable').then(r => r.data.data ?? []),
-    enabled: activeSection === 'timetable',
-  });
+  const timetable: any[] = [];
 
   const SECTIONS = [
     { id: 'overview', label: 'Overview', icon: Building2 },
@@ -73,10 +81,10 @@ export default function SchoolErpPage() {
         <div className="space-y-5">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
-              { label: 'Total Students', value: overview?.studentCount ?? '—', icon: GraduationCap, color: 'text-blue-500 bg-blue-50' },
-              { label: 'Total Teachers', value: overview?.teacherCount ?? '—', icon: Users, color: 'text-purple-500 bg-purple-50' },
-              { label: 'Classes', value: overview?.classCount ?? '—', icon: BookOpen, color: 'text-green-500 bg-green-50' },
-              { label: 'Departments', value: overview?.departmentCount ?? '—', icon: Building2, color: 'text-amber-500 bg-amber-50' },
+              { label: 'Total Students', value: overview?.totalStudents ?? '—', icon: GraduationCap, color: 'text-blue-500 bg-blue-50' },
+              { label: 'Total Teachers', value: overview?.totalTeachers ?? '—', icon: Users, color: 'text-purple-500 bg-purple-50' },
+              { label: 'Classes', value: overview?.totalClasses ?? '—', icon: BookOpen, color: 'text-green-500 bg-green-50' },
+              { label: 'Active Sessions', value: overview?.activeSessions ?? '—', icon: Building2, color: 'text-amber-500 bg-amber-50' },
             ].map(stat => (
               <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-5">
                 <div className={cn('h-9 w-9 rounded-xl flex items-center justify-center mb-3', stat.color.split(' ')[1])}>
@@ -128,9 +136,9 @@ export default function SchoolErpPage() {
                 <tr>
                   <th className="text-left py-3 px-4 font-medium text-gray-600">Class Name</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-600">Grade</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Section</th>
                   <th className="text-left py-3 px-4 font-medium text-gray-600">Students</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Teacher</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-600">Room</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Department</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -140,9 +148,9 @@ export default function SchoolErpPage() {
                   <tr key={cls.id} className="hover:bg-gray-50">
                     <td className="py-3 px-4 font-medium text-gray-900">{cls.name}</td>
                     <td className="py-3 px-4 text-gray-600">{cls.grade ?? '—'}</td>
+                    <td className="py-3 px-4 text-gray-600">{cls.section ?? '—'}</td>
                     <td className="py-3 px-4 text-gray-600">{cls._count?.students ?? 0}</td>
-                    <td className="py-3 px-4 text-gray-600">{cls.teacher?.user?.firstName} {cls.teacher?.user?.lastName}</td>
-                    <td className="py-3 px-4 text-gray-600">{cls.room ?? '—'}</td>
+                    <td className="py-3 px-4 text-gray-600">{cls.department?.name ?? '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -169,8 +177,7 @@ export default function SchoolErpPage() {
                 </div>
               </div>
               <div className="flex items-center gap-4 text-sm text-gray-600">
-                <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{dept._count?.teachers ?? 0} teachers</span>
-                <span className="flex items-center gap-1"><GraduationCap className="h-3.5 w-3.5" />{dept._count?.students ?? 0} students</span>
+                <span className="flex items-center gap-1"><BookOpen className="h-3.5 w-3.5" />{dept._count?.classes ?? 0} classes</span>
               </div>
             </div>
           ))}

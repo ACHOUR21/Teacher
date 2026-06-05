@@ -22,7 +22,7 @@ export default function PluginsPage() {
 
   const { data: categories } = useQuery({
     queryKey: ['plugin-categories'],
-    queryFn: () => api.get('/plugins/marketplace/categories').then(r => r.data),
+    queryFn: () => api.get('/plugins/marketplace/categories').then(r => r.data.data),
   });
 
   const { data: installed, isLoading: installedLoading } = useQuery({

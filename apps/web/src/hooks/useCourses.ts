@@ -6,7 +6,7 @@ import {
   useQueryClient,
   type UseQueryOptions,
 } from '@tanstack/react-query';
-import { apiGet, apiPost, apiPatch, apiDelete } from '@/lib/api';
+import { api, apiPost, apiPatch, apiDelete } from '@/lib/api';
 import { buildQueryString } from '@/lib/utils';
 
 export interface Course {
@@ -68,11 +68,13 @@ export interface CoursesParams {
 }
 
 export interface PaginatedCourses {
-  data: Course[];
+  items: Course[];
   total: number;
   page: number;
   limit: number;
   totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
 }
 
 export interface CreateCourseInput {
@@ -106,7 +108,9 @@ export function useCourses(
   return useQuery<PaginatedCourses>({
     queryKey: courseKeys.list(params),
     queryFn: () =>
-      apiGet<PaginatedCourses>(`/courses${buildQueryString(params as Record<string, string | number | boolean | undefined | null>)}`),
+      api
+        .get(`/courses${buildQueryString(params as Record<string, string | number | boolean | undefined | null>)}`)
+        .then(r => r.data.data as PaginatedCourses),
     ...options,
   });
 }

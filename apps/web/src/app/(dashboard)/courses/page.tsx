@@ -73,9 +73,9 @@ export default function CoursesPage() {
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-            {data?.data?.map((course: any) => <CourseCard key={course.id} course={course} />)}
+            {data?.items?.map((course: any) => <CourseCard key={course.id} course={course} />)}
           </div>
-          {!data?.data?.length && (
+          {!data?.items?.length && (
             <div className="text-center py-16 text-gray-400">
               <p className="text-lg font-medium">No courses found</p>
               <p className="text-sm mt-1">Try adjusting your filters or create a new course</p>

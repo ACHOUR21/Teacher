@@ -15,7 +15,7 @@ export default function CertificatesPage() {
     queryFn: () => api.get('/certificates/my').then(r => r.data.data),
   });
 
-  const certificates: any[] = (data?.data ?? []).filter((c: any) => {
+  const certificates: any[] = ((data as any[]) ?? []).filter((c: any) => {
     if (!search) return true;
     const name = c.template?.name?.toLowerCase() ?? '';
     const course = c.enrollment?.course?.title?.toLowerCase() ?? '';
@@ -27,7 +27,7 @@ export default function CertificatesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Certificates</h1>
-          <p className="text-sm text-gray-500 mt-1">{data?.total ?? 0} certificates earned</p>
+          <p className="text-sm text-gray-500 mt-1">{(data as any[])?.length ?? 0} certificates earned</p>
         </div>
       </div>
 
