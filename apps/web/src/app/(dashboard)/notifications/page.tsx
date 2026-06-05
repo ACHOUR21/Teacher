@@ -66,7 +66,7 @@ export default function NotificationsPage() {
             variant="outline"
             leftIcon={<CheckCheck className="h-4 w-4" />}
             onClick={() => markAllRead.mutate()}
-            isLoading={markAllRead.isPending}
+            loading={markAllRead.isPending}
           >
             Mark all read
           </Button>

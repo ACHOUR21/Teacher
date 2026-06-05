@@ -3,14 +3,17 @@ import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { cn, formatNumber } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
 
+type TrendProp = number | { value: number; direction: 'up' | 'down' };
+
 interface StatsCardProps {
   title: string;
   value: string | number;
-  trend?: number; // percentage change, positive or negative
+  trend?: TrendProp;
   trendLabel?: string;
   icon: React.ComponentType<{ className?: string }>;
   iconColor?: string;
   iconBgColor?: string;
+  color?: 'blue' | 'purple' | 'green' | 'orange';
   prefix?: string;
   suffix?: string;
   loading?: boolean;
@@ -19,15 +22,17 @@ interface StatsCardProps {
 export function StatsCard({
   title,
   value,
-  trend,
+  trend: trendProp,
   trendLabel = 'vs last month',
   icon: Icon,
   iconColor = 'text-primary',
   iconBgColor = 'bg-primary/10',
+  color,
   prefix,
   suffix,
   loading = false,
 }: StatsCardProps) {
+  const trend = typeof trendProp === 'object' ? (trendProp.direction === 'up' ? trendProp.value : -trendProp.value) : trendProp;
   const isPositive = trend !== undefined && trend > 0;
   const isNegative = trend !== undefined && trend < 0;
   const isNeutral = trend === 0;

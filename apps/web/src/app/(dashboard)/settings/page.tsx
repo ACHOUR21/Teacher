@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Settings, Palette, Bell, Shield, Key, Building } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -24,8 +24,11 @@ export default function SettingsPage() {
   const { data: wlSettings } = useQuery({
     queryKey: ['white-label'],
     queryFn: () => api.get('/white-label/settings').then(r => r.data.data),
-    onSuccess: (d: any) => d && setBrandForm({ brandName: d.brandName, primaryColor: d.primaryColor, secondaryColor: d.secondaryColor }),
   });
+
+  React.useEffect(() => {
+    if (wlSettings) setBrandForm({ brandName: wlSettings.brandName, primaryColor: wlSettings.primaryColor, secondaryColor: wlSettings.secondaryColor });
+  }, [wlSettings]);
 
   const { data: apiKeys, refetch: refetchKeys } = useQuery({
     queryKey: ['api-keys'],

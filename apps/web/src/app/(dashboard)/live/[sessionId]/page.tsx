@@ -24,7 +24,7 @@ interface Participant {
 export default function LiveSessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const router = useRouter();
-  const { socket, isConnected } = useSocket('/live');
+  const { socket, isConnected } = useSocket({ namespace: '/live' });
 
   const [micOn, setMicOn] = useState(true);
   const [cameraOn, setCameraOn] = useState(true);

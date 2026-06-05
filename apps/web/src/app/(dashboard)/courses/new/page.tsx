@@ -189,7 +189,7 @@ export default function NewCoursePage() {
         {/* Submit */}
         <div className="flex items-center justify-end gap-3 pb-8">
           <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
-          <Button type="submit" isLoading={createMutation.isPending}>
+          <Button type="submit" loading={createMutation.isPending}>
             Create Course
           </Button>
         </div>

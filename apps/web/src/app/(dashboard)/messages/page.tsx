@@ -32,7 +32,7 @@ export default function MessagesPage() {
   const [search, setSearch] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
-  const { socket } = useSocket('/messaging');
+  const { socket } = useSocket({ namespace: '/messaging' });
 
   const { data: conversations } = useQuery({
     queryKey: ['conversations'],

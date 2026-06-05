@@ -186,7 +186,7 @@ export default function CourseDetailPage() {
             ) : (
               <Button
                 className="w-full mt-3"
-                isLoading={enrollMutation.isPending}
+                loading={enrollMutation.isPending}
                 onClick={() => enrollMutation.mutate()}
               >
                 {course.price === 0 ? 'Enroll for Free' : `Enroll · $${course.price?.toFixed(2)}`}
