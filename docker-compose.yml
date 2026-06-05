@@ -18,6 +18,12 @@ volumes:
     name: eduai_minio_data
   pgadmin_data:
     name: eduai_pgadmin_data
+  prometheus_data:
+    name: eduai_prometheus_data
+  grafana_data:
+    name: eduai_grafana_data
+  loki_data:
+    name: eduai_loki_data
 
 # ─── Services ──────────────────────────────────────────────────────────────────
 services:
@@ -226,3 +232,154 @@ services:
       timeout: 10s
       retries: 5
       start_period: 30s
+
+  # ── NestJS API ────────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+      target: development
+    container_name: eduai_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    env_file:
+      - .env.local
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://eduai:eduai_dev_pass@postgres:5432/eduai_dev
+      DIRECT_URL: postgresql://eduai:eduai_dev_pass@postgres:5432/eduai_dev
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: eduai
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_REGION: us-east-1
+      ELASTICSEARCH_NODE: http://elasticsearch:9200
+      SMTP_HOST: mailhog
+      SMTP_PORT: "1025"
+      PORT: "3001"
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./apps/api/src:/app/apps/api/src
+      - ./packages:/app/packages
+    networks:
+      - eduai_network
+    command: >
+      sh -c "pnpm --filter api exec prisma migrate deploy && pnpm --filter api run start:dev"
+
+  # ── Next.js Web App ───────────────────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+      target: development
+    container_name: eduai_web
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+      NEXT_PUBLIC_WS_URL: http://localhost:3001
+      NEXT_PUBLIC_GRAPHQL_URL: http://localhost:3001/graphql
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/web/src:/app/apps/web/src
+    networks:
+      - eduai_network
+
+  # ── BullMQ Worker ─────────────────────────────────────────────────────────────
+  worker:
+    build:
+      context: .
+      dockerfile: infra/docker/worker.Dockerfile
+      target: development
+    container_name: eduai_worker
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env.local
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://eduai:eduai_dev_pass@postgres:5432/eduai_dev
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+    networks:
+      - eduai_network
+
+  # ── MailHog (local email capture) ─────────────────────────────────────────────
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: eduai_mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - eduai_network
+
+  # ── Prometheus ────────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: eduai_prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/monitoring/prometheus:/etc/prometheus:ro
+      - prometheus_data:/prometheus
+    networks:
+      - eduai_network
+
+  # ── Grafana ───────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: eduai_grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+      - loki
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_FEATURE_TOGGLES_ENABLE: traceqlEditor
+    ports:
+      - "3333:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/monitoring/grafana:/etc/grafana/provisioning:ro
+    networks:
+      - eduai_network
+
+  # ── Loki (log aggregation) ────────────────────────────────────────────────────
+  loki:
+    image: grafana/loki:2.9.5
+    container_name: eduai_loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./infra/monitoring/loki:/etc/loki:ro
+      - loki_data:/loki
+    networks:
+      - eduai_network

@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "EduAI Dev",
+      "Group": "Servers",
+      "Port": 5432,
+      "Username": "eduai",
+      "Host": "postgres",
+      "SSLMode": "prefer",
+      "MaintenanceDB": "eduai_db"
+    }
+  }
+}

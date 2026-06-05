@@ -33,6 +33,7 @@ import { WhiteLabelModule } from './modules/white-label/white-label.module';
 import { ApiEcosystemModule } from './modules/api-ecosystem/api-ecosystem.module';
 import { PluginsModule } from './modules/plugins/plugins.module';
 import { AiAgentsModule } from './modules/ai-agents/ai-agents.module';
+import { AppGraphQLModule } from './modules/graphql/graphql.module';
 import { TenantMiddleware } from './modules/tenants/middleware/tenant.middleware';
 
 @Module({
@@ -74,6 +75,7 @@ import { TenantMiddleware } from './modules/tenants/middleware/tenant.middleware
     ApiEcosystemModule,
     PluginsModule,
     AiAgentsModule,
+    AppGraphQLModule,
   ],
   providers: [
     {
