@@ -365,6 +365,19 @@ export class AuthService {
     });
   }
 
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) throw new UnauthorizedException('Current password is incorrect');
+
+    const passwordHash = await bcrypt.hash(newPassword, this.BCRYPT_ROUNDS);
+    await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
+    await this.prisma.userSession.deleteMany({ where: { userId } });
+    this.logger.log(`Password changed for user ${userId}`);
+  }
+
   async forgotPassword(email: string, tenantId: string): Promise<void> {
     const user = await this.prisma.user.findUnique({
       where: { tenantId_email: { tenantId, email: email.toLowerCase() } },

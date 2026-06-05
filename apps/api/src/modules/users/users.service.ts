@@ -205,6 +205,53 @@ export class UsersService {
     return updated;
   }
 
+  async updateMe(userId: string, tenantId: string, dto: UpdateUserDto & UpdateUserProfileDto) {
+    const user = await this.prisma.user.findFirst({ where: { id: userId, tenantId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const [updatedUser] = await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: {
+          ...(dto.firstName && { firstName: dto.firstName }),
+          ...(dto.lastName && { lastName: dto.lastName }),
+          ...(dto.phone !== undefined && { phone: dto.phone }),
+          ...(dto.avatarUrl !== undefined && { avatarUrl: dto.avatarUrl }),
+        },
+      }),
+      this.prisma.userProfile.upsert({
+        where: { userId },
+        update: {
+          ...(dto.bio !== undefined && { bio: dto.bio }),
+          ...(dto.timezone && { timezone: dto.timezone }),
+          ...(dto.language && { language: dto.language }),
+        },
+        create: {
+          userId,
+          bio: dto.bio,
+          timezone: dto.timezone ?? 'UTC',
+          language: dto.language ?? 'en',
+        },
+      }),
+    ]);
+
+    await this.redis.del(`user:${userId}:profile`);
+    return updatedUser;
+  }
+
+  async getUserDevices(userId: string) {
+    return this.prisma.userDevice.findMany({
+      where: { userId },
+      orderBy: { lastSeenAt: 'desc' },
+    });
+  }
+
+  async revokeDevice(userId: string, deviceId: string) {
+    const device = await this.prisma.userDevice.findFirst({ where: { userId, deviceId } });
+    if (!device) throw new NotFoundException('Device not found');
+    await this.prisma.userDevice.update({ where: { deviceId }, data: { isActive: false } });
+  }
+
   async getUserActivity(userId: string, tenantId: string) {
     const user = await this.prisma.user.findFirst({ where: { id: userId, tenantId } });
     if (!user) throw new NotFoundException('User not found');

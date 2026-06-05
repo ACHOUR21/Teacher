@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Put,
+  Patch,
   Delete,
   Post,
   Body,
@@ -48,8 +49,40 @@ export class UsersController {
     return this.usersService.findAll(tenantId, pagination, roleFilter);
   }
 
+  @Get('me')
+  @ApiOperation({ summary: 'Get current user full profile' })
+  getMe(@CurrentUser() user: CurrentUserPayload, @TenantId() tenantId: string) {
+    return this.usersService.findById(user.id, tenantId);
+  }
+
+  @Patch('me')
+  @ApiOperation({ summary: 'Update current user profile' })
+  updateMe(
+    @CurrentUser() user: CurrentUserPayload,
+    @TenantId() tenantId: string,
+    @Body() dto: UpdateUserDto & UpdateUserProfileDto,
+  ) {
+    return this.usersService.updateMe(user.id, tenantId, dto);
+  }
+
+  @Get('me/devices')
+  @ApiOperation({ summary: 'List current user devices' })
+  getMyDevices(@CurrentUser() user: CurrentUserPayload) {
+    return this.usersService.getUserDevices(user.id);
+  }
+
+  @Delete('me/devices/:deviceId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Revoke a device session' })
+  revokeDevice(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('deviceId') deviceId: string,
+  ) {
+    return this.usersService.revokeDevice(user.id, deviceId);
+  }
+
   @Get('profile')
-  @ApiOperation({ summary: 'Get own profile' })
+  @ApiOperation({ summary: 'Get own profile (legacy)' })
   getProfile(@CurrentUser() user: CurrentUserPayload, @TenantId() tenantId: string) {
     return this.usersService.findById(user.id, tenantId);
   }
