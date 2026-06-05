@@ -6,11 +6,13 @@ import { ArrowLeft, Star, Users, BarChart2, Clock, BookOpen, Play, CheckCircle, 
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const qc = useQueryClient();
+  const { isAdmin, isTeacher } = useAuth();
 
   const { data: course, isLoading } = useQuery({
     queryKey: ['course', id],
@@ -72,14 +74,16 @@ export default function CourseDetailPage() {
           </div>
           <h1 className="text-2xl font-bold leading-snug">{course.title}</h1>
         </div>
-        <div className="absolute top-4 right-4 flex gap-2">
-          <button onClick={() => router.push(`/courses/${id}/edit`)} className="p-2 bg-white/20 backdrop-blur rounded-lg text-white hover:bg-white/30 transition-colors">
-            <Edit className="h-4 w-4" />
-          </button>
-          <button onClick={() => { if (confirm('Delete this course?')) deleteMutation.mutate(); }} className="p-2 bg-red-500/80 backdrop-blur rounded-lg text-white hover:bg-red-600/80 transition-colors">
-            <Trash2 className="h-4 w-4" />
-          </button>
-        </div>
+        {(isAdmin || isTeacher) && (
+          <div className="absolute top-4 right-4 flex gap-2">
+            <button onClick={() => router.push(`/courses/${id}/edit`)} className="p-2 bg-white/20 backdrop-blur rounded-lg text-white hover:bg-white/30 transition-colors">
+              <Edit className="h-4 w-4" />
+            </button>
+            <button onClick={() => { if (confirm('Delete this course?')) deleteMutation.mutate(); }} className="p-2 bg-red-500/80 backdrop-blur rounded-lg text-white hover:bg-red-600/80 transition-colors">
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Stats Row */}
