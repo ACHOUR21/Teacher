@@ -247,7 +247,7 @@ export default function ProfilePage() {
                   {mfaSetup && !user?.mfaEnabled && (
                     <div className="mt-4 p-4 bg-gray-50 rounded-lg space-y-3">
                       <p className="text-sm font-medium text-gray-700">Scan this QR code with your authenticator app:</p>
-                      <img src={mfaSetup.qrCode} alt="MFA QR Code" className="w-40 h-40" />
+                      <img src={mfaSetup.qrCodeUrl} alt="MFA QR Code" className="w-40 h-40" />
                       <p className="text-xs text-gray-500 font-mono">{mfaSetup.secret}</p>
                     </div>
                   )}
@@ -268,7 +268,7 @@ export default function ProfilePage() {
                         <p className="text-xs text-gray-500 mt-0.5">{device.deviceType} · {device.os} · {device.browser}</p>
                         <p className="text-xs text-gray-400 mt-0.5">Last active: {device.lastActiveAt ? new Date(device.lastActiveAt).toLocaleString() : 'Never'}</p>
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => revokeDeviceMutation.mutate(device.id)}>Revoke</Button>
+                      <Button variant="outline" size="sm" onClick={() => revokeDeviceMutation.mutate(device.deviceId)}>Revoke</Button>
                     </div>
                   ))}
                   {!devices?.length && <p className="py-4 text-sm text-gray-400">No devices found.</p>}

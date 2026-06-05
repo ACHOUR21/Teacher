@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Send, Search, Plus, Users, Lock, Hash } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useSocket } from '@/hooks/useSocket';
+import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -33,10 +34,11 @@ export default function MessagesPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
   const { socket } = useSocket({ namespace: '/messaging' });
+  const currentUserId = useAuthStore(s => s.user?.id);
 
   const { data: conversations } = useQuery({
     queryKey: ['conversations'],
-    queryFn: () => api.get('/messaging/conversations').then(r => r.data.data.data as Conversation[]),
+    queryFn: () => api.get('/messaging/conversations').then(r => r.data.data as Conversation[]),
   });
 
   const { data: messages, isLoading: messagesLoading } = useQuery({
@@ -205,7 +207,7 @@ export default function MessagesPage() {
               </div>
             )}
             {(messages ?? []).map((msg: Message, i: number) => {
-              const isOwn = msg.senderId === 'me'; // will be replaced with actual userId
+              const isOwn = msg.senderId === currentUserId;
               return (
                 <div key={msg.id} className={cn('flex items-end gap-2', isOwn ? 'justify-end' : 'justify-start')}>
                   {!isOwn && (

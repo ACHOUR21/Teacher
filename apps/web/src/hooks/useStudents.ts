@@ -6,7 +6,7 @@ import {
   useQueryClient,
   type UseQueryOptions,
 } from '@tanstack/react-query';
-import { apiGet, apiPost, apiPatch, apiDelete } from '@/lib/api';
+import { api, apiPost, apiPatch, apiDelete } from '@/lib/api';
 import { buildQueryString } from '@/lib/utils';
 
 export interface Student {
@@ -78,9 +78,9 @@ export function useStudents(
   return useQuery<PaginatedStudents>({
     queryKey: studentKeys.list(params),
     queryFn: () =>
-      apiGet<PaginatedStudents>(
-        `/students${buildQueryString(params as Record<string, string | number | boolean | undefined | null>)}`
-      ),
+      api
+        .get(`/students${buildQueryString(params as Record<string, string | number | boolean | undefined | null>)}`)
+        .then(r => r.data.data as PaginatedStudents),
     ...options,
   });
 }
