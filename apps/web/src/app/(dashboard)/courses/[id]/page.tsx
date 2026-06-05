@@ -129,7 +129,14 @@ export default function CourseDetailPage() {
                     </div>
                     <div className="divide-y divide-gray-50">
                       {(section.lessons ?? []).map((lesson: any) => (
-                        <div key={lesson.id} className="px-4 py-2.5 flex items-center gap-3 hover:bg-gray-50 transition-colors">
+                        <div
+                          key={lesson.id}
+                          onClick={() => isEnrolled && router.push(`/courses/${id}/learn?lesson=${lesson.id}`)}
+                          className={cn(
+                            'px-4 py-2.5 flex items-center gap-3 transition-colors',
+                            isEnrolled ? 'cursor-pointer hover:bg-blue-50' : 'cursor-default hover:bg-gray-50'
+                          )}
+                        >
                           {isEnrolled ? (
                             lesson.completed ? (
                               <CheckCircle className="h-4 w-4 text-green-500 flex-shrink-0" />
