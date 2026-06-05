@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { GamificationService } from '../../gamification.service';
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
@@ -10,6 +10,12 @@ import { CurrentUser } from '../../../core/decorators/current-user.decorator';
 @Controller('gamification')
 export class GamificationController {
   constructor(private readonly gamificationService: GamificationService) {}
+
+  @Get('stats')
+  @ApiOperation({ summary: 'Get current user gamification stats' })
+  myStats(@CurrentUser() user: any, @Request() req: any) {
+    return this.gamificationService.getMyStats(user.id, req.tenant?.id);
+  }
 
   @Get('points')
   @ApiOperation({ summary: 'Get current user points' })

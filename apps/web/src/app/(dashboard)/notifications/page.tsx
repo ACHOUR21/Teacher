@@ -38,7 +38,7 @@ export default function NotificationsPage() {
   });
 
   const notifications: any[] = data?.data ?? [];
-  const unreadCount = notifications.filter(n => !n.readAt).length;
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   if (isLoading) {
     return (
@@ -86,7 +86,7 @@ export default function NotificationsPage() {
           {notifications.map((n: any) => {
             const config = TYPE_CONFIG[n.type] ?? TYPE_CONFIG.GENERAL;
             const Icon = config.icon;
-            const isRead = !!n.readAt;
+            const isRead = !!n.isRead;
 
             return (
               <div

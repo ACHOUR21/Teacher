@@ -66,4 +66,24 @@ export class GamificationService {
   async getAllAchievements() {
     return this.prisma.achievement.findMany({ orderBy: { points: 'desc' } });
   }
+
+  async getMyStats(userId: string, tenantId: string) {
+    const [points, achievementCount] = await Promise.all([
+      this.prisma.userPoints.findUnique({ where: { userId } }),
+      this.prisma.userAchievement.count({ where: { userId } }),
+    ]);
+
+    const myPoints = points?.total ?? 0;
+    const rank = await this.prisma.userPoints.count({
+      where: { user: { tenantId }, total: { gt: myPoints } },
+    });
+
+    return {
+      totalPoints: myPoints,
+      weeklyPoints: 0,
+      achievementCount,
+      rank: rank + 1,
+      level: points?.level ?? 1,
+    };
+  }
 }

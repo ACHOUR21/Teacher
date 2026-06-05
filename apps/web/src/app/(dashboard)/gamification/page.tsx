@@ -34,12 +34,12 @@ export default function GamificationPage() {
 
   const { data: myAchievements } = useQuery({
     queryKey: ['my-achievements'],
-    queryFn: () => api.get('/gamification/achievements/me').then(r => r.data.data),
+    queryFn: () => api.get('/gamification/achievements/my').then(r => r.data.data),
   });
 
   const earnedIds = new Set((myAchievements ?? []).map((a: any) => a.achievementId));
   const allAchievements: any[] = achievements ?? [];
-  const leaderboardData: any[] = leaderboard?.data ?? [];
+  const leaderboardData: any[] = (leaderboard as any[]) ?? [];
 
   return (
     <div className="space-y-6">
