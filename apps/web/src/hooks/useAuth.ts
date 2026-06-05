@@ -17,7 +17,7 @@ interface RegisterData {
   lastName: string;
   email: string;
   password: string;
-  role: 'teacher' | 'student' | 'parent';
+  role: 'TEACHER' | 'STUDENT' | 'PARENT';
   tenantId: string;
 }
 
@@ -27,7 +27,7 @@ interface AuthResponse {
     email: string;
     firstName: string;
     lastName: string;
-    role: 'super_admin' | 'tenant_admin' | 'teacher' | 'student' | 'parent';
+    role: 'SUPER_ADMIN' | 'ADMIN' | 'SCHOOL_ADMIN' | 'UNIVERSITY_ADMIN' | 'TEACHER' | 'STUDENT' | 'PARENT';
     avatar?: string;
     tenantId: string;
     tenantName: string;
@@ -131,10 +131,10 @@ export function useAuth() {
     [user]
   );
 
-  const isAdmin = user?.role === 'super_admin' || user?.role === 'tenant_admin';
-  const isTeacher = user?.role === 'teacher';
-  const isStudent = user?.role === 'student';
-  const isParent = user?.role === 'parent';
+  const isAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN' || user?.role === 'SCHOOL_ADMIN' || user?.role === 'UNIVERSITY_ADMIN';
+  const isTeacher = user?.role === 'TEACHER';
+  const isStudent = user?.role === 'STUDENT';
+  const isParent = user?.role === 'PARENT';
 
   return {
     user,

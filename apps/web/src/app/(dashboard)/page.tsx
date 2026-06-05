@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
+import { useAuth } from '@/hooks/useAuth';
 import { useState } from 'react';
 
 function InviteCard() {
@@ -48,6 +49,12 @@ function InviteCard() {
       </CardContent>
     </Card>
   );
+}
+
+function InviteCardWrapper() {
+  const { isStudent, isParent } = useAuth();
+  if (isStudent || isParent) return null;
+  return <InviteCard />;
 }
 
 export default function DashboardPage() {
@@ -104,7 +111,7 @@ export default function DashboardPage() {
         />
       </div>
 
-      <InviteCard />
+      <InviteCardWrapper />
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">

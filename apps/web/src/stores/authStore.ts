@@ -2,11 +2,13 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 
 export type UserRole =
-  | 'super_admin'
-  | 'tenant_admin'
-  | 'teacher'
-  | 'student'
-  | 'parent';
+  | 'SUPER_ADMIN'
+  | 'ADMIN'
+  | 'SCHOOL_ADMIN'
+  | 'UNIVERSITY_ADMIN'
+  | 'TEACHER'
+  | 'STUDENT'
+  | 'PARENT';
 
 export interface User {
   id: string;

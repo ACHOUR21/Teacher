@@ -7,6 +7,7 @@ import { useCourses } from '@/hooks/useCourses';
 import { CourseCard } from '@/components/courses/CourseCard';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { useAuth } from '@/hooks/useAuth';
 
 const LEVELS = ['All', 'BEGINNER', 'INTERMEDIATE', 'ADVANCED', 'EXPERT'];
 const CATEGORIES = ['All', 'Mathematics', 'Science', 'History', 'Language', 'Technology', 'Arts'];
@@ -16,6 +17,7 @@ export default function CoursesPage() {
   const [level, setLevel] = useState('All');
   const [category, setCategory] = useState('All');
   const [page, setPage] = useState(1);
+  const { isAdmin, isTeacher } = useAuth();
 
   const { data, isLoading } = useCourses({ search, level: level === 'All' ? undefined : level, category: category === 'All' ? undefined : category, page, limit: 12 });
 
@@ -26,9 +28,11 @@ export default function CoursesPage() {
           <h1 className="text-2xl font-bold text-gray-900">Courses</h1>
           <p className="text-sm text-gray-500 mt-1">{data?.total ?? 0} courses available</p>
         </div>
-        <Link href="/courses/new">
-          <Button leftIcon={<Plus className="h-4 w-4" />}>Create Course</Button>
-        </Link>
+        {(isAdmin || isTeacher) && (
+          <Link href="/courses/new">
+            <Button leftIcon={<Plus className="h-4 w-4" />}>Create Course</Button>
+          </Link>
+        )}
       </div>
 
       {/* Filters */}

@@ -31,7 +31,7 @@ const schema = z
       .regex(/[A-Z]/, 'Must include uppercase letter')
       .regex(/[0-9]/, 'Must include a number'),
     confirmPassword: z.string(),
-    role: z.enum(['student', 'parent'], { required_error: 'Select a role' }),
+    role: z.enum(['STUDENT', 'PARENT'], { required_error: 'Select a role' }),
   })
   .refine((d) => d.password === d.confirmPassword, {
     message: "Passwords don't match",
@@ -41,8 +41,8 @@ const schema = z
 type FormData = z.infer<typeof schema>;
 
 const roleOptions = [
-  { value: 'student' as const, label: 'Student', description: 'Access courses & AI tutor', icon: GraduationCap },
-  { value: 'parent' as const, label: 'Parent', description: 'Monitor your child', icon: Users },
+  { value: 'STUDENT' as const, label: 'Student', description: 'Access courses & AI tutor', icon: GraduationCap },
+  { value: 'PARENT' as const, label: 'Parent', description: 'Monitor your child', icon: Users },
 ];
 
 export default function JoinPage() {
