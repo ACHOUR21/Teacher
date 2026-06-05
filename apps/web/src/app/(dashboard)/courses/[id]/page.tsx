@@ -20,7 +20,7 @@ export default function CourseDetailPage() {
   });
 
   const enrollMutation = useMutation({
-    mutationFn: () => api.post(`/marketplace/enroll/${id}`),
+    mutationFn: () => api.post(`/marketplace/courses/${id}/purchase`),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['course', id] }),
   });
 
