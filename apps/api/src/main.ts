@@ -98,6 +98,7 @@ async function bootstrap() {
     .addTag('API Ecosystem', 'API Keys & Webhooks')
     .addTag('Search', 'Full-text Search')
     .addTag('Storage', 'File Storage')
+    .addTag('Audit', 'Audit Logs')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

@@ -56,6 +56,46 @@ export class SearchService {
     }
   }
 
+  async searchUsers(query: string, tenantId: string, filters?: { role?: string }, page = 1, limit = 20) {
+    try {
+      const from = (page - 1) * limit;
+      const must: any[] = [
+        { multi_match: { query, fields: ['firstName^2', 'lastName^2', 'email'], type: 'best_fields', fuzziness: 'AUTO' } },
+        { term: { tenantId } },
+      ];
+      if (filters?.role) must.push({ term: { role: filters.role } });
+
+      const result = await this.elasticsearchService.search({
+        index: 'users',
+        from,
+        size: limit,
+        query: { bool: { must } },
+      });
+
+      return {
+        hits: result.hits.hits.map(h => ({ id: h._id, score: h._score, ...(h._source as object) })),
+        total: typeof result.hits.total === 'number' ? result.hits.total : result.hits.total?.value ?? 0,
+        page,
+        limit,
+      };
+    } catch (err) {
+      this.logger.error('User search failed', err);
+      return { hits: [], total: 0, page, limit };
+    }
+  }
+
+  async indexUser(user: { id: string; firstName: string; lastName: string; email: string; role: string; tenantId: string }) {
+    try {
+      await this.elasticsearchService.index({
+        index: 'users',
+        id: user.id,
+        document: { ...user, indexedAt: new Date() },
+      });
+    } catch (err) {
+      this.logger.error('Failed to index user', err);
+    }
+  }
+
   async deleteDocument(index: string, id: string) {
     try {
       await this.elasticsearchService.delete({ index, id });
@@ -75,6 +115,19 @@ export class SearchService {
             category: { type: 'keyword' },
             tags: { type: 'keyword' },
             teacherName: { type: 'text' },
+            tenantId: { type: 'keyword' },
+            indexedAt: { type: 'date' },
+          },
+        },
+      },
+      {
+        index: 'users',
+        mappings: {
+          properties: {
+            firstName: { type: 'text' },
+            lastName: { type: 'text' },
+            email: { type: 'keyword' },
+            role: { type: 'keyword' },
             tenantId: { type: 'keyword' },
             indexedAt: { type: 'date' },
           },

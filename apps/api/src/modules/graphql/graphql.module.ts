@@ -5,9 +5,13 @@ import { join } from 'path';
 import { CoursesModule } from '../courses/courses.module';
 import { UsersModule } from '../users/users.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { GamificationModule } from '../gamification/gamification.module';
 import { CoursesResolver } from './resolvers/courses.resolver';
 import { UsersResolver } from './resolvers/users.resolver';
 import { AnalyticsResolver } from './resolvers/analytics.resolver';
+import { NotificationsResolver } from './resolvers/notifications.resolver';
+import { GamificationResolver } from './resolvers/gamification.resolver';
 import { GqlAuthGuard } from './guards/gql-auth.guard';
 
 @Module({
@@ -28,11 +32,15 @@ import { GqlAuthGuard } from './guards/gql-auth.guard';
     CoursesModule,
     UsersModule,
     AnalyticsModule,
+    NotificationsModule,
+    GamificationModule,
   ],
   providers: [
     CoursesResolver,
     UsersResolver,
     AnalyticsResolver,
+    NotificationsResolver,
+    GamificationResolver,
     GqlAuthGuard,
   ],
 })
