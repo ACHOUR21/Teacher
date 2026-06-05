@@ -5,13 +5,14 @@ import { PrismaService } from '../../database/prisma.service';
 import { RedisService } from '../../cache/redis.service';
 import { SearchService } from '../../search/search.service';
 
-const mockRedis = { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn(), delPattern: jest.fn() };
+const mockRedis = { get: jest.fn().mockResolvedValue(null), getObject: jest.fn().mockResolvedValue(null), set: jest.fn(), setObject: jest.fn(), del: jest.fn(), delPattern: jest.fn() };
 const mockSearch = { indexCourse: jest.fn(), deleteDocument: jest.fn() };
 
 const mockPrisma = {
   course: {
     findMany: jest.fn(),
     findUnique: jest.fn(),
+    findFirst: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
     delete: jest.fn(),
@@ -29,12 +30,26 @@ const mockPrisma = {
   },
   courseProgress: {
     findFirst: jest.fn(),
-    upsert: jest.fn(),
     findMany: jest.fn(),
+    upsert: jest.fn(),
+    update: jest.fn(),
   },
   enrollment: {
     findFirst: jest.fn(),
     create: jest.fn(),
+  },
+  teacher: {
+    findFirst: jest.fn(),
+  },
+  user: {
+    findUnique: jest.fn(),
+  },
+  review: {
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    aggregate: jest.fn(),
+    count: jest.fn(),
+    findMany: jest.fn(),
   },
 };
 
@@ -77,7 +92,7 @@ describe('CoursesService', () => {
       mockPrisma.course.findMany.mockResolvedValueOnce([]);
       mockPrisma.course.count.mockResolvedValueOnce(0);
 
-      await service.findAll('tenant-1', { level: 'BEGINNER', page: 1, limit: 10 });
+      await service.findAll('tenant-1', { page: 1, limit: 10 }, { level: 'BEGINNER' as any });
 
       expect(mockPrisma.course.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -87,7 +102,7 @@ describe('CoursesService', () => {
     });
   });
 
-  describe('findOne', () => {
+  describe('findById', () => {
     it('should return a course by ID', async () => {
       const mockCourse = {
         id: 'course-1',
@@ -96,17 +111,17 @@ describe('CoursesService', () => {
         sections: [],
         teacher: { user: { firstName: 'John', lastName: 'Doe' } },
       };
-      mockPrisma.course.findUnique.mockResolvedValueOnce(mockCourse);
+      mockPrisma.course.findFirst.mockResolvedValueOnce(mockCourse);
 
-      const result = await service.findOne('tenant-1', 'course-1');
+      const result = await service.findById('course-1', 'tenant-1');
 
       expect(result.id).toBe('course-1');
     });
 
     it('should throw NotFoundException when course does not exist', async () => {
-      mockPrisma.course.findUnique.mockResolvedValueOnce(null);
+      mockPrisma.course.findFirst.mockResolvedValueOnce(null);
 
-      await expect(service.findOne('tenant-1', 'nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.findById('nonexistent', 'tenant-1')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -119,6 +134,7 @@ describe('CoursesService', () => {
         level: 'BEGINNER',
         price: 0,
       };
+      mockPrisma.course.findUnique.mockResolvedValue(null);
       mockPrisma.course.create.mockResolvedValueOnce(newCourse);
 
       const result = await service.create('tenant-1', 'teacher-1', {
@@ -137,19 +153,25 @@ describe('CoursesService', () => {
   });
 
   describe('updateProgress', () => {
-    it('should upsert course progress for enrolled user', async () => {
-      mockPrisma.courseProgress.upsert.mockResolvedValueOnce({
+    it('should update course progress for enrolled student', async () => {
+      mockPrisma.courseProgress.findFirst.mockResolvedValueOnce({
+        id: 'progress-1',
+        courseId: 'course-1',
+        completedLessons: [],
+      });
+      mockPrisma.course.findFirst.mockResolvedValueOnce({
+        id: 'course-1',
+        totalLessons: 10,
+      });
+      mockPrisma.courseProgress.update.mockResolvedValueOnce({
         id: 'progress-1',
         userId: 'user-1',
         courseId: 'course-1',
-        completedLessons: 3,
-        progressPercent: 30,
+        completedLessons: ['lesson-1'],
+        progressPercent: 10,
       });
 
-      const result = await service.updateProgress('tenant-1', 'user-1', 'course-1', {
-        lessonId: 'lesson-1',
-        completed: true,
-      });
+      const result = await service.updateProgress('course-1', 'user-1', 'lesson-1', 'tenant-1');
 
       expect(result).toHaveProperty('progressPercent');
     });

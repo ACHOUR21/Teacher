@@ -16,6 +16,10 @@ const mockPrisma = {
     create: jest.fn(),
     findMany: jest.fn(),
     count: jest.fn(),
+    findUnique: jest.fn(),
+  },
+  student: {
+    findUnique: jest.fn(),
   },
   enrollment: {
     findFirst: jest.fn(),
@@ -26,14 +30,20 @@ const mockPrisma = {
 };
 
 const mockStorage = {
+  upload: jest.fn().mockResolvedValue({ url: 'https://cdn.example.com/certs/test.pdf', key: 'certs/test.pdf' }),
   uploadFile: jest.fn().mockResolvedValue({ url: 'https://cdn.example.com/certs/test.pdf', key: 'certs/test.pdf' }),
 };
 
 jest.mock('pdfkit', () => {
+  const chunks: Buffer[] = [Buffer.from('mock-pdf')];
   const mockDoc: any = {
     pipe: jest.fn().mockReturnThis(),
     end: jest.fn(),
-    on: jest.fn((event: string, cb: Function) => { if (event === 'end') cb(); return mockDoc; }),
+    on: jest.fn((event: string, cb: Function) => {
+      if (event === 'data') cb(Buffer.from('mock-pdf'));
+      if (event === 'end') cb();
+      return mockDoc;
+    }),
     fontSize: jest.fn().mockReturnThis(),
     font: jest.fn().mockReturnThis(),
     fillColor: jest.fn().mockReturnThis(),
@@ -41,11 +51,14 @@ jest.mock('pdfkit', () => {
     moveDown: jest.fn().mockReturnThis(),
     rect: jest.fn().mockReturnThis(),
     fill: jest.fn().mockReturnThis(),
+    stroke: jest.fn().mockReturnThis(),
+    lineWidth: jest.fn().mockReturnThis(),
     linearGradient: jest.fn().mockReturnValue({ stop: jest.fn().mockReturnThis() }),
     page: { width: 841.89, height: 595.28 },
   };
+  // Service uses: const PDFDocument = require('pdfkit') — so module.exports must be the constructor
   const PDFDocumentMock = jest.fn().mockImplementation(() => mockDoc);
-  return { __esModule: true, default: PDFDocumentMock };
+  return PDFDocumentMock;
 });
 
 describe('CertificatesService', () => {
@@ -65,73 +78,57 @@ describe('CertificatesService', () => {
   });
 
   describe('issueCertificate', () => {
-    it('should issue a certificate for a completed enrollment', async () => {
+    it('should issue a certificate for a student', async () => {
       const mockTemplate = {
         id: 'tmpl-1',
         name: 'Course Completion',
-        tenantId: 'tenant-1',
-        isActive: true,
+        course: { title: 'Mathematics 101' },
       };
-      const mockUser = {
-        id: 'user-1',
-        firstName: 'John',
-        lastName: 'Doe',
-        email: 'john@example.com',
-      };
-      const mockEnrollment = {
-        id: 'enroll-1',
-        userId: 'user-1',
-        courseId: 'course-1',
-        course: { title: 'Mathematics 101', tenantId: 'tenant-1' },
-        completedAt: new Date(),
+      const mockStudent = {
+        id: 'student-1',
+        user: {
+          firstName: 'John',
+          lastName: 'Doe',
+        },
       };
       const mockIssuedCert = {
         id: 'cert-1',
-        userId: 'user-1',
+        studentId: 'student-1',
         templateId: 'tmpl-1',
-        credentialId: 'CERT-XXXX',
-        pdfUrl: 'https://cdn.example.com/certs/test.pdf',
+        metadata: { pdfUrl: 'https://cdn.example.com/certs/test.pdf' },
         issuedAt: new Date(),
       };
 
-      mockPrisma.certificateTemplate.findFirst.mockResolvedValueOnce(mockTemplate);
-      mockPrisma.user.findUnique.mockResolvedValueOnce(mockUser);
-      mockPrisma.enrollment.findFirst.mockResolvedValueOnce(mockEnrollment);
-      mockPrisma.issuedCertificate.findFirst.mockResolvedValueOnce(null);
+      mockPrisma.certificateTemplate.findUnique.mockResolvedValueOnce(mockTemplate);
+      mockPrisma.student.findUnique.mockResolvedValueOnce(mockStudent);
       mockPrisma.issuedCertificate.create.mockResolvedValueOnce(mockIssuedCert);
 
-      const result = await service.issueCertificate({
-        tenantId: 'tenant-1',
-        userId: 'user-1',
-        courseId: 'course-1',
-      });
+      const result = await service.issueCertificate('student-1', 'tmpl-1');
 
-      expect(result.credentialId).toBeDefined();
-      expect(result.pdfUrl).toContain('cdn.example.com');
+      expect(result.id).toBe('cert-1');
+      expect(mockStorage.upload).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException when template not found', async () => {
-      mockPrisma.certificateTemplate.findFirst.mockResolvedValueOnce(null);
+      mockPrisma.certificateTemplate.findUnique.mockResolvedValueOnce(null);
 
       await expect(
-        service.issueCertificate({ tenantId: 'tenant-1', userId: 'user-1', courseId: 'course-1' }),
+        service.issueCertificate('student-1', 'bad-template'),
       ).rejects.toThrow(NotFoundException);
     });
   });
 
-  describe('getUserCertificates', () => {
-    it('should return all certificates for a user', async () => {
+  describe('getStudentCertificates', () => {
+    it('should return all certificates for a student', async () => {
       const mockCerts = [
-        { id: 'c-1', credentialId: 'CERT-001', issuedAt: new Date(), template: { name: 'Math Cert' } },
-        { id: 'c-2', credentialId: 'CERT-002', issuedAt: new Date(), template: { name: 'Science Cert' } },
+        { id: 'c-1', issuedAt: new Date(), template: { name: 'Math Cert', course: { title: 'Math', thumbnailUrl: null } } },
+        { id: 'c-2', issuedAt: new Date(), template: { name: 'Science Cert', course: { title: 'Science', thumbnailUrl: null } } },
       ];
       mockPrisma.issuedCertificate.findMany.mockResolvedValueOnce(mockCerts);
-      mockPrisma.issuedCertificate.count.mockResolvedValueOnce(2);
 
-      const result = await service.getUserCertificates('user-1', { page: 1, limit: 10 });
+      const result = await service.getStudentCertificates('student-1');
 
-      expect(result.items).toHaveLength(2);
-      expect(result.total).toBe(2);
+      expect(result).toHaveLength(2);
     });
   });
 });

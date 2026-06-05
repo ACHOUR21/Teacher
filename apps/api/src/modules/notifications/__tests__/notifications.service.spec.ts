@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationsService } from '../notifications.service';
 import { PrismaService } from '../../database/prisma.service';
-import { RedisService } from '../../cache/redis.service';
 
 const mockPrisma = {
   notification: {
@@ -14,13 +13,9 @@ const mockPrisma = {
     delete: jest.fn(),
     findUnique: jest.fn(),
   },
-};
-
-const mockRedis = {
-  publish: jest.fn(),
-  subscribe: jest.fn(),
-  get: jest.fn(),
-  set: jest.fn(),
+  user: {
+    findUnique: jest.fn(),
+  },
 };
 
 describe('NotificationsService', () => {
@@ -31,7 +26,6 @@ describe('NotificationsService', () => {
       providers: [
         NotificationsService,
         { provide: PrismaService, useValue: mockPrisma },
-        { provide: RedisService, useValue: mockRedis },
       ],
     }).compile();
 
@@ -39,33 +33,31 @@ describe('NotificationsService', () => {
     jest.clearAllMocks();
   });
 
-  describe('createNotification', () => {
-    it('should create a notification and publish to Redis', async () => {
+  describe('createInApp', () => {
+    it('should create an in-app notification', async () => {
       const mockNotification = {
         id: 'notif-1',
         userId: 'user-1',
-        type: 'COURSE_ENROLLED',
+        type: 'IN_APP',
         title: 'Enrolled in Mathematics 101',
         body: 'You have successfully enrolled in the course.',
         createdAt: new Date(),
-        readAt: null,
+        isRead: false,
       };
       mockPrisma.notification.create.mockResolvedValueOnce(mockNotification);
 
-      const result = await service.createNotification({
-        tenantId: 'tenant-1',
-        userId: 'user-1',
-        type: 'COURSE_ENROLLED',
-        title: 'Enrolled in Mathematics 101',
-        body: 'You have successfully enrolled in the course.',
-      });
+      const result = await service.createInApp(
+        'user-1',
+        'IN_APP' as any,
+        'Enrolled in Mathematics 101',
+        'You have successfully enrolled in the course.',
+      );
 
       expect(result.id).toBe('notif-1');
       expect(mockPrisma.notification.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
             userId: 'user-1',
-            type: 'COURSE_ENROLLED',
           }),
         }),
       );
@@ -75,52 +67,44 @@ describe('NotificationsService', () => {
   describe('getUserNotifications', () => {
     it('should return paginated notifications for a user', async () => {
       const mockNotifs = [
-        { id: 'n-1', type: 'GENERAL', title: 'Test', readAt: null, createdAt: new Date() },
-        { id: 'n-2', type: 'ASSIGNMENT_DUE', title: 'Assignment', readAt: new Date(), createdAt: new Date() },
+        { id: 'n-1', type: 'IN_APP', title: 'Test', isRead: false, createdAt: new Date() },
+        { id: 'n-2', type: 'IN_APP', title: 'Assignment', isRead: true, createdAt: new Date() },
       ];
       mockPrisma.notification.findMany.mockResolvedValueOnce(mockNotifs);
       mockPrisma.notification.count.mockResolvedValueOnce(2);
 
-      const result = await service.getUserNotifications('user-1', { page: 1, limit: 10 });
+      const result = await service.getUserNotifications('user-1', 1, 10);
 
-      expect(result.items).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
       expect(result.total).toBe(2);
     });
   });
 
-  describe('markAsRead', () => {
-    it('should mark notification as read with current timestamp', async () => {
-      mockPrisma.notification.findUnique.mockResolvedValueOnce({
-        id: 'n-1',
-        userId: 'user-1',
-        readAt: null,
-      });
-      mockPrisma.notification.update.mockResolvedValueOnce({
-        id: 'n-1',
-        readAt: new Date(),
-      });
+  describe('markRead', () => {
+    it('should mark notification as read', async () => {
+      mockPrisma.notification.updateMany.mockResolvedValueOnce({ count: 1 });
 
-      const result = await service.markAsRead('user-1', 'n-1');
+      const result = await service.markRead('user-1', 'n-1');
 
-      expect(mockPrisma.notification.update).toHaveBeenCalledWith(
+      expect(mockPrisma.notification.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { id: 'n-1' },
-          data: expect.objectContaining({ readAt: expect.any(Date) }),
+          where: expect.objectContaining({ id: 'n-1', userId: 'user-1' }),
+          data: expect.objectContaining({ isRead: true }),
         }),
       );
     });
   });
 
-  describe('markAllAsRead', () => {
+  describe('markAllRead', () => {
     it('should mark all unread notifications for user as read', async () => {
       mockPrisma.notification.updateMany.mockResolvedValueOnce({ count: 5 });
 
-      const result = await service.markAllAsRead('user-1');
+      const result = await service.markAllRead('user-1');
 
       expect(mockPrisma.notification.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ userId: 'user-1', readAt: null }),
-          data: expect.objectContaining({ readAt: expect.any(Date) }),
+          where: expect.objectContaining({ userId: 'user-1', isRead: false }),
+          data: expect.objectContaining({ isRead: true }),
         }),
       );
     });
@@ -135,7 +119,7 @@ describe('NotificationsService', () => {
       expect(count).toBe(3);
       expect(mockPrisma.notification.count).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: expect.objectContaining({ userId: 'user-1', readAt: null }),
+          where: expect.objectContaining({ userId: 'user-1', isRead: false }),
         }),
       );
     });

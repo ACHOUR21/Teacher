@@ -15,7 +15,11 @@ const mockPrisma = {
   userPoints: {
     upsert: jest.fn(),
     findFirst: jest.fn(),
+    findUnique: jest.fn(),
     findMany: jest.fn(),
+  },
+  courseProgress: {
+    count: jest.fn(),
   },
   $transaction: jest.fn((ops: any[]) => Promise.all(ops)),
 };
@@ -40,16 +44,9 @@ describe('GamificationService', () => {
       mockPrisma.userPoints.upsert.mockResolvedValueOnce({
         userId: 'user-1',
         total: 150,
-        weekly: 50,
-        monthly: 100,
       });
 
-      const result = await service.awardPoints({
-        tenantId: 'tenant-1',
-        userId: 'user-1',
-        points: 50,
-        reason: 'LESSON_COMPLETED',
-      });
+      const result = await service.awardPoints('user-1', 50);
 
       expect(mockPrisma.userPoints.upsert).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -61,7 +58,7 @@ describe('GamificationService', () => {
   });
 
   describe('getLeaderboard', () => {
-    it('should return sorted leaderboard with pagination', async () => {
+    it('should return sorted leaderboard', async () => {
       const mockLeaderboard = [
         { userId: 'user-1', total: 1000, user: { firstName: 'Alice', lastName: 'Smith' } },
         { userId: 'user-2', total: 850, user: { firstName: 'Bob', lastName: 'Jones' } },
@@ -69,10 +66,10 @@ describe('GamificationService', () => {
       ];
       mockPrisma.userPoints.findMany.mockResolvedValueOnce(mockLeaderboard);
 
-      const result = await service.getLeaderboard('tenant-1', { page: 1, limit: 10 });
+      const result = await service.getLeaderboard('tenant-1', 10);
 
-      expect(result.items).toHaveLength(3);
-      expect(result.items[0].total).toBeGreaterThanOrEqual(result.items[1].total);
+      expect(result).toHaveLength(3);
+      expect(result[0].total).toBeGreaterThanOrEqual(result[1].total);
     });
   });
 
@@ -82,48 +79,40 @@ describe('GamificationService', () => {
         {
           id: 'ach-1',
           name: 'First Course',
-          condition: 'COURSES_COMPLETED',
-          threshold: 1,
+          criteria: { type: 'points', threshold: 10 },
           points: 100,
-          badgeLevel: 'BRONZE',
         },
       ];
 
+      // findUnique for userPoints, then findMany for earned achievements, then findMany for all achievements
+      mockPrisma.userPoints.findUnique.mockResolvedValueOnce({ userId: 'user-1', total: 50 });
+      mockPrisma.userAchievement.findMany.mockResolvedValueOnce([]);
       mockPrisma.achievement.findMany.mockResolvedValueOnce(mockAchievements);
-      mockPrisma.userAchievement.findUnique.mockResolvedValueOnce(null);
       mockPrisma.userAchievement.create.mockResolvedValueOnce({
         id: 'ua-1',
         userId: 'user-1',
         achievementId: 'ach-1',
         earnedAt: new Date(),
       });
-      mockPrisma.userPoints.upsert.mockResolvedValueOnce({ total: 100, weekly: 100, monthly: 100 });
 
-      const awarded = await service.checkAndAwardAchievements('tenant-1', 'user-1', {
-        type: 'COURSES_COMPLETED',
-        value: 1,
-      });
+      const awarded = await service.checkAndAwardAchievements('user-1');
 
       expect(awarded.length).toBeGreaterThan(0);
-      expect(awarded[0].achievementId).toBe('ach-1');
+      expect(awarded[0]).toBe('ach-1');
     });
 
     it('should not re-award already earned achievement', async () => {
-      mockPrisma.achievement.findMany.mockResolvedValueOnce([
-        { id: 'ach-1', condition: 'COURSES_COMPLETED', threshold: 1 },
+      mockPrisma.userPoints.findUnique.mockResolvedValueOnce({ userId: 'user-1', total: 50 });
+      mockPrisma.userAchievement.findMany.mockResolvedValueOnce([
+        { achievementId: 'ach-1' },
       ]);
-      mockPrisma.userAchievement.findUnique.mockResolvedValueOnce({
-        id: 'ua-existing',
-        userId: 'user-1',
-        achievementId: 'ach-1',
-      });
+      // All achievements are already earned so findMany for all will get empty (notIn filter)
+      mockPrisma.achievement.findMany.mockResolvedValueOnce([]);
 
-      const awarded = await service.checkAndAwardAchievements('tenant-1', 'user-1', {
-        type: 'COURSES_COMPLETED',
-        value: 1,
-      });
+      const awarded = await service.checkAndAwardAchievements('user-1');
 
       expect(mockPrisma.userAchievement.create).not.toHaveBeenCalled();
+      expect(awarded).toHaveLength(0);
     });
   });
 });

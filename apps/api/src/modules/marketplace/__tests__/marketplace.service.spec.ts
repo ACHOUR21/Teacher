@@ -8,8 +8,9 @@ import { BillingService } from '../../billing/billing.service';
 const mockPrisma = {
   course: { findMany: jest.fn(), findUnique: jest.fn(), count: jest.fn(), update: jest.fn() },
   enrollment: { findFirst: jest.fn(), create: jest.fn(), findMany: jest.fn() },
-  review: { findFirst: jest.fn(), create: jest.fn(), findMany: jest.fn(), aggregate: jest.fn() },
-  courseProgress: { create: jest.fn(), upsert: jest.fn() },
+  review: { findFirst: jest.fn(), findUnique: jest.fn(), create: jest.fn(), findMany: jest.fn(), aggregate: jest.fn(), count: jest.fn() },
+  courseProgress: { create: jest.fn(), upsert: jest.fn(), findUnique: jest.fn() },
+  student: { findFirst: jest.fn() },
   $transaction: jest.fn((cb: any) => cb(mockPrisma)),
 };
 const mockSearch = { searchCourses: jest.fn().mockResolvedValue({ hits: [], total: 0 }) };
@@ -43,7 +44,7 @@ describe('MarketplaceService', () => {
 
       const result = await service.browseCourses({ page: 1, limit: 10 });
 
-      expect(result.items).toHaveLength(2);
+      expect(result.data).toHaveLength(2);
       expect(result.total).toBe(2);
     });
 
@@ -62,14 +63,16 @@ describe('MarketplaceService', () => {
   describe('purchaseCourse', () => {
     it('should create enrollment for free course', async () => {
       const freeCourse = { id: 'c-free', title: 'Free Course', price: 0, isPublished: true, tenantId: 'tenant-1' };
+      mockPrisma.courseProgress.findUnique.mockResolvedValueOnce(null);
       mockPrisma.course.findUnique.mockResolvedValueOnce(freeCourse);
-      mockPrisma.enrollment.findFirst.mockResolvedValueOnce(null);
-      mockPrisma.enrollment.create.mockResolvedValueOnce({ id: 'enroll-1', userId: 'user-1', courseId: 'c-free', status: 'ACTIVE' });
-      mockPrisma.courseProgress.upsert.mockResolvedValueOnce({ id: 'progress-1' });
+      mockPrisma.student.findFirst.mockResolvedValueOnce({ id: 'student-1', userId: 'user-1' });
+      mockPrisma.$transaction.mockImplementationOnce((arr: Promise<any>[]) => Promise.all(arr));
+      mockPrisma.courseProgress.create.mockResolvedValueOnce({ id: 'progress-1', studentId: 'student-1', courseId: 'c-free' });
+      mockPrisma.course.update.mockResolvedValueOnce({ id: 'c-free' });
 
       const result = await service.purchaseCourse('user-1', 'c-free');
 
-      expect(mockPrisma.enrollment.create).toHaveBeenCalled();
+      expect(mockPrisma.courseProgress.create).toHaveBeenCalled();
     });
 
     it('should throw NotFoundException for non-existent course', async () => {
@@ -81,7 +84,7 @@ describe('MarketplaceService', () => {
   describe('addReview', () => {
     it('should create a review', async () => {
       mockPrisma.enrollment.findFirst.mockResolvedValueOnce({ id: 'enroll-1', status: 'ACTIVE' });
-      mockPrisma.review.findFirst.mockResolvedValueOnce(null);
+      mockPrisma.review.findUnique.mockResolvedValueOnce(null);
       mockPrisma.review.create.mockResolvedValueOnce({ id: 'review-1', rating: 5, comment: 'Excellent!', userId: 'user-1', courseId: 'c-1' });
       mockPrisma.review.aggregate.mockResolvedValueOnce({ _avg: { rating: 4.8 } });
 

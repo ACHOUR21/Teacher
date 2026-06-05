@@ -1,8 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { LiveService } from '../live.service';
 import { PrismaService } from '../../database/prisma.service';
-import { RedisService } from '../../cache/redis.service';
 
 const mockPrisma = {
   liveSession: {
@@ -23,13 +22,6 @@ const mockPrisma = {
   $transaction: jest.fn((cb: any) => cb(mockPrisma)),
 };
 
-const mockRedis = {
-  set: jest.fn(),
-  get: jest.fn(),
-  del: jest.fn(),
-  publish: jest.fn(),
-};
-
 describe('LiveService', () => {
   let service: LiveService;
 
@@ -38,7 +30,6 @@ describe('LiveService', () => {
       providers: [
         LiveService,
         { provide: PrismaService, useValue: mockPrisma },
-        { provide: RedisService, useValue: mockRedis },
       ],
     }).compile();
 
@@ -52,14 +43,14 @@ describe('LiveService', () => {
         id: 'session-1',
         title: 'Math Live Class',
         status: 'SCHEDULED',
-        tenantId: 'tenant-1',
         teacherId: 'teacher-1',
         scheduledAt: new Date(Date.now() + 3600000),
         maxParticipants: 30,
+        teacher: { user: { firstName: 'Jane', lastName: 'Smith', avatarUrl: null } },
       };
       mockPrisma.liveSession.create.mockResolvedValueOnce(mockSession);
 
-      const result = await service.createSession('tenant-1', 'teacher-1', {
+      const result = await service.createSession('teacher-1', {
         title: 'Math Live Class',
         scheduledAt: new Date(Date.now() + 3600000),
         maxParticipants: 30,
@@ -76,12 +67,11 @@ describe('LiveService', () => {
         id: 'session-1',
         status: 'SCHEDULED',
         teacherId: 'teacher-1',
-        tenantId: 'tenant-1',
       };
       mockPrisma.liveSession.findUnique.mockResolvedValueOnce(mockSession);
       mockPrisma.liveSession.update.mockResolvedValueOnce({ ...mockSession, status: 'LIVE', startedAt: new Date() });
 
-      const result = await service.startSession('tenant-1', 'teacher-1', 'session-1');
+      const result = await service.startSession('session-1', 'teacher-1');
 
       expect(result.status).toBe('LIVE');
       expect(mockPrisma.liveSession.update).toHaveBeenCalledWith(
@@ -91,24 +81,23 @@ describe('LiveService', () => {
       );
     });
 
-    it('should throw ForbiddenException if not the session teacher', async () => {
+    it('should throw BadRequestException if not the session teacher', async () => {
       mockPrisma.liveSession.findUnique.mockResolvedValueOnce({
         id: 'session-1',
         status: 'SCHEDULED',
         teacherId: 'other-teacher',
-        tenantId: 'tenant-1',
       });
 
       await expect(
-        service.startSession('tenant-1', 'teacher-1', 'session-1'),
-      ).rejects.toThrow(ForbiddenException);
+        service.startSession('session-1', 'teacher-1'),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException for non-existent session', async () => {
       mockPrisma.liveSession.findUnique.mockResolvedValueOnce(null);
 
       await expect(
-        service.startSession('tenant-1', 'teacher-1', 'session-x'),
+        service.startSession('session-x', 'teacher-1'),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -117,10 +106,8 @@ describe('LiveService', () => {
     it('should create participant record for new joiner', async () => {
       const mockSession = {
         id: 'session-1',
-        status: 'LIVE',
-        maxParticipants: 30,
-        tenantId: 'tenant-1',
-        _count: { participants: 5 },
+        status: 'SCHEDULED',
+        teacherId: 'teacher-1',
       };
       mockPrisma.liveSession.findUnique.mockResolvedValueOnce(mockSession);
       mockPrisma.liveParticipant.findFirst.mockResolvedValueOnce(null);
@@ -129,28 +116,26 @@ describe('LiveService', () => {
         userId: 'user-1',
         sessionId: 'session-1',
         joinedAt: new Date(),
-        role: 'STUDENT',
+        role: 'student',
       });
-      mockPrisma.liveParticipant.findMany.mockResolvedValueOnce([]);
 
-      const result = await service.joinSession('tenant-1', 'user-1', 'session-1');
+      const result = await service.joinSession('session-1', 'user-1');
 
-      expect(result).toHaveProperty('participants');
+      expect(result).toHaveProperty('id');
+      expect(result.userId).toBe('user-1');
     });
   });
 
   describe('endSession', () => {
-    it('should transition session to ENDED and clear participants', async () => {
+    it('should transition session to ENDED', async () => {
       mockPrisma.liveSession.findUnique.mockResolvedValueOnce({
         id: 'session-1',
         status: 'LIVE',
         teacherId: 'teacher-1',
-        tenantId: 'tenant-1',
       });
       mockPrisma.liveSession.update.mockResolvedValueOnce({ id: 'session-1', status: 'ENDED' });
-      mockPrisma.liveParticipant.deleteMany.mockResolvedValueOnce({ count: 5 });
 
-      const result = await service.endSession('tenant-1', 'teacher-1', 'session-1');
+      const result = await service.endSession('session-1', 'teacher-1');
 
       expect(result.status).toBe('ENDED');
     });

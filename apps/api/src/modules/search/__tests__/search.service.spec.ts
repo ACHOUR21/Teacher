@@ -130,7 +130,8 @@ describe('SearchService', () => {
     });
 
     it('should skip creation if index already exists', async () => {
-      mockEs.indices.exists.mockResolvedValueOnce(true);
+      // service checks both 'courses' and 'users' indices
+      mockEs.indices.exists.mockResolvedValue(true);
 
       await service.createIndices();
 

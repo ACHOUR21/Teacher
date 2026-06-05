@@ -16,22 +16,28 @@ const mockPrisma = {
     findUnique: jest.fn(),
     update: jest.fn(),
   },
+  user: {
+    findUnique: jest.fn(),
+  },
   invoice: {
     create: jest.fn(),
     findMany: jest.fn(),
-    upsert: jest.fn(),
+    count: jest.fn(),
   },
-  coupon: { findFirst: jest.fn() },
+  coupon: {
+    findUnique: jest.fn(),
+    update: jest.fn(),
+  },
   $transaction: jest.fn((cb: any) => cb(mockPrisma)),
 };
 
 const mockConfig = {
-  get: jest.fn((key: string) => {
+  get: jest.fn((key: string, defaultVal?: string) => {
     const map: Record<string, string> = {
       STRIPE_SECRET_KEY: 'sk_test_mock',
       STRIPE_WEBHOOK_SECRET: 'whsec_mock',
     };
-    return map[key] ?? '';
+    return map[key] ?? defaultVal ?? '';
   }),
 };
 
@@ -44,11 +50,13 @@ const mockStripe = {
     create: jest.fn().mockResolvedValue({
       id: 'sub_mock123',
       status: 'active',
-      current_period_start: Math.floor(Date.now() / 1000),
       current_period_end: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
-      items: { data: [{ price: { id: 'price_mock', unit_amount: 7900, currency: 'usd' } }] },
+      latest_invoice: {
+        payment_intent: { client_secret: 'pi_secret_mock' },
+      },
+      metadata: {},
     }),
-    update: jest.fn(),
+    update: jest.fn().mockResolvedValue({ id: 'sub_mock123', cancel_at_period_end: true }),
     cancel: jest.fn().mockResolvedValue({ id: 'sub_mock123', status: 'canceled' }),
   },
   billingPortal: {
@@ -63,7 +71,12 @@ const mockStripe = {
 
 jest.mock('stripe', () => ({ __esModule: true, default: jest.fn().mockImplementation(() => mockStripe) }));
 
-const mockRedis = { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn() };
+const mockRedis = {
+  get: jest.fn().mockResolvedValue(null),
+  set: jest.fn(),
+  del: jest.fn(),
+  delPattern: jest.fn(),
+};
 
 describe('BillingService', () => {
   let service: BillingService;
@@ -82,61 +95,63 @@ describe('BillingService', () => {
     jest.clearAllMocks();
   });
 
-  describe('createSubscription', () => {
+  describe('subscribe', () => {
     it('should create a Stripe customer and subscription', async () => {
       const mockTenant = {
         id: 'tenant-1',
         name: 'Test School',
-        stripeCustomerId: null,
+        plan: 'FREE_TRIAL',
+        subscription: null,
       };
+      const mockUser = { id: 'user-1', email: 'admin@test.com' };
 
       mockPrisma.tenant.findUnique.mockResolvedValueOnce(mockTenant);
-      mockPrisma.tenant.update.mockResolvedValueOnce({ ...mockTenant, stripeCustomerId: 'cus_mock123' });
+      mockPrisma.user.findUnique.mockResolvedValueOnce(mockUser);
       mockPrisma.subscription.upsert.mockResolvedValueOnce({
         id: 'billing-1',
         plan: 'PROFESSIONAL',
         status: 'ACTIVE',
         tenantId: 'tenant-1',
       });
+      mockPrisma.tenant.update.mockResolvedValueOnce({ ...mockTenant, plan: 'PROFESSIONAL' });
 
-      const result = await service.createSubscription('tenant-1', {
-        plan: 'PROFESSIONAL' as any,
-        paymentMethodId: 'pm_test_mock',
-      });
+      const result = await service.subscribe('tenant-1', 'PROFESSIONAL' as any, 'user-1');
 
       expect(mockStripe.customers.create).toHaveBeenCalledWith(
-        expect.objectContaining({ metadata: { tenantId: 'tenant-1' } }),
+        expect.objectContaining({ metadata: expect.objectContaining({ tenantId: 'tenant-1' }) }),
       );
       expect(mockStripe.subscriptions.create).toHaveBeenCalled();
+      expect(result).toHaveProperty('subscription');
     });
 
     it('should use existing Stripe customer if already created', async () => {
       const mockTenant = {
         id: 'tenant-1',
         name: 'Test School',
-        stripeCustomerId: 'cus_existing',
+        plan: 'FREE_TRIAL',
+        subscription: { stripeCustomerId: 'cus_existing' },
       };
+      const mockUser = { id: 'user-1', email: 'admin@test.com' };
 
       mockPrisma.tenant.findUnique.mockResolvedValueOnce(mockTenant);
+      mockPrisma.user.findUnique.mockResolvedValueOnce(mockUser);
       mockPrisma.subscription.upsert.mockResolvedValueOnce({
         id: 'billing-1',
         plan: 'PROFESSIONAL',
         status: 'ACTIVE',
         tenantId: 'tenant-1',
       });
+      mockPrisma.tenant.update.mockResolvedValueOnce({ ...mockTenant, plan: 'PROFESSIONAL' });
 
-      await service.createSubscription('tenant-1', {
-        plan: 'PROFESSIONAL' as any,
-        paymentMethodId: 'pm_test_mock',
-      });
+      await service.subscribe('tenant-1', 'PROFESSIONAL' as any, 'user-1');
 
       expect(mockStripe.customers.create).not.toHaveBeenCalled();
     });
   });
 
   describe('cancelSubscription', () => {
-    it('should cancel active subscription', async () => {
-      mockPrisma.subscription.findFirst.mockResolvedValueOnce({
+    it('should schedule cancellation of active subscription', async () => {
+      mockPrisma.subscription.findUnique.mockResolvedValueOnce({
         id: 'billing-1',
         stripeSubscriptionId: 'sub_mock123',
         status: 'ACTIVE',
@@ -144,25 +159,27 @@ describe('BillingService', () => {
       });
       mockPrisma.subscription.update.mockResolvedValueOnce({
         id: 'billing-1',
-        status: 'CANCELED',
+        cancelAtPeriodEnd: true,
       });
 
-      const result = await service.cancelSubscription('tenant-1');
+      await service.cancelSubscription('tenant-1');
 
-      expect(mockStripe.subscriptions.cancel).toHaveBeenCalledWith('sub_mock123');
+      expect(mockStripe.subscriptions.update).toHaveBeenCalledWith('sub_mock123', {
+        cancel_at_period_end: true,
+      });
     });
   });
 
-  describe('getBillingPortalUrl', () => {
+  describe('createPortalSession', () => {
     it('should return Stripe portal URL', async () => {
-      mockPrisma.tenant.findUnique.mockResolvedValueOnce({
-        id: 'tenant-1',
+      mockPrisma.subscription.findUnique.mockResolvedValueOnce({
+        id: 'billing-1',
         stripeCustomerId: 'cus_mock123',
       });
 
-      const result = await service.getBillingPortalUrl('tenant-1', 'https://app.example.com/billing');
+      const result = await service.createPortalSession('tenant-1', 'https://app.example.com/billing');
 
-      expect(result.url).toBe('https://billing.stripe.com/session/mock');
+      expect(result).toBe('https://billing.stripe.com/session/mock');
     });
   });
 });

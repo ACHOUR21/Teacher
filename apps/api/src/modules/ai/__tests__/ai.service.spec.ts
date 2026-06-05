@@ -1,8 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ConfigService } from '@nestjs/config';
 import { AiService } from '../ai.service';
 import { PrismaService } from '../../database/prisma.service';
-import { RedisService } from '../../cache/redis.service';
 
 const mockPrisma = {
   aIConversation: {
@@ -11,26 +9,11 @@ const mockPrisma = {
     update: jest.fn(),
   },
   aIMessage: { create: jest.fn() },
-  aIUsage: { create: jest.fn(), findFirst: jest.fn() },
+  aIUsage: { create: jest.fn(), findFirst: jest.fn(), groupBy: jest.fn() },
+  user: { findUnique: jest.fn() },
   $transaction: jest.fn((cb: any) => cb(mockPrisma)),
 };
 
-const mockRedis = {
-  get: jest.fn().mockResolvedValue(null),
-  set: jest.fn(),
-  incr: jest.fn().mockResolvedValue(1),
-  expire: jest.fn(),
-};
-
-const mockConfig = {
-  get: jest.fn((key: string) => {
-    const map: Record<string, string> = {
-      ANTHROPIC_API_KEY: 'test-key',
-      OPENAI_API_KEY: 'test-openai-key',
-    };
-    return map[key] ?? '';
-  }),
-};
 
 jest.mock('@anthropic-ai/sdk', () => ({
   __esModule: true,
@@ -44,6 +27,13 @@ jest.mock('@anthropic-ai/sdk', () => ({
   })),
 }));
 
+const mockExamJson = JSON.stringify({
+  title: 'Math Test',
+  questions: [
+    { id: 1, type: 'multiple_choice', question: 'What is 2+2?', options: ['2','3','4','5'], answer: '4', explanation: 'Basic arithmetic', points: 10 },
+  ],
+});
+
 jest.mock('openai', () => ({
   __esModule: true,
   default: jest.fn().mockImplementation(() => ({
@@ -55,10 +45,15 @@ jest.mock('openai', () => ({
     chat: {
       completions: {
         create: jest.fn().mockResolvedValue({
-          choices: [{ message: { content: 'OpenAI response' } }],
-          usage: { prompt_tokens: 100, completion_tokens: 50 },
+          choices: [{ message: { content: mockExamJson } }],
+          usage: { total_tokens: 150 },
         }),
       },
+    },
+    moderations: {
+      create: jest.fn().mockResolvedValue({
+        results: [{ flagged: false, categories: {}, category_scores: {} }],
+      }),
     },
   })),
 }));
@@ -71,8 +66,6 @@ describe('AiService', () => {
       providers: [
         AiService,
         { provide: PrismaService, useValue: mockPrisma },
-        { provide: RedisService, useValue: mockRedis },
-        { provide: ConfigService, useValue: mockConfig },
       ],
     }).compile();
 
@@ -89,12 +82,7 @@ describe('AiService', () => {
       mockPrisma.aIMessage.create.mockResolvedValue({ id: 'msg-1' });
       mockPrisma.aIUsage.create.mockResolvedValue({ id: 'usage-1' });
 
-      const result = await service.tutorChat({
-        tenantId: 'tenant-1',
-        userId: 'user-1',
-        message: 'What is calculus?',
-        subject: 'Mathematics',
-      });
+      const result = await service.tutorChat('user-1', 'tenant-1', 'What is calculus?', 'Mathematics');
 
       expect(result).toHaveProperty('answer');
       expect(result).toHaveProperty('conversationId');
@@ -113,13 +101,7 @@ describe('AiService', () => {
       mockPrisma.aIMessage.create.mockResolvedValue({ id: 'msg-1' });
       mockPrisma.aIUsage.create.mockResolvedValue({ id: 'usage-1' });
 
-      const result = await service.tutorChat({
-        tenantId: 'tenant-1',
-        userId: 'user-1',
-        message: 'Tell me more',
-        subject: 'Mathematics',
-        conversationId: 'conv-existing',
-      });
+      const result = await service.tutorChat('user-1', 'tenant-1', 'Tell me more', 'Mathematics', 'conv-existing');
 
       expect(result.conversationId).toBe('conv-existing');
     });
@@ -127,60 +109,25 @@ describe('AiService', () => {
 
   describe('generateExam', () => {
     it('should return parsed exam questions', async () => {
-      const mockExamJson = JSON.stringify({
-        questions: [
-          {
-            question: 'What is 2 + 2?',
-            type: 'MULTIPLE_CHOICE',
-            options: ['2', '3', '4', '5'],
-            correctAnswer: '4',
-            points: 10,
-            explanation: '2 + 2 equals 4',
-          },
-        ],
-      });
-
-      // Re-mock to return exam JSON
-      const Anthropic = require('@anthropic-ai/sdk').default;
-      Anthropic.mockImplementationOnce(() => ({
-        messages: {
-          create: jest.fn().mockResolvedValue({
-            content: [{ type: 'text', text: mockExamJson }],
-            usage: { input_tokens: 200, output_tokens: 100 },
-          }),
-        },
-      }));
-
       mockPrisma.aIUsage.create.mockResolvedValue({ id: 'usage-1' });
 
-      const result = await service.generateExam({
-        tenantId: 'tenant-1',
-        userId: 'user-1',
-        subject: 'Mathematics',
-        topic: 'Basic Arithmetic',
-        difficulty: 'BEGINNER',
-        questionCount: 1,
-        questionTypes: ['MULTIPLE_CHOICE'],
-      });
+      const result = await service.generateExam('user-1', 'tenant-1', 'Basic Arithmetic', 1, 'beginner', ['multiple_choice']);
 
-      expect(result).toHaveProperty('questions');
-      expect(Array.isArray(result.questions)).toBe(true);
+      expect(result).toHaveProperty('exam');
+      expect(result.exam).toHaveProperty('questions');
     });
   });
 
   describe('getUsageStats', () => {
     it('should return usage statistics', async () => {
-      mockPrisma.aIUsage.findFirst.mockResolvedValue({
-        _sum: { inputTokens: 1000, outputTokens: 500, cost: 0.05 },
-        _count: { id: 20 },
-      });
+      mockPrisma.aIUsage.groupBy.mockResolvedValue([
+        { module: 'TUTOR', _sum: { tokens: 1000, cost: 0.003 }, _count: { id: 10 } },
+      ]);
 
-      const result = await service.getUsageStats({
-        tenantId: 'tenant-1',
-        userId: 'user-1',
-      });
+      const result = await service.getUsageStats('tenant-1', 'month');
 
       expect(result).toBeDefined();
+      expect(Array.isArray(result)).toBe(true);
     });
   });
 });

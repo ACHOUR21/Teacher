@@ -17,6 +17,8 @@ jest.mock('@anthropic-ai/sdk', () => {
 const mockPrisma = {
   aIConversation: {
     findFirst: jest.fn(),
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
     create: jest.fn(),
     update: jest.fn(),
   },
@@ -25,12 +27,17 @@ const mockPrisma = {
     create: jest.fn(),
     createMany: jest.fn(),
   },
+  aIUsage: {
+    create: jest.fn(),
+    findFirst: jest.fn(),
+  },
   courseProgress: {
     findMany: jest.fn(),
   },
   submission: {
     findMany: jest.fn(),
   },
+  $transaction: jest.fn((arr: Promise<any>[]) => Promise.all(arr)),
 };
 
 const mockConfig = {
@@ -86,6 +93,7 @@ describe('AiAgentsService', () => {
       const session = { id: 'sess-1', agentType: 'HOMEWORK_ASSISTANT', messages: [] };
       mockPrisma.aIConversation.create.mockResolvedValueOnce(session);
       mockPrisma.aIMessage.createMany.mockResolvedValueOnce({});
+      mockPrisma.aIUsage.create.mockResolvedValueOnce({ id: 'usage-1' });
 
       anthropicMock.mockResolvedValueOnce({
         content: [{ type: 'text', text: 'Here is a hint for your problem.' }],
@@ -100,7 +108,7 @@ describe('AiAgentsService', () => {
         message: 'Help me solve this equation',
       });
 
-      expect(result.response).toBe('Here is a hint for your problem.');
+      expect(result.reply).toBe('Here is a hint for your problem.');
       expect(result.sessionId).toBe('sess-1');
     });
 
@@ -113,8 +121,9 @@ describe('AiAgentsService', () => {
           { role: 'assistant', content: 'Previous answer' },
         ],
       };
-      mockPrisma.aIConversation.findFirst.mockResolvedValueOnce(existing);
+      mockPrisma.aIConversation.findUnique.mockResolvedValueOnce(existing);
       mockPrisma.aIMessage.createMany.mockResolvedValueOnce({});
+      mockPrisma.aIUsage.create.mockResolvedValueOnce({ id: 'usage-1' });
 
       anthropicMock.mockResolvedValueOnce({
         content: [{ type: 'text', text: 'Continuing our plan...' }],
@@ -130,7 +139,7 @@ describe('AiAgentsService', () => {
         sessionId: 'sess-1',
       });
 
-      expect(result.response).toBe('Continuing our plan...');
+      expect(result.reply).toBe('Continuing our plan...');
     });
   });
 });

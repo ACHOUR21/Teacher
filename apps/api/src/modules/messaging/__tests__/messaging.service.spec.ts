@@ -94,7 +94,7 @@ describe('MessagingService', () => {
 
       const result = await service.getMessages('c-1', 'u-1');
 
-      expect(result.items).toHaveLength(1);
+      expect(result.data).toHaveLength(1);
       expect(result.total).toBe(1);
     });
 

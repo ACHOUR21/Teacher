@@ -10,14 +10,18 @@ import * as bcrypt from 'bcrypt';
 const mockPrisma = {
   tenant: { findUnique: jest.fn(), create: jest.fn() },
   user: { findUnique: jest.fn(), create: jest.fn(), update: jest.fn() },
+  userProfile: { create: jest.fn(), upsert: jest.fn() },
   userSession: { create: jest.fn(), findFirst: jest.fn(), delete: jest.fn(), deleteMany: jest.fn() },
   userDevice: { upsert: jest.fn() },
-  $transaction: jest.fn((cb) => cb(mockPrisma)),
+  subscription: { create: jest.fn() },
+  $transaction: jest.fn((cb: any) => cb(mockPrisma)),
 };
 
 const mockJwt = {
   sign: jest.fn().mockReturnValue('mock-token'),
+  signAsync: jest.fn().mockResolvedValue('mock-token'),
   verify: jest.fn(),
+  verifyAsync: jest.fn().mockResolvedValue({ sub: 'user-1' }),
 };
 
 const mockConfig = {
@@ -82,12 +86,12 @@ describe('AuthService', () => {
       const mockUser = {
         id: 'user-1',
         email: 'admin@test.com',
-        role: 'SCHOOL_ADMIN',
+        role: 'ADMIN',
         tenantId: 'tenant-1',
         firstName: 'Admin',
         lastName: 'User',
         isActive: true,
-        isMfaEnabled: false,
+        mfaEnabled: false,
         tenant: mockTenant,
         profile: null,
       };
@@ -131,7 +135,7 @@ describe('AuthService', () => {
         email: 'user@test.com',
         passwordHash: hashedPw,
         isActive: true,
-        isMfaEnabled: false,
+        mfaEnabled: false,
         role: 'STUDENT',
         tenantId: 'tenant-1',
         firstName: 'Test',
@@ -153,7 +157,7 @@ describe('AuthService', () => {
         email: 'user@test.com',
         passwordHash: hashedPw,
         isActive: true,
-        isMfaEnabled: false,
+        mfaEnabled: false,
         role: 'STUDENT',
         tenantId: 'tenant-1',
         firstName: 'Test',
