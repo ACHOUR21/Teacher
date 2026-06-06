@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class StudentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async findAll(tenantId: string, query: { search?: string; schoolId?: string; classId?: string; grade?: string; page?: number; limit?: number }) {
     const page = query.page ?? 1;
@@ -107,5 +111,18 @@ export class StudentsService {
       points: points?.total ?? 0,
       level: points?.level ?? 1,
     };
+  }
+
+  async inviteStudent(tenantId: string, dto: { email: string; firstName?: string; lastName?: string; grade?: string }) {
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, slug: true } });
+    const inviteLink = `${process.env['APP_URL'] ?? 'http://localhost:3000'}/join/${tenant?.slug ?? ''}`;
+    await this.notifications.sendEmail(
+      dto.email,
+      `You're invited to join ${tenant?.name ?? 'EduAI'}`,
+      `<p>Hi ${dto.firstName ?? 'there'},</p>
+       <p>You've been invited to join <strong>${tenant?.name ?? 'EduAI'}</strong> as a student.</p>
+       <a href="${inviteLink}" style="display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">Accept Invitation →</a>`,
+    );
+    return { message: 'Invitation sent', email: dto.email, inviteLink };
   }
 }

@@ -17,6 +17,12 @@ export class ParentsController {
     return this.parentsService.getChildren(user.id);
   }
 
+  @Get('my-children')
+  @ApiOperation({ summary: 'Get parent linked children (alias)' })
+  myChildren(@CurrentUser() user: any) {
+    return this.parentsService.getChildren(user.id);
+  }
+
   @Post('children/link')
   @ApiOperation({ summary: 'Link a student as child' })
   link(@CurrentUser() user: any, @Body() body: { studentId: string; relationship?: string }) {

@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class TeachersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async findAll(tenantId: string, query: { search?: string; schoolId?: string; subject?: string; page?: number; limit?: number }) {
     const page = query.page ?? 1;
@@ -90,6 +94,33 @@ export class TeachersService {
       completionsCount,
       completionRate: studentsCount > 0 ? (completionsCount / studentsCount) * 100 : 0,
     };
+  }
+
+  async getTenantStats(tenantId: string) {
+    const [total, activeThisMonth, totalCourses] = await Promise.all([
+      this.prisma.teacher.count({ where: { user: { tenantId } } }),
+      this.prisma.teacher.count({
+        where: {
+          user: { tenantId },
+          createdAt: { gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) },
+        },
+      }),
+      this.prisma.course.count({ where: { teacher: { user: { tenantId } }, isPublished: true } }),
+    ]);
+    return { total, activeThisMonth, totalCourses };
+  }
+
+  async inviteTeacher(tenantId: string, dto: { email: string; firstName?: string; lastName?: string }) {
+    const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, slug: true } });
+    const inviteLink = `${process.env['APP_URL'] ?? 'http://localhost:3000'}/join/${tenant?.slug ?? ''}`;
+    await this.notifications.sendEmail(
+      dto.email,
+      `You're invited to teach on ${tenant?.name ?? 'EduAI'}`,
+      `<p>Hi ${dto.firstName ?? 'there'},</p>
+       <p>You've been invited to join <strong>${tenant?.name ?? 'EduAI'}</strong> as a teacher.</p>
+       <a href="${inviteLink}" style="display:inline-block;background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">Accept Invitation →</a>`,
+    );
+    return { message: 'Invitation sent', email: dto.email, inviteLink };
   }
 
   async getSchedule(id: string) {

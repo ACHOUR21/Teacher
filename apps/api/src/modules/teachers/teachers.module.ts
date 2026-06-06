@@ -3,9 +3,10 @@ import { TeachersController } from './presentation/controllers/teachers.controll
 import { TeachersService } from './teachers.service';
 import { DatabaseModule } from '../database/database.module';
 import { CacheModule } from '../cache/cache.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [DatabaseModule, CacheModule],
+  imports: [DatabaseModule, CacheModule, NotificationsModule],
   controllers: [TeachersController],
   providers: [TeachersService],
   exports: [TeachersService],

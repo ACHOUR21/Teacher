@@ -3,9 +3,10 @@ import { StudentsController } from './presentation/controllers/students.controll
 import { StudentsService } from './students.service';
 import { DatabaseModule } from '../database/database.module';
 import { GamificationModule } from '../gamification/gamification.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  imports: [DatabaseModule, GamificationModule],
+  imports: [DatabaseModule, GamificationModule, NotificationsModule],
   controllers: [StudentsController],
   providers: [StudentsService],
   exports: [StudentsService],

@@ -1,12 +1,14 @@
-import { Controller, Get, Param, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { StudentsService } from '../../students.service';
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../core/guards/roles.guard';
+import { Roles } from '../../../core/decorators/roles.decorator';
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
 
 @ApiTags('Students')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('students')
 export class StudentsController {
   constructor(private readonly studentsService: StudentsService) {}
@@ -59,5 +61,13 @@ export class StudentsController {
   @ApiOperation({ summary: 'Get student performance summary' })
   performance(@Param('id') id: string) {
     return this.studentsService.getPerformanceSummary(id);
+  }
+
+  @Post('invite')
+  @HttpCode(HttpStatus.OK)
+  @Roles('ADMIN', 'SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER')
+  @ApiOperation({ summary: 'Invite a student by email' })
+  invite(@Request() req: any, @Body() body: { email: string; firstName?: string; lastName?: string; grade?: string }) {
+    return this.studentsService.inviteStudent(req.tenant?.id, body);
   }
 }

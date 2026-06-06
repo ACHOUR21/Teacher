@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Param, Body, Query, UseGuards, Request, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, Request, NotFoundException, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { TeachersService } from '../../teachers.service';
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
@@ -59,5 +59,18 @@ export class TeachersController {
   @ApiOperation({ summary: 'Get teacher upcoming schedule' })
   schedule(@Param('id') id: string) {
     return this.teachersService.getSchedule(id);
+  }
+
+  @Get('stats')
+  @ApiOperation({ summary: 'Get aggregate teacher stats for tenant' })
+  tenantStats(@Request() req: any) {
+    return this.teachersService.getTenantStats(req.tenant?.id);
+  }
+
+  @Post('invite')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Invite a teacher by email' })
+  invite(@Request() req: any, @Body() body: { email: string; firstName?: string; lastName?: string }) {
+    return this.teachersService.inviteTeacher(req.tenant?.id, body);
   }
 }
