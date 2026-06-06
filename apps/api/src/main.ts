@@ -19,8 +19,9 @@ import { TimeoutInterceptor } from './modules/core/interceptors/timeout.intercep
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
+  const isProd = process.env['NODE_ENV'] === 'production';
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
-    logger: ['error', 'warn', 'log', 'debug'],
+    logger: isProd ? ['error', 'warn'] : ['error', 'warn', 'log', 'debug', 'verbose'],
   });
 
   // Security

@@ -62,8 +62,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
       message = 'Invalid data provided';
       errors = ['Database validation failed'];
     } else if (exception instanceof Error) {
-      message = exception.message;
-      errors = [exception.message];
+      // Never leak raw internal error details to clients in production
+      if (process.env['NODE_ENV'] === 'production') {
+        message = 'Internal server error';
+        errors = [];
+      } else {
+        message = exception.message;
+        errors = [exception.message];
+      }
     }
 
     const errorResponse: ApiErrorResponse = {
@@ -77,10 +83,10 @@ export class AllExceptionsFilter implements ExceptionFilter {
     };
 
     if (statusCode >= 500) {
-      this.logger.error(
-        `${request.method} ${request.url} - ${statusCode}`,
-        exception instanceof Error ? exception.stack : String(exception),
-      );
+      const detail = process.env['NODE_ENV'] === 'production'
+        ? (exception instanceof Error ? exception.message : String(exception))
+        : (exception instanceof Error ? exception.stack : String(exception));
+      this.logger.error(`${request.method} ${request.url} - ${statusCode}`, detail);
     } else {
       this.logger.warn(`${request.method} ${request.url} - ${statusCode}: ${message}`);
     }

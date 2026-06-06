@@ -265,6 +265,9 @@ services:
       SMTP_HOST: mailhog
       SMTP_PORT: "1025"
       PORT: "3001"
+      OTEL_ENABLED: "false"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: eduai-api
     ports:
       - "3001:3001"
     volumes:
@@ -381,5 +384,35 @@ services:
     volumes:
       - ./infra/monitoring/loki:/etc/loki:ro
       - loki_data:/loki
+    networks:
+      - eduai_network
+
+  # ── OpenTelemetry Collector ───────────────────────────────────────────────────
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.102.0
+    container_name: eduai_otel
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol/config.yaml"]
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8889:8889"   # Prometheus metrics exporter
+    volumes:
+      - ./infra/monitoring/opentelemetry/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    networks:
+      - eduai_network
+    depends_on:
+      - loki
+
+  # ── Jaeger (distributed tracing) ─────────────────────────────────────────────
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: eduai_jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"  # Jaeger UI → http://localhost:16686
+      - "14317:4317"   # OTLP gRPC (internal to otel-collector)
     networks:
       - eduai_network
