@@ -55,7 +55,7 @@ class Endpoints {
   static const String updateProfile = '/profile/update';
   static const String uploadAvatar = '/profile/avatar';
   static const String userStats = '/profile/stats';
-  static const String achievements = '/profile/achievements';
+  static const String profileAchievements = '/profile/achievements';
   static const String certificates = '/profile/certificates';
 
   // Notifications
@@ -64,4 +64,25 @@ class Endpoints {
   static const String markAllRead = '/notifications/mark-all-read';
   static String markRead(String id) => '/notifications/$id/read';
   static const String fcmToken = '/notifications/fcm-token';
+  static String markNotificationRead(String id) => '/notifications/$id/read';
+  static const String markAllNotificationsRead = '/notifications/mark-all-read';
+
+  // Gamification
+  static const String gamificationStats = '/gamification/stats';
+  static const String achievements = '/gamification/achievements';
+  static const String leaderboard = '/gamification/leaderboard';
+  static const String userPoints = '/gamification/my-points';
+
+  // Certificates
+  static const String myCertificates = '/certificates/my';
+  static String downloadCertificate(String id) => '/certificates/$id/download';
+
+  // Marketplace
+  static const String marketplaceCourses = '/marketplace/courses';
+  static const String featuredCourses = '/marketplace/featured';
+  static String purchaseCourse(String id) => '/marketplace/courses/$id/purchase';
+
+  // Parents
+  static const String myChildren = '/parents/my-children';
+  static String childCourses(String id) => '/students/$id/courses';
 }

@@ -119,7 +119,53 @@ export class CertificatesService {
   async getTemplates(courseId?: string) {
     return this.prisma.certificateTemplate.findMany({
       where: courseId ? { courseId } : {},
-      include: { course: { select: { title: true } } },
+      include: {
+        course: { select: { title: true } },
+        _count: { select: { issued: true } },
+      },
     });
+  }
+
+  async createTemplate(dto: {
+    name: string;
+    title: string;
+    bodyText?: string;
+    backgroundColor?: string;
+    textColor?: string;
+    borderStyle?: string;
+    showSignature?: boolean;
+    courseId?: string;
+  }) {
+    const { name, courseId, ...designFields } = dto;
+    return this.prisma.certificateTemplate.create({
+      data: {
+        name,
+        courseId: courseId ?? null,
+        design: designFields as import('@prisma/client').Prisma.InputJsonValue,
+        fields: [],
+      },
+    });
+  }
+
+  async issueCertificateByTemplate(dto: { templateId: string; courseId?: string; recipientId: string }) {
+    return this.issueCertificate(dto.recipientId, dto.templateId);
+  }
+
+  async downloadCertificate(certId: string) {
+    const cert = await this.prisma.issuedCertificate.findUnique({
+      where: { id: certId },
+      include: {
+        student: { include: { user: true } },
+        template: { include: { course: { select: { title: true } } } },
+      },
+    });
+    if (!cert) throw new NotFoundException('Certificate not found');
+    const pdfBuffer = await this.generatePDF({
+      studentName: `${cert.student.user.firstName} ${cert.student.user.lastName}`,
+      courseName: cert.template.course?.title ?? 'Course',
+      issuedDate: cert.issuedAt.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+      templateName: cert.template.name,
+    });
+    return pdfBuffer;
   }
 }

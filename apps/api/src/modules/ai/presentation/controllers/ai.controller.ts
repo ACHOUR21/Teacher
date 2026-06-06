@@ -99,6 +99,12 @@ export class AiController {
     return this.aiService.checkPlagiarism(user.id, req.tenant?.id, dto.content);
   }
 
+  @Post('content/moderate')
+  @ApiOperation({ summary: 'Moderate content for inappropriate material' })
+  moderateContent(@Request() req: any, @Body() dto: { content: string }) {
+    return this.aiService.moderateContent(req.tenant?.id, dto.content);
+  }
+
   @Post('recommend')
   @ApiOperation({ summary: 'Get personalized course recommendations' })
   recommend(@CurrentUser() user: any, @Request() req: any) {

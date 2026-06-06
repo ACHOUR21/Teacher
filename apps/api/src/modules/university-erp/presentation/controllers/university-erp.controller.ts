@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Param, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { UniversityErpService } from '../../university-erp.service';
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
@@ -24,6 +24,19 @@ export class UniversityErpController {
     return this.universityErpService.getUniversities(req.tenant?.id);
   }
 
+  @Get('universities/:id')
+  @ApiOperation({ summary: 'Get a university by ID' })
+  findOne(@Param('id') id: string) {
+    return this.universityErpService.getUniversity(id);
+  }
+
+  @Patch('universities/:id')
+  @Roles('ADMIN', 'UNIVERSITY_ADMIN')
+  @ApiOperation({ summary: 'Update university fields' })
+  updateUniversity(@Param('id') id: string, @Body() body: { name?: string; code?: string }) {
+    return this.universityErpService.updateUniversity(id, body);
+  }
+
   @Get('universities/:id/faculties')
   @ApiOperation({ summary: 'List faculties in university' })
   faculties(@Param('id') id: string) {
@@ -37,6 +50,26 @@ export class UniversityErpController {
     return this.universityErpService.createFaculty(id, body);
   }
 
+  @Delete('faculties/:id')
+  @Roles('ADMIN', 'UNIVERSITY_ADMIN')
+  @ApiOperation({ summary: 'Delete a faculty' })
+  deleteFaculty(@Param('id') id: string) {
+    return this.universityErpService.deleteFaculty(id);
+  }
+
+  @Post('faculties/:facultyId/departments')
+  @Roles('ADMIN', 'UNIVERSITY_ADMIN')
+  @ApiOperation({ summary: 'Create a department under a faculty' })
+  createDepartment(@Param('facultyId') facultyId: string, @Body() body: { name: string; code?: string }) {
+    return this.universityErpService.createUniDepartment(facultyId, body);
+  }
+
+  @Get('faculties/:facultyId/departments')
+  @ApiOperation({ summary: 'List departments in a faculty' })
+  getDepartments(@Param('facultyId') facultyId: string) {
+    return this.universityErpService.getDepartments(facultyId);
+  }
+
   @Post('universities/:id/programs')
   @Roles('ADMIN', 'UNIVERSITY_ADMIN')
   @ApiOperation({ summary: 'Create an academic program' })
@@ -48,6 +81,12 @@ export class UniversityErpController {
   @ApiOperation({ summary: 'List programs in university' })
   programs(@Param('id') id: string) {
     return this.universityErpService.getPrograms(id);
+  }
+
+  @Get('programs/:programId/stats')
+  @ApiOperation({ summary: 'Get enrollment stats for a program' })
+  programStats(@Param('programId') programId: string) {
+    return this.universityErpService.getProgramEnrollmentStats(programId);
   }
 
   @Post('programs/:programId/enroll')
@@ -68,5 +107,11 @@ export class UniversityErpController {
   @ApiOperation({ summary: 'Update enrollment status' })
   updateStatus(@Param('id') id: string, @Body() body: { status: any }) {
     return this.universityErpService.updateEnrollmentStatus(id, body.status);
+  }
+
+  @Get('students/:studentId/academic-record')
+  @ApiOperation({ summary: 'Get full academic record for a student' })
+  academicRecord(@Param('studentId') studentId: string, @Query('universityId') universityId: string) {
+    return this.universityErpService.getStudentAcademicRecord(studentId, universityId);
   }
 }
