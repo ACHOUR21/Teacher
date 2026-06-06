@@ -9,6 +9,15 @@ type AIModuleUsage {
   totalTokens: Int!
 }
 
+type Achievement {
+  description: String!
+  icon: String
+  id: ID!
+  name: String!
+  points: Int!
+  unlockedAt: DateTime
+}
+
 type Course {
   category: String
   createdAt: DateTime!
@@ -63,6 +72,21 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+type GamificationProfile {
+  achievements: [Achievement!]!
+  points: UserPoints
+}
+
+type LeaderboardEntry {
+  avatarUrl: String
+  firstName: String!
+  lastName: String!
+  level: Int!
+  points: Int!
+  rank: Int!
+  userId: ID!
+}
+
 type MonthlyRevenue {
   month: String!
   revenue: Float!
@@ -80,9 +104,26 @@ type Mutation {
 
   """Delete a course"""
   deleteCourse(id: ID!): Boolean!
+  markAllNotificationsRead: Boolean!
+  markNotificationRead(id: String!): Notification!
 
   """Publish a course"""
   publishCourse(id: ID!): Boolean!
+}
+
+type Notification {
+  body: String!
+  createdAt: DateTime!
+  id: ID!
+  isRead: Boolean!
+  readAt: DateTime
+  title: String!
+  type: String!
+}
+
+type NotificationPage {
+  data: [Notification!]!
+  meta: PaginationMeta!
 }
 
 type PaginationMeta {
@@ -108,9 +149,12 @@ type Query {
 
   """List courses for the authenticated tenant"""
   courses(filter: CourseFilterInput): CoursePage!
+  leaderboard(limit: Int = 20): [LeaderboardEntry!]!
 
   """Get current authenticated user"""
   me: User!
+  myGamificationProfile: GamificationProfile!
+  myNotifications(limit: Int = 20, page: Int = 1): NotificationPage!
 
   """Platform-wide statistics"""
   platformStats: PlatformStats!
@@ -120,6 +164,7 @@ type Query {
 
   """Student engagement metrics"""
   studentActivity(days: Int = 7): StudentActivity!
+  unreadNotificationCount: Int!
 
   """Get a user by ID"""
   user(id: ID!): User!
@@ -166,6 +211,11 @@ type UserBrief {
 type UserPage {
   data: [User!]!
   meta: PaginationMeta!
+}
+
+type UserPoints {
+  level: Int!
+  total: Int!
 }
 
 type UserProfile {
