@@ -65,7 +65,18 @@
     "speakeasy": "^2.0.0",
     "stripe": "^15.5.0",
     "twilio": "^5.0.4",
-    "uuid": "^9.0.1"
+    "uuid": "^9.0.1",
+    "graphql-subscriptions": "^2.0.0",
+    "graphql-ws": "^5.16.0",
+    "@opentelemetry/sdk-node": "^0.52.0",
+    "@opentelemetry/auto-instrumentations-node": "^0.49.0",
+    "@opentelemetry/exporter-trace-otlp-grpc": "^0.52.0",
+    "@opentelemetry/exporter-metrics-otlp-grpc": "^0.52.0",
+    "@opentelemetry/resources": "^1.25.0",
+    "@opentelemetry/semantic-conventions": "^1.25.0",
+    "@opentelemetry/sdk-metrics": "^1.25.0",
+    "@opentelemetry/sdk-trace-base": "^1.25.0",
+    "@opentelemetry/core": "^1.25.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.3.2",

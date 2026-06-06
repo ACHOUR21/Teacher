@@ -1,3 +1,7 @@
+// OpenTelemetry must be initialized before any other imports
+import { startTelemetry } from './instrumentation';
+startTelemetry();
+
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';

@@ -16,6 +16,7 @@ import { NotificationsResolver } from './resolvers/notifications.resolver';
 import { GamificationResolver } from './resolvers/gamification.resolver';
 import { AssignmentsResolver } from './resolvers/assignments.resolver';
 import { SuperAdminResolver } from './resolvers/super-admin.resolver';
+import { SubscriptionsResolver } from './resolvers/subscriptions.resolver';
 import { GqlAuthGuard } from './guards/gql-auth.guard';
 
 @Module({
@@ -26,7 +27,21 @@ import { GqlAuthGuard } from './guards/gql-auth.guard';
       sortSchema: true,
       playground: process.env['NODE_ENV'] !== 'production',
       introspection: process.env['NODE_ENV'] !== 'production',
-      context: ({ req }: { req: Request }) => ({ req }),
+      subscriptions: {
+        'graphql-ws': {
+          onConnect: (context: any) => {
+            const { connectionParams } = context;
+            if (connectionParams?.Authorization) {
+              return { req: { headers: { authorization: connectionParams.Authorization } } };
+            }
+            return {};
+          },
+        },
+        'subscriptions-transport-ws': false,
+      },
+      context: ({ req, extra }: { req?: Request; extra?: { request?: Request } }) => ({
+        req: req ?? extra?.request,
+      }),
       formatError: (error) => ({
         message: error.message,
         code: error.extensions?.['code'] ?? 'INTERNAL_SERVER_ERROR',
@@ -49,6 +64,7 @@ import { GqlAuthGuard } from './guards/gql-auth.guard';
     GamificationResolver,
     AssignmentsResolver,
     SuperAdminResolver,
+    SubscriptionsResolver,
     GqlAuthGuard,
   ],
 })
