@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -147,6 +148,28 @@ export class CoursesController {
     return this.coursesService.createSection(courseId, tenantId, dto);
   }
 
+  @Patch('sections/:sectionId')
+  @Roles(UserRole.TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Update a section' })
+  updateSection(
+    @Param('sectionId') sectionId: string,
+    @TenantId() tenantId: string,
+    @Body() dto: { title?: string; position?: number },
+  ) {
+    return this.coursesService.updateSection(sectionId, tenantId, dto);
+  }
+
+  @Delete('sections/:sectionId')
+  @Roles(UserRole.TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete a section and its lessons' })
+  deleteSection(
+    @Param('sectionId') sectionId: string,
+    @TenantId() tenantId: string,
+  ) {
+    return this.coursesService.deleteSection(sectionId, tenantId);
+  }
+
   @Post('sections/:sectionId/lessons')
   @Roles(UserRole.TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Add lesson to section' })
@@ -156,6 +179,28 @@ export class CoursesController {
     @Body() dto: CreateLessonDto,
   ) {
     return this.coursesService.createLesson(sectionId, tenantId, dto);
+  }
+
+  @Patch('sections/:sectionId/lessons/:lessonId')
+  @Roles(UserRole.TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Update a lesson' })
+  updateLesson(
+    @Param('lessonId') lessonId: string,
+    @TenantId() tenantId: string,
+    @Body() dto: { title?: string; description?: string; contentType?: string; contentUrl?: string; duration?: number; position?: number; isPreview?: boolean },
+  ) {
+    return this.coursesService.updateLesson(lessonId, tenantId, dto);
+  }
+
+  @Delete('sections/:sectionId/lessons/:lessonId')
+  @Roles(UserRole.TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Delete a lesson' })
+  deleteLesson(
+    @Param('lessonId') lessonId: string,
+    @TenantId() tenantId: string,
+  ) {
+    return this.coursesService.deleteLesson(lessonId, tenantId);
   }
 
   @Post(':id/enroll')

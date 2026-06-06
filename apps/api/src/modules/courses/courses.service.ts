@@ -246,6 +246,51 @@ export class CoursesService {
     await this.searchService.deleteDocument('courses', id);
   }
 
+  async updateSection(sectionId: string, tenantId: string, dto: { title?: string; position?: number }) {
+    const section = await this.prisma.courseSection.findFirst({
+      where: { id: sectionId, course: { tenantId } },
+    });
+    if (!section) throw new NotFoundException('Section not found');
+    const updated = await this.prisma.courseSection.update({ where: { id: sectionId }, data: dto });
+    await this.redis.del(`course:${section.courseId}`);
+    return updated;
+  }
+
+  async deleteSection(sectionId: string, tenantId: string) {
+    const section = await this.prisma.courseSection.findFirst({
+      where: { id: sectionId, course: { tenantId } },
+    });
+    if (!section) throw new NotFoundException('Section not found');
+    await this.prisma.courseSection.delete({ where: { id: sectionId } });
+    // Recalculate lesson count
+    const lessonCount = await this.prisma.lesson.count({ where: { section: { courseId: section.courseId } } });
+    await this.prisma.course.update({ where: { id: section.courseId }, data: { totalLessons: lessonCount } });
+    await this.redis.del(`course:${section.courseId}`);
+  }
+
+  async updateLesson(lessonId: string, tenantId: string, dto: { title?: string; description?: string; contentType?: string; contentUrl?: string; duration?: number; position?: number; isPreview?: boolean }) {
+    const lesson = await this.prisma.lesson.findFirst({
+      where: { id: lessonId, section: { course: { tenantId } } },
+      include: { section: true },
+    });
+    if (!lesson) throw new NotFoundException('Lesson not found');
+    const updated = await this.prisma.lesson.update({ where: { id: lessonId }, data: dto as any });
+    await this.redis.del(`course:${lesson.section.courseId}`);
+    return updated;
+  }
+
+  async deleteLesson(lessonId: string, tenantId: string) {
+    const lesson = await this.prisma.lesson.findFirst({
+      where: { id: lessonId, section: { course: { tenantId } } },
+      include: { section: true },
+    });
+    if (!lesson) throw new NotFoundException('Lesson not found');
+    await this.prisma.lesson.delete({ where: { id: lessonId } });
+    const lessonCount = await this.prisma.lesson.count({ where: { section: { courseId: lesson.section.courseId } } });
+    await this.prisma.course.update({ where: { id: lesson.section.courseId }, data: { totalLessons: lessonCount } });
+    await this.redis.del(`course:${lesson.section.courseId}`);
+  }
+
   async createSection(courseId: string, tenantId: string, dto: CreateSectionDto) {
     const course = await this.prisma.course.findFirst({ where: { id: courseId, tenantId } });
     if (!course) throw new NotFoundException('Course not found');
