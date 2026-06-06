@@ -199,6 +199,180 @@ Return JSON: { "central": string, "branches": [{ "label": string, "color": strin
     return { recommendations: JSON.parse(response.choices[0].message.content ?? '{}'), tokens };
   }
 
+  async generateCurriculum(userId: string, tenantId: string, subject: string, gradeLevel: string, weeks: number, objectives: string[]) {
+    const prompt = `Design a ${weeks}-week curriculum for "${subject}" at ${gradeLevel} level.
+Learning objectives: ${objectives.join('; ')}.
+Return valid JSON: { "title": string, "subject": string, "gradeLevel": string, "totalWeeks": number, "weeks": [{ "week": number, "theme": string, "topics": string[], "activities": string[], "assessment": string, "resources": string[] }] }`;
+
+    const response = await this.openai.chat.completions.create({
+      model: process.env.OPENAI_MODEL ?? 'gpt-4o',
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' },
+      max_tokens: 4096,
+    });
+
+    const curriculum = JSON.parse(response.choices[0].message.content!);
+    const tokens = response.usage?.total_tokens ?? 0;
+    await this.trackUsage(tenantId, userId, AIModuleType.CURRICULUM_GENERATOR, tokens);
+    return { curriculum, tokens };
+  }
+
+  async researchAssist(userId: string, tenantId: string, topic: string, depth: 'overview' | 'detailed' | 'academic', conversationId?: string) {
+    const conversation = await this.getOrCreateConversation(userId, tenantId, AIModuleType.RESEARCH_ASSISTANT, conversationId);
+    await this.saveMessage(conversation!.id, 'user', topic);
+
+    const depthInstructions = {
+      overview: 'Provide a concise overview with key points and 3-5 reputable sources.',
+      detailed: 'Provide an in-depth analysis with subtopics, statistics, key findings, and 8-10 sources.',
+      academic: 'Provide an academic-level analysis with methodology, literature review pointers, critical analysis, and 10-15 peer-reviewed sources.',
+    };
+
+    const response = await this.anthropic.messages.create({
+      model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',
+      max_tokens: 3000,
+      system: `You are an expert research assistant. ${depthInstructions[depth]} Always cite sources and distinguish between fact and inference.`,
+      messages: [{ role: 'user', content: `Research topic: ${topic}` }],
+    });
+
+    const result = (response.content[0] as Anthropic.TextBlock).text;
+    const tokens = response.usage.input_tokens + response.usage.output_tokens;
+    await this.saveMessage(conversation!.id, 'assistant', result, tokens);
+    await this.trackUsage(tenantId, userId, AIModuleType.RESEARCH_ASSISTANT, tokens);
+    return { conversationId: conversation!.id, result, tokens };
+  }
+
+  async speechToText(userId: string, tenantId: string, audioBase64: string, language = 'en') {
+    const audioBuffer = Buffer.from(audioBase64, 'base64');
+    const { Readable } = await import('stream');
+    const stream = Readable.from(audioBuffer) as any;
+    stream.path = 'audio.webm';
+
+    const transcription = await this.openai.audio.transcriptions.create({
+      file: stream,
+      model: 'whisper-1',
+      language,
+    });
+
+    await this.trackUsage(tenantId, userId, AIModuleType.SPEECH_TO_TEXT, Math.ceil(transcription.text.length / 4));
+    return { transcript: transcription.text, language };
+  }
+
+  async textToSpeech(userId: string, tenantId: string, text: string, voice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer' = 'nova') {
+    const mp3 = await this.openai.audio.speech.create({
+      model: 'tts-1',
+      voice,
+      input: text,
+    });
+
+    const buffer = Buffer.from(await mp3.arrayBuffer());
+    const tokens = Math.ceil(text.length / 4);
+    await this.trackUsage(tenantId, userId, AIModuleType.TEXT_TO_SPEECH, tokens);
+    return { audioBase64: buffer.toString('base64'), mimeType: 'audio/mpeg', tokens };
+  }
+
+  async getCareerAdvice(userId: string, tenantId: string, interests: string[], skills: string[], educationLevel: string, targetRole?: string) {
+    const prompt = `Career counseling request:
+Interests: ${interests.join(', ')}
+Current skills: ${skills.join(', ')}
+Education level: ${educationLevel}
+${targetRole ? `Target role: ${targetRole}` : 'No specific target role'}
+
+Provide: 1) Top 5 career paths with match percentage, 2) Required skills gap analysis, 3) 6-month action plan, 4) Relevant certifications/courses.
+Return valid JSON: { "careerPaths": [{ "title": string, "match": number, "description": string, "avgSalary": string, "growth": string }], "skillGaps": string[], "actionPlan": [{ "month": number, "goal": string, "actions": string[] }], "certifications": [{ "name": string, "provider": string, "relevance": string }] }`;
+
+    const response = await this.openai.chat.completions.create({
+      model: process.env.OPENAI_MODEL ?? 'gpt-4o',
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' },
+      max_tokens: 2048,
+    });
+
+    const advice = JSON.parse(response.choices[0].message.content!);
+    const tokens = response.usage?.total_tokens ?? 0;
+    await this.trackUsage(tenantId, userId, AIModuleType.CAREER_ADVISOR, tokens);
+    return { advice, tokens };
+  }
+
+  async predictPerformance(tenantId: string, studentId: string) {
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      include: {
+        assignmentSubmissions: { take: 20, orderBy: { createdAt: 'desc' }, include: { assignment: true } },
+        enrollments: { include: { course: true } },
+      },
+    });
+
+    if (!student) throw new Error('Student not found');
+
+    const submissions = (student.assignmentSubmissions as any[]);
+    const avgScore = submissions.length
+      ? submissions.reduce((s: number, sub: any) => s + (sub.score ?? 0), 0) / submissions.length
+      : 0;
+    const submissionRate = submissions.length > 0
+      ? submissions.filter((s: any) => s.status !== 'LATE').length / submissions.length
+      : 0;
+
+    const trend = submissions.slice(0, 5).reduce((s: number, sub: any) => s + (sub.score ?? 0), 0) / Math.max(5, submissions.slice(0, 5).length)
+      - submissions.slice(5, 10).reduce((s: number, sub: any) => s + (sub.score ?? 0), 0) / Math.max(5, submissions.slice(5, 10).length);
+
+    const prediction = {
+      predictedGrade: Math.min(100, Math.max(0, avgScore + trend * 0.5)),
+      performanceLevel: avgScore >= 85 ? 'excellent' : avgScore >= 70 ? 'good' : avgScore >= 55 ? 'average' : 'at-risk',
+      submissionRate: Math.round(submissionRate * 100),
+      trend: trend > 5 ? 'improving' : trend < -5 ? 'declining' : 'stable',
+      recommendations: [] as string[],
+    };
+
+    if (prediction.performanceLevel === 'at-risk') prediction.recommendations.push('Schedule one-on-one tutoring sessions');
+    if (prediction.submissionRate < 80) prediction.recommendations.push('Improve assignment submission consistency');
+    if (prediction.trend === 'declining') prediction.recommendations.push('Review recent material — performance dropping');
+
+    return { studentId, prediction };
+  }
+
+  async predictDropout(tenantId: string, studentId: string) {
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      include: {
+        enrollments: { include: { course: true } },
+        assignmentSubmissions: { take: 30, orderBy: { createdAt: 'desc' } },
+      },
+    });
+
+    if (!student) throw new Error('Student not found');
+
+    const submissions = (student.assignmentSubmissions as any[]);
+    const enrollments = (student.enrollments as any[]);
+
+    const missedAssignments = submissions.filter((s: any) => s.status === 'LATE' || !s.score).length;
+    const totalAssignments = submissions.length;
+    const missedRate = totalAssignments > 0 ? missedAssignments / totalAssignments : 0;
+
+    const avgScore = totalAssignments > 0
+      ? submissions.reduce((s: number, sub: any) => s + (sub.score ?? 0), 0) / totalAssignments
+      : 50;
+
+    const riskScore = Math.min(100, (missedRate * 50) + (avgScore < 60 ? 30 : 0) + (enrollments.length === 0 ? 20 : 0));
+    const riskLevel = riskScore >= 70 ? 'high' : riskScore >= 40 ? 'medium' : 'low';
+
+    const factors: string[] = [];
+    if (missedRate > 0.3) factors.push(`High assignment miss rate (${Math.round(missedRate * 100)}%)`);
+    if (avgScore < 60) factors.push('Low average score');
+    if (enrollments.length === 0) factors.push('No active course enrollments');
+
+    const interventions: string[] = [];
+    if (riskLevel === 'high') {
+      interventions.push('Immediate counselor outreach');
+      interventions.push('Parent/guardian notification');
+      interventions.push('Personalized learning plan');
+    } else if (riskLevel === 'medium') {
+      interventions.push('Peer mentoring program');
+      interventions.push('Weekly check-in schedule');
+    }
+
+    return { studentId, riskScore: Math.round(riskScore), riskLevel, factors, interventions };
+  }
+
   async getUsageStats(tenantId: string, period: 'day' | 'week' | 'month' = 'month') {
     const from = new Date();
     if (period === 'day') from.setDate(from.getDate() - 1);

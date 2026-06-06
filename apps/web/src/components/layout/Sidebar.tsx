@@ -63,6 +63,7 @@ const navSections: NavSection[] = [
       { label: 'Assignments', href: '/assignments', icon: ClipboardList },
       { label: 'Live Classes', href: '/live', icon: Video },
       { label: 'AI Tutor', href: '/ai-tutor', icon: Bot, badge: 'AI' },
+      { label: 'AI Tools', href: '/ai-tools', icon: Zap, badge: 'AI' },
       { label: 'AI Agents', href: '/ai-agents', icon: Sparkles, badge: 'NEW' },
       { label: 'Certificates', href: '/certificates', icon: Award },
     ],

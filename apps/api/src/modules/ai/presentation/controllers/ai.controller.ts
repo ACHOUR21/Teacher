@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Get, Param, Body, Query, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { IsString, IsOptional, IsInt, IsArray, Min, Max } from 'class-validator';
 import { AiService } from '../../ai.service';
@@ -103,6 +103,48 @@ export class AiController {
   @ApiOperation({ summary: 'Get personalized course recommendations' })
   recommend(@CurrentUser() user: any, @Request() req: any) {
     return this.aiService.getRecommendations(user.id, req.tenant?.id);
+  }
+
+  @Post('curriculum/generate')
+  @ApiOperation({ summary: 'Generate a full curriculum' })
+  generateCurriculum(@CurrentUser() user: any, @Request() req: any, @Body() body: { subject: string; gradeLevel: string; weeks: number; objectives: string[] }) {
+    return this.aiService.generateCurriculum(user.id, req.tenant?.id, body.subject, body.gradeLevel, body.weeks, body.objectives);
+  }
+
+  @Post('research/assist')
+  @ApiOperation({ summary: 'AI research assistant' })
+  researchAssist(@CurrentUser() user: any, @Request() req: any, @Body() body: { topic: string; depth: 'overview' | 'detailed' | 'academic'; conversationId?: string }) {
+    return this.aiService.researchAssist(user.id, req.tenant?.id, body.topic, body.depth, body.conversationId);
+  }
+
+  @Post('speech-to-text')
+  @ApiOperation({ summary: 'Transcribe audio to text' })
+  speechToText(@CurrentUser() user: any, @Request() req: any, @Body() body: { audioBase64: string; language?: string }) {
+    return this.aiService.speechToText(user.id, req.tenant?.id, body.audioBase64, body.language);
+  }
+
+  @Post('text-to-speech')
+  @ApiOperation({ summary: 'Convert text to speech audio' })
+  textToSpeech(@CurrentUser() user: any, @Request() req: any, @Body() body: { text: string; voice?: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer' }) {
+    return this.aiService.textToSpeech(user.id, req.tenant?.id, body.text, body.voice);
+  }
+
+  @Post('career/advise')
+  @ApiOperation({ summary: 'Get AI career advice' })
+  careerAdvise(@CurrentUser() user: any, @Request() req: any, @Body() body: { interests: string[]; skills: string[]; educationLevel: string; targetRole?: string }) {
+    return this.aiService.getCareerAdvice(user.id, req.tenant?.id, body.interests, body.skills, body.educationLevel, body.targetRole);
+  }
+
+  @Get('predict/performance/:studentId')
+  @ApiOperation({ summary: 'Predict student performance' })
+  predictPerformance(@Request() req: any, @Param('studentId') studentId: string) {
+    return this.aiService.predictPerformance(req.tenant?.id, studentId);
+  }
+
+  @Get('predict/dropout/:studentId')
+  @ApiOperation({ summary: 'Predict student dropout risk' })
+  predictDropout(@Request() req: any, @Param('studentId') studentId: string) {
+    return this.aiService.predictDropout(req.tenant?.id, studentId);
   }
 
   @Get('usage')
