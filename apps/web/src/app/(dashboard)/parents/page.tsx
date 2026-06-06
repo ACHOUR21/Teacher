@@ -1,158 +1,631 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Users, Search, ChevronRight } from 'lucide-react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import {
+  Users, BookOpen, ClipboardList, BarChart2, MessageSquare,
+  ArrowLeft, GraduationCap, TrendingUp, Clock, CheckCircle,
+  AlertCircle, Send, ChevronRight,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface ChildSummary {
+  id: string;
+  firstName: string;
+  lastName: string;
+  grade?: string;
+  school?: string;
+  gpa?: number;
+  coursesEnrolled?: number;
+  lastActive?: string;
+  studentId?: string;
+  avatarUrl?: string;
+}
+
+interface CourseProgress {
+  id: string;
+  title: string;
+  progress: number;
+  instructor?: string;
+  thumbnailUrl?: string;
+}
+
+interface Assignment {
+  id: string;
+  title: string;
+  course?: { title: string };
+  dueDate?: string;
+  grade?: number | null;
+  status?: string;
+}
+
+interface GradeRow {
+  courseTitle: string;
+  grade: number | string;
+  completedAt?: string;
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ParentsPage() {
-  const [search, setSearch] = useState('');
-  const [page, setPage] = useState(1);
-  const [selected, setSelected] = useState<any | null>(null);
+  const [selectedChild, setSelectedChild] = useState<ChildSummary | null>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['parents', search, page],
-    queryFn: () => api.get('/users', { params: { search: search || undefined, page, limit: 20, role: 'PARENT' } }).then(r => r.data.data),
+    queryKey: ['parents-my-children'],
+    queryFn: () => api.get('/parents/my-children').then(r => r.data.data),
   });
 
-  const parents: any[] = data?.items ?? [];
+  const children: ChildSummary[] = (data as ChildSummary[]) ?? [];
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <PageHeader />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-48 bg-gray-100 rounded-2xl animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedChild) {
+    return (
+      <ChildDetailView
+        child={selectedChild}
+        onBack={() => setSelectedChild(null)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Parent Portal</h1>
-          <p className="text-sm text-gray-500 mt-1">{data?.total ?? 0} registered parents</p>
+      <PageHeader />
+
+      {children.length === 0 ? (
+        <NoChildrenState />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {children.map(child => (
+            <ChildCard
+              key={child.id}
+              child={child}
+              onClick={() => setSelectedChild(child)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PageHeader() {
+  return (
+    <div>
+      <h1 className="text-2xl font-bold text-gray-900">Parent Portal</h1>
+      <p className="text-sm text-gray-500 mt-1">Monitor your children's academic progress</p>
+    </div>
+  );
+}
+
+// ─── Child Card ───────────────────────────────────────────────────────────────
+
+function ChildCard({ child, onClick }: { child: ChildSummary; onClick: () => void }) {
+  const initials = `${child.firstName?.[0] ?? ''}${child.lastName?.[0] ?? ''}`;
+  const lastActive = child.lastActive
+    ? format(new Date(child.lastActive), 'MMM d, yyyy')
+    : 'Never';
+
+  return (
+    <button
+      onClick={onClick}
+      className="w-full text-left bg-white rounded-2xl border border-gray-200 p-5 hover:shadow-md transition-shadow group"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white font-bold text-base flex-shrink-0">
+            {initials}
+          </div>
+          <div>
+            <p className="font-semibold text-gray-900">
+              {child.firstName} {child.lastName}
+            </p>
+            {child.grade && (
+              <p className="text-xs text-gray-500">{child.grade}</p>
+            )}
+          </div>
+        </div>
+        <ChevronRight className="h-5 w-5 text-gray-300 group-hover:text-gray-500 transition-colors" />
+      </div>
+
+      {child.school && (
+        <p className="text-xs text-gray-500 mb-3 flex items-center gap-1.5">
+          <GraduationCap className="h-3.5 w-3.5" /> {child.school}
+        </p>
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
+        <StatPill label="GPA" value={child.gpa != null ? child.gpa.toFixed(2) : '—'} color="blue" />
+        <StatPill label="Courses" value={String(child.coursesEnrolled ?? 0)} color="purple" />
+      </div>
+
+      <p className="text-xs text-gray-400 mt-3 flex items-center gap-1.5">
+        <Clock className="h-3.5 w-3.5" /> Last active {lastActive}
+      </p>
+    </button>
+  );
+}
+
+function StatPill({ label, value, color }: { label: string; value: string; color: 'blue' | 'purple' | 'green' | 'orange' }) {
+  const colorMap = {
+    blue: 'bg-blue-50 text-blue-700',
+    purple: 'bg-purple-50 text-purple-700',
+    green: 'bg-green-50 text-green-700',
+    orange: 'bg-orange-50 text-orange-700',
+  };
+  return (
+    <div className={cn('rounded-lg px-3 py-2', colorMap[color])}>
+      <p className="text-lg font-bold">{value}</p>
+      <p className="text-xs opacity-80">{label}</p>
+    </div>
+  );
+}
+
+// ─── No Children State ────────────────────────────────────────────────────────
+
+function NoChildrenState() {
+  return (
+    <div className="text-center py-24">
+      <div className="h-16 w-16 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-4">
+        <Users className="h-8 w-8 text-blue-400" />
+      </div>
+      <p className="text-gray-700 font-medium text-lg">No children linked to your account yet</p>
+      <p className="text-sm text-gray-400 mt-2 max-w-sm mx-auto">
+        Contact your school admin to link your children to your parent account.
+      </p>
+    </div>
+  );
+}
+
+// ─── Child Detail View ────────────────────────────────────────────────────────
+
+type ChildTab = 'courses' | 'assignments' | 'grades' | 'messages';
+
+function ChildDetailView({ child, onBack }: { child: ChildSummary; onBack: () => void }) {
+  const [activeTab, setActiveTab] = useState<ChildTab>('courses');
+  const studentId = child.studentId ?? child.id;
+
+  const { data: statsData } = useQuery({
+    queryKey: ['child-stats', studentId],
+    queryFn: () => api.get(`/students/${studentId}/stats`).then(r => r.data.data).catch(() => null),
+  });
+
+  const stats = statsData ?? {
+    gpa: child.gpa ?? null,
+    coursesEnrolled: child.coursesEnrolled ?? null,
+    assignmentsPending: null,
+    attendancePercent: null,
+  };
+
+  const TABS: { key: ChildTab; label: string; icon: React.ReactNode }[] = [
+    { key: 'courses', label: 'Active Courses', icon: <BookOpen className="h-4 w-4" /> },
+    { key: 'assignments', label: 'Assignments', icon: <ClipboardList className="h-4 w-4" /> },
+    { key: 'grades', label: 'Grades', icon: <BarChart2 className="h-4 w-4" /> },
+    { key: 'messages', label: 'Messages', icon: <MessageSquare className="h-4 w-4" /> },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <button
+          onClick={onBack}
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5 text-gray-600" />
+        </button>
+        <div className="flex items-center gap-3">
+          <div className="h-11 w-11 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white font-bold flex-shrink-0">
+            {child.firstName?.[0]}{child.lastName?.[0]}
+          </div>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">
+              {child.firstName} {child.lastName}
+            </h1>
+            {child.grade && (
+              <p className="text-sm text-gray-500">{child.grade}{child.school ? ` — ${child.school}` : ''}</p>
+            )}
+          </div>
         </div>
       </div>
 
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Search by name or email..."
-          value={search}
-          onChange={e => { setSearch(e.target.value); setPage(1); }}
-          className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      {/* Stat Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          label="GPA"
+          value={stats.gpa != null ? stats.gpa.toFixed(2) : '—'}
+          icon={<TrendingUp className="h-5 w-5" />}
+          color="blue"
+        />
+        <StatCard
+          label="Courses Enrolled"
+          value={stats.coursesEnrolled != null ? String(stats.coursesEnrolled) : '—'}
+          icon={<BookOpen className="h-5 w-5" />}
+          color="purple"
+        />
+        <StatCard
+          label="Assignments Pending"
+          value={stats.assignmentsPending != null ? String(stats.assignmentsPending) : '—'}
+          icon={<ClipboardList className="h-5 w-5" />}
+          color="orange"
+        />
+        <StatCard
+          label="Attendance"
+          value={stats.attendancePercent != null ? `${stats.attendancePercent}%` : '—'}
+          icon={<CheckCircle className="h-5 w-5" />}
+          color="green"
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Parents List */}
-        <div className="lg:col-span-1 bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-            <p className="text-sm font-semibold text-gray-700">Parents</p>
-          </div>
-          <div className="divide-y divide-gray-50 max-h-[600px] overflow-y-auto">
-            {isLoading && Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="p-4 flex items-center gap-3">
-                <div className="h-9 w-9 rounded-full bg-gray-100 animate-pulse" />
-                <div className="flex-1 space-y-1.5">
-                  <div className="h-3.5 bg-gray-100 rounded w-32 animate-pulse" />
-                  <div className="h-3 bg-gray-100 rounded w-24 animate-pulse" />
-                </div>
-              </div>
-            ))}
-            {!isLoading && parents.map(parent => (
-              <button
-                key={parent.id}
-                onClick={() => setSelected(parent)}
-                className={cn(
-                  'w-full flex items-center gap-3 p-4 hover:bg-gray-50 transition-colors text-left',
-                  selected?.id === parent.id && 'bg-blue-50',
-                )}
-              >
-                <div className="h-9 w-9 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
-                  {parent.firstName?.[0]}{parent.lastName?.[0]}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">
-                    {parent.firstName} {parent.lastName}
-                  </p>
-                  <p className="text-xs text-gray-500 truncate">{parent.email}</p>
-                </div>
-                <div className={cn('text-xs px-1.5 py-0.5 rounded-full', parent.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500')}>
-                  {parent.isActive ? 'Active' : 'Inactive'}
-                </div>
-                <ChevronRight className="h-4 w-4 text-gray-300" />
-              </button>
-            ))}
-            {!isLoading && parents.length === 0 && (
-              <div className="py-12 text-center text-gray-400 text-sm">No parents found</div>
-            )}
-          </div>
-          {(data?.totalPages ?? 1) > 1 && (
-            <div className="p-3 border-t flex justify-between gap-2">
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                className="text-xs px-3 py-1.5 border rounded-lg disabled:opacity-40 hover:bg-gray-50">
-                Previous
-              </button>
-              <span className="text-xs text-gray-500 self-center">Page {page}</span>
-              <button onClick={() => setPage(p => p + 1)} disabled={page === data?.totalPages}
-                className="text-xs px-3 py-1.5 border rounded-lg disabled:opacity-40 hover:bg-gray-50">
-                Next
-              </button>
-            </div>
-          )}
+      {/* Tabs */}
+      <div className="border-b border-gray-200">
+        <div className="flex gap-1">
+          {TABS.map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={cn(
+                'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors',
+                activeTab === tab.key
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+              )}
+            >
+              {tab.icon} {tab.label}
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* Parent Detail Panel */}
-        <div className="lg:col-span-2">
-          {!selected ? (
-            <div className="bg-white rounded-xl border border-gray-200 h-full flex items-center justify-center py-20">
-              <div className="text-center">
-                <Users className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-                <p className="text-gray-500 text-sm">Select a parent to view details</p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {/* Parent Info */}
-              <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <div className="flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-full bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white text-xl font-bold">
-                    {selected.firstName?.[0]}{selected.lastName?.[0]}
-                  </div>
-                  <div>
-                    <p className="text-lg font-semibold text-gray-900">
-                      {selected.firstName} {selected.lastName}
-                    </p>
-                    <p className="text-sm text-gray-500">{selected.email}</p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Member since {new Date(selected.createdAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Account Info */}
-              <div className="bg-white rounded-xl border border-gray-200 p-5">
-                <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <Users className="h-4 w-4 text-purple-500" /> Account Details
-                </h3>
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Status</span>
-                    <span className={cn('font-medium', selected.isActive ? 'text-green-600' : 'text-gray-400')}>
-                      {selected.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Email verified</span>
-                    <span className="font-medium">{selected.emailVerified ? 'Yes' : 'No'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Last login</span>
-                    <span className="font-medium">{selected.lastLoginAt ? new Date(selected.lastLoginAt).toLocaleDateString() : 'Never'}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+      {/* Tab Content */}
+      <div>
+        {activeTab === 'courses' && <CoursesTab studentId={studentId} />}
+        {activeTab === 'assignments' && <AssignmentsTab studentId={studentId} />}
+        {activeTab === 'grades' && <GradesTab studentId={studentId} />}
+        {activeTab === 'messages' && <MessagesTab childName={`${child.firstName} ${child.lastName}`} />}
       </div>
     </div>
   );
 }
 
+function StatCard({
+  label,
+  value,
+  icon,
+  color,
+}: {
+  label: string;
+  value: string;
+  icon: React.ReactNode;
+  color: 'blue' | 'purple' | 'green' | 'orange';
+}) {
+  const colorMap = {
+    blue: { bg: 'bg-blue-50', text: 'text-blue-600', val: 'text-blue-900' },
+    purple: { bg: 'bg-purple-50', text: 'text-purple-600', val: 'text-purple-900' },
+    green: { bg: 'bg-green-50', text: 'text-green-600', val: 'text-green-900' },
+    orange: { bg: 'bg-orange-50', text: 'text-orange-600', val: 'text-orange-900' },
+  };
+  const c = colorMap[color];
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-4">
+      <div className={cn('inline-flex p-2 rounded-lg mb-3', c.bg)}>
+        <span className={c.text}>{icon}</span>
+      </div>
+      <p className={cn('text-2xl font-bold', c.val)}>{value}</p>
+      <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+    </div>
+  );
+}
+
+// ─── Courses Tab ──────────────────────────────────────────────────────────────
+
+function CoursesTab({ studentId }: { studentId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['child-courses', studentId],
+    queryFn: () => api.get(`/students/${studentId}/courses`).then(r => r.data.data),
+  });
+
+  const courses: CourseProgress[] = (data as CourseProgress[]) ?? [];
+
+  if (isLoading) return <LoadingSkeleton rows={4} />;
+
+  if (courses.length === 0) {
+    return (
+      <EmptyTabState
+        icon={<BookOpen className="h-8 w-8 text-gray-300" />}
+        message="No active courses"
+      />
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {courses.map(course => (
+        <div key={course.id} className="bg-white rounded-xl border border-gray-200 p-4">
+          <div className="flex items-start gap-3 mb-3">
+            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+              <BookOpen className="h-5 w-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-gray-900 text-sm truncate">{course.title}</p>
+              {course.instructor && (
+                <p className="text-xs text-gray-500">{course.instructor}</p>
+              )}
+            </div>
+            <span className="text-sm font-semibold text-blue-600">{course.progress ?? 0}%</span>
+          </div>
+          <div className="w-full bg-gray-100 rounded-full h-2">
+            <div
+              className="bg-blue-600 h-2 rounded-full transition-all"
+              style={{ width: `${course.progress ?? 0}%` }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Assignments Tab ──────────────────────────────────────────────────────────
+
+function AssignmentsTab({ studentId }: { studentId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['child-assignments', studentId],
+    queryFn: () =>
+      api.get('/assignments/my', { params: { studentId } }).then(r => r.data.data),
+  });
+
+  const assignments: Assignment[] = (data as Assignment[]) ?? [];
+
+  if (isLoading) return <LoadingSkeleton rows={5} />;
+
+  if (assignments.length === 0) {
+    return (
+      <EmptyTabState
+        icon={<ClipboardList className="h-8 w-8 text-gray-300" />}
+        message="No assignments found"
+      />
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50">
+          <tr>
+            {['Assignment', 'Course', 'Due Date', 'Grade', 'Status'].map(h => (
+              <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-50">
+          {assignments.map(a => {
+            const dueDate = a.dueDate ? format(new Date(a.dueDate), 'MMM d, yyyy') : '—';
+            const isPast = a.dueDate ? new Date(a.dueDate) < new Date() : false;
+            return (
+              <tr key={a.id} className="hover:bg-gray-50">
+                <td className="px-4 py-3 font-medium text-gray-900">{a.title}</td>
+                <td className="px-4 py-3 text-gray-500">{a.course?.title ?? '—'}</td>
+                <td className={cn('px-4 py-3 text-xs', isPast && !a.grade ? 'text-red-500 font-medium' : 'text-gray-500')}>
+                  {dueDate}
+                  {isPast && !a.grade && (
+                    <AlertCircle className="inline h-3.5 w-3.5 ml-1" />
+                  )}
+                </td>
+                <td className="px-4 py-3">
+                  {a.grade != null ? (
+                    <span className={cn(
+                      'font-semibold',
+                      a.grade >= 90 ? 'text-green-600' : a.grade >= 70 ? 'text-yellow-600' : 'text-red-600',
+                    )}>
+                      {a.grade}%
+                    </span>
+                  ) : '—'}
+                </td>
+                <td className="px-4 py-3">
+                  <AssignmentStatusBadge status={a.status} />
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function AssignmentStatusBadge({ status }: { status?: string }) {
+  const map: Record<string, string> = {
+    submitted: 'bg-blue-100 text-blue-700',
+    graded: 'bg-green-100 text-green-700',
+    pending: 'bg-yellow-100 text-yellow-700',
+    late: 'bg-red-100 text-red-700',
+    missing: 'bg-red-100 text-red-700',
+  };
+  const s = (status ?? 'pending').toLowerCase();
+  return (
+    <span className={cn('inline-block text-xs px-2 py-0.5 rounded-full font-medium capitalize', map[s] ?? 'bg-gray-100 text-gray-600')}>
+      {s}
+    </span>
+  );
+}
+
+// ─── Grades Tab ───────────────────────────────────────────────────────────────
+
+function GradesTab({ studentId }: { studentId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['child-grades', studentId],
+    queryFn: () => api.get(`/students/${studentId}/courses`).then(r => r.data.data),
+  });
+
+  const rows: GradeRow[] = ((data as CourseProgress[]) ?? [])
+    .filter((c: CourseProgress) => c.progress >= 100)
+    .map((c: CourseProgress) => ({
+      courseTitle: c.title,
+      grade: 'Completed',
+      completedAt: undefined,
+    }));
+
+  if (isLoading) return <LoadingSkeleton rows={4} />;
+
+  if (rows.length === 0) {
+    return (
+      <EmptyTabState
+        icon={<BarChart2 className="h-8 w-8 text-gray-300" />}
+        message="No completed courses yet"
+      />
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50">
+          <tr>
+            {['Course', 'Grade', 'Completed'].map(h => (
+              <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-50">
+          {rows.map((row, i) => (
+            <tr key={i} className="hover:bg-gray-50">
+              <td className="px-4 py-3 font-medium text-gray-900">{row.courseTitle}</td>
+              <td className="px-4 py-3">
+                <span className="inline-block text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">
+                  {row.grade}
+                </span>
+              </td>
+              <td className="px-4 py-3 text-gray-500 text-xs">
+                {row.completedAt ? format(new Date(row.completedAt), 'MMM d, yyyy') : '—'}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ─── Messages Tab ─────────────────────────────────────────────────────────────
+
+function MessagesTab({ childName }: { childName: string }) {
+  const [recipientId, setRecipientId] = useState('');
+  const [message, setMessage] = useState('');
+  const [sent, setSent] = useState(false);
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      api.post('/messages', { recipientId, content: message, subject: `Message about ${childName}` }).then(r => r.data),
+    onSuccess: () => {
+      setSent(true);
+      setMessage('');
+      setRecipientId('');
+    },
+  });
+
+  if (sent) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+        <div className="h-14 w-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
+          <CheckCircle className="h-7 w-7 text-green-500" />
+        </div>
+        <p className="font-semibold text-gray-900">Message sent!</p>
+        <p className="text-sm text-gray-500 mt-1 mb-4">Your message has been delivered to the teacher.</p>
+        <button
+          onClick={() => setSent(false)}
+          className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+        >
+          Send another message
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-6 max-w-xl">
+      <h3 className="font-semibold text-gray-900 mb-1 flex items-center gap-2">
+        <MessageSquare className="h-4 w-4 text-blue-500" /> Message a Teacher
+      </h3>
+      <p className="text-sm text-gray-500 mb-5">Send a message to {childName}'s teacher</p>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Teacher ID / Recipient</label>
+          <input
+            value={recipientId}
+            onChange={e => setRecipientId(e.target.value)}
+            placeholder="Enter teacher user ID..."
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Message</label>
+          <textarea
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            rows={5}
+            placeholder={`Write your message about ${childName}...`}
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+          />
+        </div>
+
+        {mutation.isError && (
+          <p className="text-sm text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+            Failed to send message. Please try again.
+          </p>
+        )}
+
+        <button
+          onClick={() => mutation.mutate()}
+          disabled={!recipientId.trim() || !message.trim() || mutation.isPending}
+          className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <Send className="h-4 w-4" />
+          {mutation.isPending ? 'Sending...' : 'Send Message'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Shared Helpers ───────────────────────────────────────────────────────────
+
+function LoadingSkeleton({ rows }: { rows: number }) {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: rows }).map((_, i) => (
+        <div key={i} className="h-14 bg-gray-100 rounded-xl animate-pulse" />
+      ))}
+    </div>
+  );
+}
+
+function EmptyTabState({ icon, message }: { icon: React.ReactNode; message: string }) {
+  return (
+    <div className="text-center py-16">
+      <div className="flex justify-center mb-3">{icon}</div>
+      <p className="text-gray-500 text-sm">{message}</p>
+    </div>
+  );
+}

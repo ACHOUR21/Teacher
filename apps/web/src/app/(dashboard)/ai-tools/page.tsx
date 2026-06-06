@@ -6,11 +6,27 @@ import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import {
   BookOpen, Search, Mic, Volume2, Briefcase, TrendingUp, AlertTriangle,
-  ChevronRight, Loader2, CheckCircle, Download
+  ChevronRight, Loader2, CheckCircle, Download,
+  Brain, FileQuestion, GraduationCap, Layers, Network, Languages, SearchCheck, ShieldCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-type Tab = 'curriculum' | 'research' | 'stt' | 'tts' | 'career' | 'performance' | 'dropout';
+type Tab =
+  | 'curriculum'
+  | 'research'
+  | 'stt'
+  | 'tts'
+  | 'career'
+  | 'performance'
+  | 'dropout'
+  | 'homework'
+  | 'exam'
+  | 'lesson'
+  | 'flashcards'
+  | 'mindmap'
+  | 'translator'
+  | 'plagiarism'
+  | 'moderation';
 
 const TABS: { id: Tab; label: string; icon: React.ComponentType<any>; description: string; roles?: string[] }[] = [
   { id: 'curriculum', label: 'Curriculum', icon: BookOpen, description: 'Generate full multi-week curricula' },
@@ -20,7 +36,18 @@ const TABS: { id: Tab; label: string; icon: React.ComponentType<any>; descriptio
   { id: 'career', label: 'Career Advisor', icon: Briefcase, description: 'Personalized career guidance' },
   { id: 'performance', label: 'Performance', icon: TrendingUp, description: 'Predict student performance', roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] },
   { id: 'dropout', label: 'Dropout Risk', icon: AlertTriangle, description: 'Identify at-risk students', roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] },
+  { id: 'homework', label: 'Homework', icon: Brain, description: 'Step-by-step homework solutions' },
+  { id: 'exam', label: 'Exam Generator', icon: FileQuestion, description: 'Generate exams with multiple question types' },
+  { id: 'lesson', label: 'Lesson Planner', icon: GraduationCap, description: 'Create structured lesson plans' },
+  { id: 'flashcards', label: 'Flashcards', icon: Layers, description: 'Generate interactive study flashcards' },
+  { id: 'mindmap', label: 'Mind Map', icon: Network, description: 'Visualize topics as mind maps' },
+  { id: 'translator', label: 'Translator', icon: Languages, description: 'Translate text between languages' },
+  { id: 'plagiarism', label: 'Plagiarism', icon: SearchCheck, description: 'Check content for plagiarism' },
+  { id: 'moderation', label: 'Moderation', icon: ShieldCheck, description: 'Moderate content for safety' },
 ];
+
+const SUBJECTS = ['Mathematics', 'Science', 'English', 'History', 'Geography', 'Physics', 'Chemistry', 'Biology', 'Computer Science', 'Art', 'Music', 'Physical Education'];
+const GRADE_LEVELS = ['K-5', '6-8', '9-12', 'University'];
 
 function CurriculumTab() {
   const [subject, setSubject] = useState('');
@@ -508,6 +535,724 @@ function DropoutRiskTab() {
   );
 }
 
+// ─── New Tabs ────────────────────────────────────────────────────────────────
+
+function HomeworkTab() {
+  const [problem, setProblem] = useState('');
+  const [subject, setSubject] = useState('Mathematics');
+  const [result, setResult] = useState<{ steps: string[]; answer: string; explanation: string } | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: () => api.post('/ai/homework/solve', { problem, subject }).then(r => r.data.data),
+    onSuccess: (data) => setResult(data),
+  });
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-1">Subject</label>
+        <select
+          value={subject} onChange={e => setSubject(e.target.value)}
+          className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+          {SUBJECTS.map(s => <option key={s}>{s}</option>)}
+        </select>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-1">Problem</label>
+        <textarea
+          value={problem} onChange={e => setProblem(e.target.value)} rows={4}
+          placeholder="Describe the homework problem in detail..."
+          className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+        />
+      </div>
+      <Button onClick={() => mutation.mutate()} disabled={!problem.trim() || mutation.isPending} className="w-full">
+        {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Solving...</> : 'Solve Problem'}
+      </Button>
+
+      {result && (
+        <div className="space-y-4">
+          {result.steps && result.steps.length > 0 && (
+            <div className="border border-border rounded-xl overflow-hidden">
+              <div className="bg-primary/5 px-4 py-2">
+                <h3 className="text-sm font-semibold text-foreground">Step-by-Step Solution</h3>
+              </div>
+              <ol className="divide-y divide-border">
+                {result.steps.map((step, i) => (
+                  <li key={i} className="p-3 flex gap-3 items-start">
+                    <span className="text-xs font-bold bg-primary text-primary-foreground rounded-full w-5 h-5 flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
+                    <p className="text-sm text-foreground">{step}</p>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+          {result.answer && (
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+              <p className="text-xs font-semibold text-green-700 uppercase mb-1">Final Answer</p>
+              <p className="text-sm font-medium text-green-900">{result.answer}</p>
+            </div>
+          )}
+          {result.explanation && (
+            <div className="border border-border rounded-xl p-4 bg-muted/30">
+              <p className="text-xs font-semibold text-muted-foreground uppercase mb-1">Explanation</p>
+              <p className="text-sm text-foreground leading-relaxed">{result.explanation}</p>
+            </div>
+          )}
+          {!result.steps && !result.answer && (
+            <div className="border border-border rounded-xl p-4 bg-muted/30">
+              <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{(result as any).solution ?? JSON.stringify(result)}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ExamGeneratorTab() {
+  const [topic, setTopic] = useState('');
+  const [gradeLevel, setGradeLevel] = useState('9-12');
+  const [difficulty, setDifficulty] = useState('Medium');
+  const [numQuestions, setNumQuestions] = useState(10);
+  const [questionTypes, setQuestionTypes] = useState<string[]>(['multiple_choice', 'short_answer']);
+  const [result, setResult] = useState<any>(null);
+
+  const QUESTION_TYPES = [
+    { value: 'multiple_choice', label: 'Multiple Choice' },
+    { value: 'true_false', label: 'True / False' },
+    { value: 'short_answer', label: 'Short Answer' },
+    { value: 'essay', label: 'Essay' },
+  ];
+
+  const toggleType = (value: string) =>
+    setQuestionTypes(prev => prev.includes(value) ? prev.filter(t => t !== value) : [...prev, value]);
+
+  const copyExam = () => {
+    if (!result) return;
+    const lines: string[] = [`${result.title}\n`];
+    result.questions?.forEach((q: any, i: number) => {
+      lines.push(`${i + 1}. [${q.type}] ${q.question}`);
+      if (q.options) q.options.forEach((opt: string, oi: number) => lines.push(`   ${String.fromCharCode(65 + oi)}. ${opt}`));
+      lines.push('');
+    });
+    navigator.clipboard.writeText(lines.join('\n'));
+  };
+
+  const mutation = useMutation({
+    mutationFn: () => api.post('/ai/exam/generate', { topic, gradeLevel, numQuestions, difficulty, questionTypes }).then(r => r.data.data),
+    onSuccess: (data) => setResult(data.exam ?? data),
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Topic</label>
+          <input
+            value={topic} onChange={e => setTopic(e.target.value)}
+            placeholder="e.g. Photosynthesis, World War II..."
+            className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Grade Level</label>
+          <select value={gradeLevel} onChange={e => setGradeLevel(e.target.value)} className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary">
+            {GRADE_LEVELS.map(g => <option key={g}>{g}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Difficulty</label>
+          <div className="grid grid-cols-3 gap-2">
+            {['Easy', 'Medium', 'Hard'].map(d => (
+              <button key={d} onClick={() => setDifficulty(d)}
+                className={cn('px-3 py-2 rounded-lg text-sm font-medium border transition-colors', difficulty === d ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:bg-accent')}>
+                {d}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Number of Questions ({numQuestions})</label>
+          <input type="range" min={5} max={30} value={numQuestions} onChange={e => setNumQuestions(+e.target.value)} className="w-full" />
+          <div className="flex justify-between text-xs text-muted-foreground mt-1"><span>5</span><span>30</span></div>
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-2">Question Types</label>
+        <div className="flex flex-wrap gap-2">
+          {QUESTION_TYPES.map(qt => (
+            <button key={qt.value} onClick={() => toggleType(qt.value)}
+              className={cn('px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors', questionTypes.includes(qt.value) ? 'bg-primary text-primary-foreground border-primary' : 'border-border text-muted-foreground hover:bg-accent')}>
+              {qt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      <Button onClick={() => mutation.mutate()} disabled={!topic.trim() || questionTypes.length === 0 || mutation.isPending} className="w-full">
+        {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Generating Exam...</> : 'Generate Exam'}
+      </Button>
+
+      {result && (
+        <div className="border border-border rounded-xl overflow-hidden">
+          <div className="bg-primary/5 px-4 py-3 flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-foreground">{result.title}</h3>
+              <p className="text-xs text-muted-foreground">{result.questions?.length} questions</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={copyExam}>Copy Exam</Button>
+          </div>
+          <ol className="divide-y divide-border max-h-[480px] overflow-y-auto">
+            {result.questions?.map((q: any, i: number) => (
+              <li key={i} className="p-4">
+                <div className="flex items-start gap-2 mb-2">
+                  <span className="text-xs font-bold bg-primary/10 text-primary rounded px-1.5 py-0.5 shrink-0">{i + 1}</span>
+                  <p className="text-sm font-medium text-foreground">{q.question}</p>
+                  <span className="ml-auto text-xs text-muted-foreground shrink-0">{q.points}pt</span>
+                </div>
+                {q.options && (
+                  <div className="ml-6 space-y-1">
+                    {q.options.map((opt: string, oi: number) => (
+                      <div key={oi} className="flex gap-2 text-sm text-foreground">
+                        <span className="font-medium text-muted-foreground">{String.fromCharCode(65 + oi)}.</span>
+                        <span>{opt}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LessonPlannerTab() {
+  const [topic, setTopic] = useState('');
+  const [gradeLevel, setGradeLevel] = useState('9-12');
+  const [duration, setDuration] = useState(60);
+  const [objectives, setObjectives] = useState('');
+  const [result, setResult] = useState<any>(null);
+
+  const mutation = useMutation({
+    mutationFn: () => api.post('/ai/lesson/generate', {
+      topic, gradeLevel, duration,
+      objectives: objectives.split('\n').map(o => o.trim()).filter(Boolean),
+    }).then(r => r.data.data),
+    onSuccess: (data) => setResult(data.lesson ?? data),
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Topic</label>
+          <input
+            value={topic} onChange={e => setTopic(e.target.value)}
+            placeholder="e.g. Introduction to Fractions..."
+            className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Grade Level</label>
+          <select value={gradeLevel} onChange={e => setGradeLevel(e.target.value)} className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary">
+            {GRADE_LEVELS.map(g => <option key={g}>{g}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Duration (minutes)</label>
+          <select value={duration} onChange={e => setDuration(+e.target.value)} className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary">
+            {[30, 45, 60, 90].map(d => <option key={d} value={d}>{d} min</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Learning Objectives (one per line)</label>
+          <textarea
+            value={objectives} onChange={e => setObjectives(e.target.value)} rows={3}
+            placeholder="Students will be able to..."
+            className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+          />
+        </div>
+      </div>
+      <Button onClick={() => mutation.mutate()} disabled={!topic.trim() || mutation.isPending} className="w-full">
+        {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Creating Lesson Plan...</> : 'Generate Lesson Plan'}
+      </Button>
+
+      {result && (
+        <div className="border border-border rounded-xl overflow-hidden">
+          <div className="bg-primary/5 px-4 py-3">
+            <h3 className="font-semibold text-foreground">{result.title}</h3>
+          </div>
+          <div className="p-4 space-y-4 max-h-[480px] overflow-y-auto">
+            {result.objectives?.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Objectives</h4>
+                <ul className="space-y-1">{result.objectives.map((o: string, i: number) => <li key={i} className="text-sm text-foreground flex gap-2"><CheckCircle className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />{o}</li>)}</ul>
+              </div>
+            )}
+            {result.materials?.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-2">Materials</h4>
+                <div className="flex flex-wrap gap-1.5">{result.materials.map((m: string, i: number) => <span key={i} className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">{m}</span>)}</div>
+              </div>
+            )}
+            {result.introduction && (
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-1">Introduction</h4>
+                <p className="text-sm text-foreground leading-relaxed">{result.introduction}</p>
+              </div>
+            )}
+            {result.mainContent?.sections?.map((s: any, i: number) => (
+              <div key={i} className="border border-border rounded-lg p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <h4 className="text-sm font-semibold text-foreground">{s.title}</h4>
+                  <span className="text-xs text-muted-foreground">{s.duration} min</span>
+                </div>
+                <p className="text-xs text-foreground mb-2">{s.content}</p>
+                {s.activity && <p className="text-xs text-primary font-medium">Activity: {s.activity}</p>}
+              </div>
+            ))}
+            {result.assessment && (
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-1">Assessment</h4>
+                <p className="text-sm text-foreground">{result.assessment}</p>
+              </div>
+            )}
+            {result.homework && (
+              <div>
+                <h4 className="text-xs font-semibold text-muted-foreground uppercase mb-1">Homework</h4>
+                <p className="text-sm text-foreground">{result.homework}</p>
+              </div>
+            )}
+            {result.teacherNotes && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <h4 className="text-xs font-semibold text-amber-700 uppercase mb-1">Teacher Notes</h4>
+                <p className="text-sm text-amber-900">{result.teacherNotes}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FlashcardsTab() {
+  const [topic, setTopic] = useState('');
+  const [numCards, setNumCards] = useState(10);
+  const [cards, setCards] = useState<Array<{ front: string; back: string }>>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [flippedIndex, setFlippedIndex] = useState<number | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: () => api.post('/ai/flashcards/generate', { topic, numCards }).then(r => r.data.data),
+    onSuccess: (data) => {
+      const cardList = data.flashcards?.cards ?? data.cards ?? [];
+      setCards(cardList);
+      setCurrentIndex(0);
+      setFlippedIndex(null);
+    },
+  });
+
+  const card = cards[currentIndex];
+  const isFlipped = flippedIndex === currentIndex;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Topic</label>
+          <input
+            value={topic} onChange={e => setTopic(e.target.value)}
+            placeholder="e.g. Periodic Table, French Revolution..."
+            className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Number of Cards ({numCards})</label>
+          <input type="range" min={5} max={20} value={numCards} onChange={e => setNumCards(+e.target.value)} className="w-full mt-2" />
+          <div className="flex justify-between text-xs text-muted-foreground mt-1"><span>5</span><span>20</span></div>
+        </div>
+      </div>
+      <Button onClick={() => mutation.mutate()} disabled={!topic.trim() || mutation.isPending} className="w-full">
+        {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Generating Flashcards...</> : 'Generate Flashcards'}
+      </Button>
+
+      {cards.length > 0 && card && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <span>Card {currentIndex + 1} / {cards.length}</span>
+            <span className="text-xs">{isFlipped ? 'Answer' : 'Question'} — click card to flip</span>
+          </div>
+          <button
+            onClick={() => setFlippedIndex(isFlipped ? null : currentIndex)}
+            className="w-full min-h-[160px] border-2 border-primary/30 rounded-2xl p-6 text-center transition-all hover:border-primary hover:shadow-md bg-card cursor-pointer"
+          >
+            {isFlipped ? (
+              <div>
+                <p className="text-xs font-semibold text-primary uppercase mb-3">Answer</p>
+                <p className="text-base text-foreground leading-relaxed">{card.back}</p>
+              </div>
+            ) : (
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase mb-3">Question</p>
+                <p className="text-base font-medium text-foreground leading-relaxed">{card.front}</p>
+              </div>
+            )}
+          </button>
+          <div className="flex items-center justify-between gap-3">
+            <Button variant="outline" onClick={() => { setCurrentIndex(i => Math.max(0, i - 1)); setFlippedIndex(null); }} disabled={currentIndex === 0}>
+              Previous
+            </Button>
+            <div className="flex gap-1">
+              {cards.map((_, i) => (
+                <button key={i} onClick={() => { setCurrentIndex(i); setFlippedIndex(null); }}
+                  className={cn('w-2 h-2 rounded-full transition-colors', i === currentIndex ? 'bg-primary' : 'bg-border hover:bg-muted-foreground')}
+                />
+              ))}
+            </div>
+            <Button variant="outline" onClick={() => { setCurrentIndex(i => Math.min(cards.length - 1, i + 1)); setFlippedIndex(null); }} disabled={currentIndex === cards.length - 1}>
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MindMapTab() {
+  const [topic, setTopic] = useState('');
+  const [result, setResult] = useState<{ topic: string; central: string; branches: Array<{ label: string; children: string[] }> } | null>(null);
+  const [expandedBranches, setExpandedBranches] = useState<Set<number>>(new Set());
+
+  const mutation = useMutation({
+    mutationFn: () => api.post('/ai/mindmap/generate', { topic }).then(r => r.data.data),
+    onSuccess: (data) => {
+      const mm = data.mindMap ?? data;
+      const branches = (mm.branches ?? []).map((b: any) => ({
+        label: b.label,
+        children: (b.children ?? []).map((c: any) => (typeof c === 'string' ? c : c.label)),
+      }));
+      setResult({ topic: mm.central ?? topic, central: mm.central ?? topic, branches });
+      setExpandedBranches(new Set(branches.map((_: any, i: number) => i)));
+    },
+  });
+
+  const toggleBranch = (i: number) => setExpandedBranches(prev => {
+    const next = new Set(prev);
+    next.has(i) ? next.delete(i) : next.add(i);
+    return next;
+  });
+
+  const BRANCH_COLORS = ['bg-blue-100 text-blue-700 border-blue-200', 'bg-green-100 text-green-700 border-green-200', 'bg-purple-100 text-purple-700 border-purple-200', 'bg-orange-100 text-orange-700 border-orange-200', 'bg-pink-100 text-pink-700 border-pink-200', 'bg-teal-100 text-teal-700 border-teal-200'];
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-1">Topic</label>
+        <input
+          value={topic} onChange={e => setTopic(e.target.value)}
+          placeholder="e.g. Climate Change, Machine Learning..."
+          className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+        />
+      </div>
+      <Button onClick={() => mutation.mutate()} disabled={!topic.trim() || mutation.isPending} className="w-full">
+        {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Generating Mind Map...</> : 'Generate Mind Map'}
+      </Button>
+
+      {result && (
+        <div className="border border-border rounded-xl overflow-hidden">
+          <div className="bg-primary px-4 py-3 text-center">
+            <span className="text-base font-bold text-primary-foreground">{result.central}</span>
+          </div>
+          <div className="p-4 space-y-3 max-h-[480px] overflow-y-auto">
+            {result.branches.map((branch, i) => (
+              <div key={i} className={cn('border rounded-lg overflow-hidden', BRANCH_COLORS[i % BRANCH_COLORS.length])}>
+                <button
+                  onClick={() => toggleBranch(i)}
+                  className="w-full flex items-center justify-between px-4 py-2.5 font-medium text-sm"
+                >
+                  <span>{branch.label}</span>
+                  <ChevronRight className={cn('h-4 w-4 transition-transform', expandedBranches.has(i) ? 'rotate-90' : '')} />
+                </button>
+                {expandedBranches.has(i) && branch.children.length > 0 && (
+                  <div className="px-4 pb-3 pt-1 bg-white/60 space-y-1">
+                    {branch.children.map((child, j) => (
+                      <div key={j} className="flex items-start gap-2 text-sm text-foreground">
+                        <span className="text-muted-foreground mt-1">•</span>
+                        <span>{child}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TranslatorTab() {
+  const [text, setText] = useState('');
+  const [targetLanguage, setTargetLanguage] = useState('Spanish');
+  const [sourceLanguage, setSourceLanguage] = useState('Auto-detect');
+  const [result, setResult] = useState<{ translatedText: string; detectedLanguage?: string } | null>(null);
+
+  const LANGUAGES = ['Spanish', 'French', 'German', 'Arabic', 'Chinese', 'Japanese', 'Portuguese', 'Russian', 'Italian', 'Hindi'];
+
+  const mutation = useMutation({
+    mutationFn: () => api.post('/ai/translate', {
+      text,
+      targetLanguage,
+      sourceLanguage: sourceLanguage === 'Auto-detect' ? 'auto' : sourceLanguage,
+    }).then(r => r.data.data),
+    onSuccess: (data) => setResult({ translatedText: data.translation ?? data.translatedText, detectedLanguage: data.detectedLanguage }),
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Source Language</label>
+          <select value={sourceLanguage} onChange={e => setSourceLanguage(e.target.value)} className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary">
+            <option>Auto-detect</option>
+            {LANGUAGES.map(l => <option key={l}>{l}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">Target Language</label>
+          <select value={targetLanguage} onChange={e => setTargetLanguage(e.target.value)} className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary">
+            {LANGUAGES.map(l => <option key={l}>{l}</option>)}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-1">Source Text</label>
+        <textarea
+          value={text} onChange={e => setText(e.target.value)} rows={5}
+          placeholder="Enter text to translate..."
+          className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+        />
+      </div>
+      <Button onClick={() => mutation.mutate()} disabled={!text.trim() || mutation.isPending} className="w-full">
+        {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Translating...</> : 'Translate'}
+      </Button>
+
+      {result && (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="border border-border rounded-xl p-4 bg-muted/30">
+            <p className="text-xs font-semibold text-muted-foreground uppercase mb-2">
+              Original {result.detectedLanguage ? `(Detected: ${result.detectedLanguage})` : ''}
+            </p>
+            <p className="text-sm text-foreground leading-relaxed">{text}</p>
+          </div>
+          <div className="border border-primary/30 rounded-xl p-4 bg-primary/5">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold text-primary uppercase">{targetLanguage}</p>
+              <Button variant="ghost" size="sm" onClick={() => navigator.clipboard.writeText(result.translatedText)}>Copy</Button>
+            </div>
+            <p className="text-sm text-foreground leading-relaxed">{result.translatedText}</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlagiarismTab() {
+  const [content, setContent] = useState('');
+  const [result, setResult] = useState<any>(null);
+
+  const mutation = useMutation({
+    mutationFn: () => api.post('/ai/plagiarism/check', { content }).then(r => r.data.data),
+    onSuccess: (data) => setResult(data.result ?? data),
+  });
+
+  const score: number = result?.overallScore ?? result?.score ?? 0;
+  const scoreColor = score < 20 ? 'text-green-600' : score < 50 ? 'text-yellow-600' : 'text-red-600';
+  const scoreBg = score < 20 ? 'bg-green-500' : score < 50 ? 'bg-yellow-500' : 'bg-red-500';
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-1">Content to Check</label>
+        <textarea
+          value={content} onChange={e => setContent(e.target.value)} rows={8}
+          placeholder="Paste the text you want to check for plagiarism..."
+          className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+        />
+        <p className="text-xs text-muted-foreground mt-1 text-right">{content.length} characters</p>
+      </div>
+      <Button onClick={() => mutation.mutate()} disabled={!content.trim() || mutation.isPending} className="w-full">
+        {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Checking...</> : 'Check for Plagiarism'}
+      </Button>
+
+      {result && (
+        <div className="space-y-4">
+          <div className="border border-border rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-foreground">Plagiarism Score</h3>
+              <span className={cn('text-2xl font-bold', scoreColor)}>{Math.round(score)}%</span>
+            </div>
+            <div className="w-full bg-muted rounded-full h-3 mb-3">
+              <div className={cn('h-3 rounded-full transition-all', scoreBg)} style={{ width: `${Math.min(100, score)}%` }} />
+            </div>
+            {result.verdict && (
+              <span className={cn('text-xs font-semibold px-2 py-1 rounded-full', score < 20 ? 'bg-green-100 text-green-700' : score < 50 ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700')}>
+                {result.verdict}
+              </span>
+            )}
+            {result.summary && <p className="text-sm text-muted-foreground mt-3">{result.summary}</p>}
+            {result.aiGenerated !== undefined && (
+              <p className="text-sm text-muted-foreground mt-1">AI-generated content: <span className="font-medium text-foreground">{result.aiGenerated ? 'Likely' : 'Unlikely'}</span></p>
+            )}
+          </div>
+
+          {result.flags?.length > 0 && (
+            <div className="border border-border rounded-xl p-4">
+              <h3 className="text-sm font-semibold text-foreground mb-2">Flags</h3>
+              <ul className="space-y-1">
+                {result.flags.map((f: string, i: number) => (
+                  <li key={i} className="flex gap-2 text-sm text-muted-foreground"><AlertTriangle className="h-4 w-4 text-orange-500 shrink-0 mt-0.5" />{f}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {result.matches?.length > 0 && (
+            <div className="border border-border rounded-xl overflow-hidden">
+              <div className="bg-primary/5 px-4 py-2">
+                <h3 className="text-sm font-semibold text-foreground">Matches ({result.matches.length})</h3>
+              </div>
+              <div className="divide-y divide-border">
+                {result.matches.map((m: any, i: number) => (
+                  <div key={i} className="p-3 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-foreground">{m.source ?? `Match ${i + 1}`}</span>
+                      <span className="text-xs font-bold text-red-600">{Math.round(m.similarity * 100)}% similar</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-1.5">
+                      <div className="h-1.5 rounded-full bg-red-400" style={{ width: `${m.similarity * 100}%` }} />
+                    </div>
+                    <p className="text-xs text-muted-foreground italic">&ldquo;{m.text}&rdquo;</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ContentModerationTab() {
+  const [content, setContent] = useState('');
+  const [result, setResult] = useState<{
+    safe?: boolean;
+    flagged?: boolean;
+    categories?: Record<string, boolean>;
+    scores?: Record<string, number>;
+    flaggedCategories?: string[];
+  } | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: () => api.post('/ai/content/moderate', { content }).then(r => r.data.data),
+    onSuccess: (data) => setResult(data),
+  });
+
+  const isSafe = result ? (result.safe ?? !result.flagged) : null;
+
+  return (
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-foreground mb-1">Content to Moderate</label>
+        <textarea
+          value={content} onChange={e => setContent(e.target.value)} rows={6}
+          placeholder="Enter content to check for inappropriate material..."
+          className="w-full px-3 py-2 border border-border rounded-lg text-sm bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+        />
+      </div>
+      <Button onClick={() => mutation.mutate()} disabled={!content.trim() || mutation.isPending} className="w-full">
+        {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Moderating...</> : 'Moderate Content'}
+      </Button>
+
+      {result && (
+        <div className="space-y-4">
+          <div className={cn('border rounded-xl p-4 flex items-center gap-3', isSafe ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200')}>
+            {isSafe
+              ? <CheckCircle className="h-6 w-6 text-green-600 shrink-0" />
+              : <AlertTriangle className="h-6 w-6 text-red-600 shrink-0" />
+            }
+            <div>
+              <p className={cn('font-semibold text-sm', isSafe ? 'text-green-700' : 'text-red-700')}>
+                {isSafe ? 'Content is Safe' : 'Content Flagged'}
+              </p>
+              <p className={cn('text-xs', isSafe ? 'text-green-600' : 'text-red-600')}>
+                {isSafe ? 'No policy violations detected.' : 'Content may violate safety policies.'}
+              </p>
+            </div>
+          </div>
+
+          {result.categories && Object.keys(result.categories).length > 0 && (
+            <div className="border border-border rounded-xl overflow-hidden">
+              <div className="bg-primary/5 px-4 py-2">
+                <h3 className="text-sm font-semibold text-foreground">Category Scores</h3>
+              </div>
+              <div className="divide-y divide-border">
+                {Object.entries(result.categories).map(([cat, flagged]) => {
+                  const score = (result.scores?.[cat] ?? 0) as number;
+                  const pct = Math.round(score * 100);
+                  return (
+                    <div key={cat} className="p-3 flex items-center gap-3">
+                      <div className="w-32 shrink-0">
+                        <p className="text-xs font-medium text-foreground capitalize">{cat.replace(/_/g, ' ')}</p>
+                      </div>
+                      <div className="flex-1 bg-muted rounded-full h-2">
+                        <div
+                          className={cn('h-2 rounded-full transition-all', (flagged as boolean) ? 'bg-red-500' : 'bg-green-400')}
+                          style={{ width: `${Math.max(2, pct)}%` }}
+                        />
+                      </div>
+                      <div className="w-16 text-right">
+                        <span className="text-xs text-muted-foreground">{pct}%</span>
+                      </div>
+                      <span className={cn('text-xs font-semibold px-1.5 py-0.5 rounded', (flagged as boolean) ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700')}>
+                        {(flagged as boolean) ? 'Flagged' : 'OK'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {result.flaggedCategories && result.flaggedCategories.length > 0 && (
+            <div className="border border-red-200 rounded-xl p-4 bg-red-50">
+              <h3 className="text-sm font-semibold text-red-700 mb-2">Flagged Issues</h3>
+              <ul className="space-y-1">
+                {result.flaggedCategories.map((f: string, i: number) => (
+                  <li key={i} className="flex gap-2 text-sm text-red-700">
+                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <span className="capitalize">{f.replace(/_/g, ' ')}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Tab Registry ────────────────────────────────────────────────────────────
+
 const TAB_COMPONENTS: Record<Tab, React.ComponentType> = {
   curriculum: CurriculumTab,
   research: ResearchTab,
@@ -516,6 +1261,14 @@ const TAB_COMPONENTS: Record<Tab, React.ComponentType> = {
   career: CareerAdvisorTab,
   performance: PerformancePredictionTab,
   dropout: DropoutRiskTab,
+  homework: HomeworkTab,
+  exam: ExamGeneratorTab,
+  lesson: LessonPlannerTab,
+  flashcards: FlashcardsTab,
+  mindmap: MindMapTab,
+  translator: TranslatorTab,
+  plagiarism: PlagiarismTab,
+  moderation: ContentModerationTab,
 };
 
 export default function AIToolsPage() {
@@ -529,7 +1282,7 @@ export default function AIToolsPage() {
         <p className="text-muted-foreground text-sm mt-1">Powered by Claude and GPT-4o — curriculum generation, research, speech, career guidance, and predictive analytics.</p>
       </div>
 
-      <div className="grid grid-cols-7 gap-2">
+      <div className="grid grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-15">
         {TABS.map(tab => {
           const Icon = tab.icon;
           return (
