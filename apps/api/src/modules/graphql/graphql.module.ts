@@ -7,11 +7,15 @@ import { UsersModule } from '../users/users.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { GamificationModule } from '../gamification/gamification.module';
+import { AssignmentsModule } from '../assignments/assignments.module';
+import { SuperAdminModule } from '../super-admin/super-admin.module';
 import { CoursesResolver } from './resolvers/courses.resolver';
 import { UsersResolver } from './resolvers/users.resolver';
 import { AnalyticsResolver } from './resolvers/analytics.resolver';
 import { NotificationsResolver } from './resolvers/notifications.resolver';
 import { GamificationResolver } from './resolvers/gamification.resolver';
+import { AssignmentsResolver } from './resolvers/assignments.resolver';
+import { SuperAdminResolver } from './resolvers/super-admin.resolver';
 import { GqlAuthGuard } from './guards/gql-auth.guard';
 
 @Module({
@@ -34,6 +38,8 @@ import { GqlAuthGuard } from './guards/gql-auth.guard';
     AnalyticsModule,
     NotificationsModule,
     GamificationModule,
+    AssignmentsModule,
+    SuperAdminModule,
   ],
   providers: [
     CoursesResolver,
@@ -41,6 +47,8 @@ import { GqlAuthGuard } from './guards/gql-auth.guard';
     AnalyticsResolver,
     NotificationsResolver,
     GamificationResolver,
+    AssignmentsResolver,
+    SuperAdminResolver,
     GqlAuthGuard,
   ],
 })

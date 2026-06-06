@@ -2,7 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { SubscriptionPlan, UserRole } from '@prisma/client';
+import { SubscriptionPlan, UserRole, PaymentStatus } from '@prisma/client';
 
 @Injectable()
 export class SuperAdminService {
@@ -32,7 +32,7 @@ export class SuperAdminService {
       this.prisma.course.count(),
       this.prisma.course.count({ where: { isPublished: true } }),
       this.prisma.courseProgress.count(),
-      this.prisma.invoice.aggregate({ where: { status: 'PAID' }, _sum: { amount: true } }),
+      this.prisma.invoice.aggregate({ where: { status: PaymentStatus.COMPLETED }, _sum: { amount: true } }),
       this.prisma.tenant.findMany({
         orderBy: { createdAt: 'desc' },
         take: 5,
@@ -127,7 +127,7 @@ export class SuperAdminService {
       this.prisma.course.count({ where: { tenantId: id } }),
       this.prisma.courseProgress.count({ where: { course: { tenantId: id } } }),
       this.prisma.invoice.aggregate({
-        where: { subscription: { tenantId: id }, status: 'PAID' },
+        where: { subscription: { tenantId: id }, status: PaymentStatus.COMPLETED },
         _sum: { amount: true },
       }),
     ]);
@@ -191,10 +191,10 @@ export class SuperAdminService {
 
   async getBillingOverview() {
     const [totalRevenue, monthlyRevenue, planRevenue, recentInvoices, subscriptionStats] = await Promise.all([
-      this.prisma.invoice.aggregate({ where: { status: 'PAID' }, _sum: { amount: true }, _count: { id: true } }),
+      this.prisma.invoice.aggregate({ where: { status: PaymentStatus.COMPLETED }, _sum: { amount: true }, _count: { id: true } }),
       this.prisma.invoice.groupBy({
         by: ['issuedAt'],
-        where: { status: 'PAID' },
+        where: { status: PaymentStatus.COMPLETED },
         _sum: { amount: true },
         _count: { id: true },
         orderBy: { issuedAt: 'desc' },
@@ -205,7 +205,7 @@ export class SuperAdminService {
         where: { status: 'ACTIVE' },
       }),
       this.prisma.invoice.findMany({
-        where: { status: 'PAID' },
+        where: { status: PaymentStatus.COMPLETED },
         orderBy: { issuedAt: 'desc' },
         take: 10,
         include: { subscription: { include: { tenant: { select: { name: true, slug: true } } } } },
@@ -217,8 +217,8 @@ export class SuperAdminService {
     ]);
 
     return {
-      totalRevenue: Number(totalRevenue._sum.amount ?? 0),
-      totalInvoices: totalRevenue._count.id,
+      totalRevenue: Number(totalRevenue._sum?.amount ?? 0),
+      totalInvoices: totalRevenue._count?.id ?? 0,
       planRevenue: planRevenue.map(p => ({ plan: p.plan, count: p._count.plan })),
       subscriptionStats: subscriptionStats.map(s => ({ status: s.status, count: s._count.status })),
       recentInvoices,

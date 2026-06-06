@@ -297,14 +297,14 @@ Return valid JSON: { "careerPaths": [{ "title": string, "match": number, "descri
     const student = await this.prisma.student.findUnique({
       where: { id: studentId },
       include: {
-        assignmentSubmissions: { take: 20, orderBy: { createdAt: 'desc' }, include: { assignment: true } },
-        enrollments: { include: { course: true } },
+        submissions: { take: 20, orderBy: { submittedAt: 'desc' }, include: { assignment: true } },
+        enrollments: true,
       },
     });
 
     if (!student) throw new Error('Student not found');
 
-    const submissions = (student.assignmentSubmissions as any[]);
+    const submissions = (student.submissions as any[]);
     const avgScore = submissions.length
       ? submissions.reduce((s: number, sub: any) => s + (sub.score ?? 0), 0) / submissions.length
       : 0;
@@ -334,14 +334,14 @@ Return valid JSON: { "careerPaths": [{ "title": string, "match": number, "descri
     const student = await this.prisma.student.findUnique({
       where: { id: studentId },
       include: {
-        enrollments: { include: { course: true } },
-        assignmentSubmissions: { take: 30, orderBy: { createdAt: 'desc' } },
+        enrollments: true,
+        submissions: { take: 30, orderBy: { submittedAt: 'desc' } },
       },
     });
 
     if (!student) throw new Error('Student not found');
 
-    const submissions = (student.assignmentSubmissions as any[]);
+    const submissions = (student.submissions as any[]);
     const enrollments = (student.enrollments as any[]);
 
     const missedAssignments = submissions.filter((s: any) => s.status === 'LATE' || !s.score).length;

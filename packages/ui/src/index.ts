@@ -33,3 +33,31 @@ export type {
   CardFooterProps,
   CardBadgeProps,
 } from './components/Card.js';
+
+// ─── Feedback & Status ────────────────────────────────────────────────────────
+export { Badge, badgeVariants } from './components/Badge.js';
+export type { BadgeProps } from './components/Badge.js';
+
+export { Spinner, spinnerVariants } from './components/Spinner.js';
+export type { SpinnerProps } from './components/Spinner.js';
+
+export { Toast, ToastContainer, toastVariants } from './components/Toast.js';
+export type { ToastProps, ToastContainerProps } from './components/Toast.js';
+
+// ─── Data Display ─────────────────────────────────────────────────────────────
+export { Avatar, avatarSizeVariants, getInitials, getColourClass } from './components/Avatar.js';
+export type { AvatarProps } from './components/Avatar.js';
+
+export { Table } from './components/Table.js';
+export type { TableProps, TableColumn } from './components/Table.js';
+
+export { Tabs } from './components/Tabs.js';
+export type { TabsProps, TabItem } from './components/Tabs.js';
+
+// ─── Form Controls ────────────────────────────────────────────────────────────
+export { Select } from './components/Select.js';
+export type { SelectProps, SelectOption } from './components/Select.js';
+
+// ─── Overlay ──────────────────────────────────────────────────────────────────
+export { Modal, modalPanelVariants } from './components/Modal.js';
+export type { ModalProps } from './components/Modal.js';
