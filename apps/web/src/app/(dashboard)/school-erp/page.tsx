@@ -11,13 +11,14 @@ export default function SchoolErpPage() {
   const [selectedSchoolId, setSelectedSchoolId] = useState<string | null>(null);
   const qc = useQueryClient();
 
-  const { data: schools } = useQuery({
+  const { data: schools } = useQuery<any[]>({
     queryKey: ['school-erp-schools'],
-    queryFn: () => api.get('/school-erp/schools').then(r => r.data.data as any[]),
-    onSuccess: (data: any[]) => {
+    queryFn: () => api.get('/school-erp/schools').then(r => {
+      const data = r.data.data as any[];
       if (data?.length && !selectedSchoolId) setSelectedSchoolId(data[0].id);
-    },
-  } as any);
+      return data;
+    }),
+  });
 
   const schoolId = selectedSchoolId ?? (schools?.[0]?.id ?? null);
 

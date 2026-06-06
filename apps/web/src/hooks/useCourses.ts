@@ -6,7 +6,7 @@ import {
   useQueryClient,
   type UseQueryOptions,
 } from '@tanstack/react-query';
-import { api, apiPost, apiPatch, apiDelete } from '@/lib/api';
+import { api, apiGet, apiPost, apiPatch, apiDelete } from '@/lib/api';
 import { buildQueryString } from '@/lib/utils';
 
 export interface Course {

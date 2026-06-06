@@ -42,6 +42,18 @@ export class TeachersService {
     return { data: teachers, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
+  async findByUserId(userId: string) {
+    return this.prisma.teacher.findUnique({
+      where: { userId },
+      include: {
+        user: { select: { id: true, firstName: true, lastName: true, email: true, avatarUrl: true } },
+        school: { select: { name: true } },
+        courses: { where: { isPublished: true }, take: 5, orderBy: { createdAt: 'desc' }, select: { id: true, title: true, thumbnailUrl: true, rating: true, enrollCount: true } },
+        _count: { select: { courses: true, liveSessions: true } },
+      },
+    });
+  }
+
   async findOne(id: string) {
     const teacher = await this.prisma.teacher.findUnique({
       where: { id },

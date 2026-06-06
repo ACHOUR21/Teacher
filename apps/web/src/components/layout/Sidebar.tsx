@@ -57,6 +57,7 @@ const navSections: NavSection[] = [
   {
     title: 'Learning',
     items: [
+      { label: 'My Learning', href: '/my-learning', icon: BookMarked, roles: ['STUDENT'] },
       { label: 'Courses', href: '/courses', icon: BookOpen },
       { label: 'Live Classes', href: '/live', icon: Video },
       { label: 'AI Tutor', href: '/ai-tutor', icon: Bot, badge: 'AI' },

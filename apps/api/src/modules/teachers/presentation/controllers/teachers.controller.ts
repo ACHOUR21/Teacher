@@ -1,7 +1,8 @@
-import { Controller, Get, Patch, Param, Body, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, Query, UseGuards, Request, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { TeachersService } from '../../teachers.service';
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+import { CurrentUser } from '../../../core/decorators/current-user.decorator';
 
 @ApiTags('Teachers')
 @ApiBearerAuth('JWT-auth')
@@ -9,6 +10,20 @@ import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
 @Controller('teachers')
 export class TeachersController {
   constructor(private readonly teachersService: TeachersService) {}
+
+  @Get('me')
+  @ApiOperation({ summary: 'Get my teacher profile' })
+  myProfile(@CurrentUser() user: any) {
+    return this.teachersService.findByUserId(user.sub ?? user.id);
+  }
+
+  @Get('me/stats')
+  @ApiOperation({ summary: 'Get my performance stats' })
+  async myStats(@CurrentUser() user: any) {
+    const teacher = await this.teachersService.findByUserId(user.sub ?? user.id);
+    if (!teacher) throw new NotFoundException('Teacher profile not found');
+    return this.teachersService.getPerformanceStats(teacher.id);
+  }
 
   @Get()
   @ApiOperation({ summary: 'List all teachers in tenant' })
