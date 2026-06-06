@@ -56,6 +56,35 @@ export class ApiEcosystemService {
     });
   }
 
+  async getUsageStats(tenantId: string) {
+    const [totalKeys, activeKeys, totalWebhooks, recentKeys] = await Promise.all([
+      this.prisma.apiKey.count({ where: { tenantId } }),
+      this.prisma.apiKey.count({ where: { tenantId, isActive: true } }),
+      this.prisma.webhookEndpoint.count({ where: { tenantId } }),
+      this.prisma.apiKey.findMany({
+        where: { tenantId, lastUsedAt: { not: null } },
+        orderBy: { lastUsedAt: 'desc' },
+        take: 5,
+        select: { id: true, name: true, keyPrefix: true, lastUsedAt: true, isActive: true },
+      }),
+    ]);
+    return { totalKeys, activeKeys, totalWebhooks, recentKeys };
+  }
+
+  async deleteWebhook(id: string, tenantId: string) {
+    return this.prisma.webhookEndpoint.update({
+      where: { id },
+      data: { isActive: false },
+    });
+  }
+
+  async toggleApiKey(id: string, tenantId: string, isActive: boolean) {
+    return this.prisma.apiKey.update({
+      where: { id },
+      data: { isActive },
+    });
+  }
+
   async deliverWebhook(tenantId: string, event: string, payload: unknown) {
     const endpoints = await this.prisma.webhookEndpoint.findMany({
       where: { tenantId, isActive: true, events: { has: event } },

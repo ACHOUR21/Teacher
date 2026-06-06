@@ -76,4 +76,49 @@ export class SchoolErpService {
     ]);
     return { totalStudents, totalTeachers, totalClasses, activeSessions };
   }
+
+  async assignStudentToClass(studentId: string, classId: string) {
+    const student = await this.prisma.student.findUnique({ where: { id: studentId } });
+    if (!student) throw new NotFoundException('Student not found');
+    return this.prisma.student.update({
+      where: { id: studentId },
+      data: { classId },
+    });
+  }
+
+  async removeStudentFromClass(studentId: string, classId: string) {
+    const student = await this.prisma.student.findFirst({ where: { id: studentId, classId } });
+    if (!student) throw new NotFoundException('Student not found in this class');
+    return this.prisma.student.update({
+      where: { id: studentId },
+      data: { classId: null },
+    });
+  }
+
+  async getClassStudents(classId: string) {
+    return this.prisma.student.findMany({
+      where: { classId },
+      include: {
+        user: { select: { firstName: true, lastName: true, email: true, avatarUrl: true } },
+      },
+    });
+  }
+
+  async assignTeacherToSchool(teacherId: string, schoolId: string) {
+    const teacher = await this.prisma.teacher.findUnique({ where: { id: teacherId } });
+    if (!teacher) throw new NotFoundException('Teacher not found');
+    return this.prisma.teacher.update({
+      where: { id: teacherId },
+      data: { schoolId },
+    });
+  }
+
+  async getSchoolTeachers(schoolId: string) {
+    return this.prisma.teacher.findMany({
+      where: { schoolId },
+      include: {
+        user: { select: { firstName: true, lastName: true, email: true, avatarUrl: true } },
+      },
+    });
+  }
 }

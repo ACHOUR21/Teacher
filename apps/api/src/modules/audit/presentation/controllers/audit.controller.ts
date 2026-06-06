@@ -10,13 +10,13 @@ import { UserRole, AuditAction } from '@prisma/client';
 @ApiTags('Audit')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
 @Controller('audit')
 export class AuditController {
   constructor(private readonly auditService: AuditService) {}
 
   @Get('logs')
-  @ApiOperation({ summary: 'Query audit logs (admin only)' })
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.SCHOOL_ADMIN)
+  @ApiOperation({ summary: 'Query audit logs' })
   @ApiQuery({ name: 'userId', required: false })
   @ApiQuery({ name: 'action', required: false, enum: AuditAction })
   @ApiQuery({ name: 'resource', required: false })
@@ -31,8 +31,8 @@ export class AuditController {
     @Query('resource') resource?: string,
     @Query('from') from?: string,
     @Query('to') to?: string,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     return this.auditService.query(tenantId, {
       userId,
@@ -42,6 +42,33 @@ export class AuditController {
       to: to ? new Date(to) : undefined,
       page: page ? +page : undefined,
       limit: limit ? +limit : undefined,
+    });
+  }
+
+  @Get('logs/export')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Export audit logs (up to 1000 records for CSV)' })
+  @ApiQuery({ name: 'userId', required: false })
+  @ApiQuery({ name: 'action', required: false, enum: AuditAction })
+  @ApiQuery({ name: 'resource', required: false })
+  @ApiQuery({ name: 'from', required: false, description: 'ISO date string' })
+  @ApiQuery({ name: 'to', required: false, description: 'ISO date string' })
+  export(
+    @TenantId() tenantId: string,
+    @Query('userId') userId?: string,
+    @Query('action') action?: AuditAction,
+    @Query('resource') resource?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.auditService.query(tenantId, {
+      userId,
+      action,
+      resource,
+      from: from ? new Date(from) : undefined,
+      to: to ? new Date(to) : undefined,
+      page: 1,
+      limit: 1000,
     });
   }
 }

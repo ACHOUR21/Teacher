@@ -30,6 +30,9 @@ import {
   University,
   Sparkles,
   ClipboardList,
+  FileText,
+  Palette,
+  Key,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/uiStore';
@@ -98,6 +101,9 @@ const navSections: NavSection[] = [
     items: [
       { label: 'Super Admin', href: '/super-admin', icon: Shield, roles: ['SUPER_ADMIN'], badge: 'SA' },
       { label: 'Analytics', href: '/analytics', icon: BarChart3, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] },
+      { label: 'Audit Logs', href: '/audit-logs', icon: FileText, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN'] },
+      { label: 'White Label', href: '/white-label', icon: Palette, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
+      { label: 'API Keys', href: '/api-keys', icon: Key, roles: ['SUPER_ADMIN', 'ADMIN'] },
       { label: 'Billing', href: '/billing', icon: CreditCard, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
       { label: 'Settings', href: '/settings', icon: Settings, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
       { label: 'Users', href: '/users', icon: Shield, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN'] },

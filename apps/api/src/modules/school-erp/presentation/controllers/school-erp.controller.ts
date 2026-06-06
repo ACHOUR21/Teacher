@@ -1,18 +1,20 @@
-import { Controller, Get, Post, Param, Body, UseGuards, Request } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Delete, Param, Body, UseGuards, Request } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { SchoolErpService } from '../../school-erp.service';
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../core/guards/roles.guard';
 import { Roles } from '../../../core/decorators/roles.decorator';
+import { UserRole } from '@prisma/client';
 
 @ApiTags('School ERP')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('school-erp')
 export class SchoolErpController {
   constructor(private readonly schoolErpService: SchoolErpService) {}
 
   @Post('schools')
-  @Roles('ADMIN', 'SCHOOL_ADMIN', 'SUPER_ADMIN')
+  @Roles(UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'Create a school' })
   create(@Request() req: any, @Body() body: any) {
     return this.schoolErpService.createSchool(req.tenant?.id, body);
@@ -37,7 +39,7 @@ export class SchoolErpController {
   }
 
   @Post('schools/:id/departments')
-  @Roles('ADMIN', 'SCHOOL_ADMIN')
+  @Roles(UserRole.ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({ summary: 'Create a department' })
   createDepartment(@Param('id') schoolId: string, @Body() body: any) {
     return this.schoolErpService.createDepartment(schoolId, body);
@@ -50,7 +52,7 @@ export class SchoolErpController {
   }
 
   @Post('schools/:id/classes')
-  @Roles('ADMIN', 'SCHOOL_ADMIN')
+  @Roles(UserRole.ADMIN, UserRole.SCHOOL_ADMIN)
   @ApiOperation({ summary: 'Create a class' })
   createClass(@Param('id') schoolId: string, @Body() body: any) {
     return this.schoolErpService.createClass(schoolId, body);
@@ -62,6 +64,20 @@ export class SchoolErpController {
     return this.schoolErpService.getClasses(schoolId);
   }
 
+  @Post('schools/:schoolId/teachers')
+  @Roles(UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Assign teacher to school' })
+  @ApiBody({ schema: { properties: { teacherId: { type: 'string' } }, required: ['teacherId'] } })
+  assignTeacher(@Param('schoolId') schoolId: string, @Body('teacherId') teacherId: string) {
+    return this.schoolErpService.assignTeacherToSchool(teacherId, schoolId);
+  }
+
+  @Get('schools/:schoolId/teachers')
+  @ApiOperation({ summary: 'List school teachers' })
+  getTeachers(@Param('schoolId') schoolId: string) {
+    return this.schoolErpService.getSchoolTeachers(schoolId);
+  }
+
   @Get('classes/:classId/timetable')
   @ApiOperation({ summary: 'Get class timetable' })
   timetable(@Param('classId') classId: string) {
@@ -69,9 +85,30 @@ export class SchoolErpController {
   }
 
   @Post('classes/:classId/timetable')
-  @Roles('ADMIN', 'SCHOOL_ADMIN', 'TEACHER')
+  @Roles(UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.TEACHER)
   @ApiOperation({ summary: 'Add timetable entry' })
   addTimetable(@Param('classId') classId: string, @Body() body: any) {
     return this.schoolErpService.createTimetableEntry(classId, body);
+  }
+
+  @Post('classes/:classId/students')
+  @Roles(UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Assign student to class' })
+  @ApiBody({ schema: { properties: { studentId: { type: 'string' } }, required: ['studentId'] } })
+  assignStudent(@Param('classId') classId: string, @Body('studentId') studentId: string) {
+    return this.schoolErpService.assignStudentToClass(studentId, classId);
+  }
+
+  @Delete('classes/:classId/students/:studentId')
+  @Roles(UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Remove student from class' })
+  removeStudent(@Param('classId') classId: string, @Param('studentId') studentId: string) {
+    return this.schoolErpService.removeStudentFromClass(studentId, classId);
+  }
+
+  @Get('classes/:classId/students')
+  @ApiOperation({ summary: 'List students in a class' })
+  getClassStudents(@Param('classId') classId: string) {
+    return this.schoolErpService.getClassStudents(classId);
   }
 }
