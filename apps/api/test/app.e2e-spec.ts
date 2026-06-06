@@ -205,4 +205,123 @@ describe('EduAI Ultimate API (e2e)', () => {
       expect(res.status).toBe(400);
     });
   });
+
+  describe('Assignments', () => {
+    let assignmentId: string;
+
+    it('POST /api/v1/assignments should create an assignment', async () => {
+      if (!accessToken) return;
+
+      const res = await request(app.getHttpServer())
+        .post('/api/v1/assignments')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .set('X-Tenant-ID', tenantId)
+        .send({ title: 'E2E Assignment', maxScore: 100 });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data).toHaveProperty('id');
+      expect(res.body.data.title).toBe('E2E Assignment');
+      assignmentId = res.body.data.id;
+    });
+
+    it('GET /api/v1/assignments should list assignments', async () => {
+      if (!accessToken) return;
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/assignments')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .set('X-Tenant-ID', tenantId);
+
+      expect(res.status).toBe(200);
+    });
+
+    it('GET /api/v1/assignments/:id should return assignment details', async () => {
+      if (!accessToken || !assignmentId) return;
+
+      const res = await request(app.getHttpServer())
+        .get(`/api/v1/assignments/${assignmentId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .set('X-Tenant-ID', tenantId);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.id).toBe(assignmentId);
+    });
+
+    it('PATCH /api/v1/assignments/:id should update assignment', async () => {
+      if (!accessToken || !assignmentId) return;
+
+      const res = await request(app.getHttpServer())
+        .patch(`/api/v1/assignments/${assignmentId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .set('X-Tenant-ID', tenantId)
+        .send({ title: 'Updated Assignment' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.data.title).toBe('Updated Assignment');
+    });
+
+    it('DELETE /api/v1/assignments/:id should delete assignment', async () => {
+      if (!accessToken || !assignmentId) return;
+
+      const res = await request(app.getHttpServer())
+        .delete(`/api/v1/assignments/${assignmentId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .set('X-Tenant-ID', tenantId);
+
+      expect(res.status).toBe(204);
+    });
+  });
+
+  describe('AI Endpoints', () => {
+    it('GET /api/v1/ai/usage should return usage stats', async () => {
+      if (!accessToken) return;
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/ai/usage?period=month')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .set('X-Tenant-ID', tenantId);
+
+      expect(res.status).toBe(200);
+      expect(Array.isArray(res.body.data)).toBe(true);
+    });
+  });
+
+  describe('Notifications', () => {
+    it('GET /api/v1/notifications should return notifications list', async () => {
+      if (!accessToken) return;
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/notifications')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .set('X-Tenant-ID', tenantId);
+
+      expect(res.status).toBe(200);
+    });
+  });
+
+  describe('Analytics', () => {
+    it('GET /api/v1/analytics/stats should return platform stats', async () => {
+      if (!accessToken) return;
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/analytics/stats')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .set('X-Tenant-ID', tenantId);
+
+      expect(res.status).toBe(200);
+    });
+  });
+
+  describe('Certificates', () => {
+    it('GET /api/v1/certificates should return certificates list', async () => {
+      if (!accessToken) return;
+
+      const res = await request(app.getHttpServer())
+        .get('/api/v1/certificates')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .set('X-Tenant-ID', tenantId);
+
+      expect(res.status).toBe(200);
+    });
+  });
 });

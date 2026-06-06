@@ -6,7 +6,10 @@
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report"
   },
   "dependencies": {
     "next": "15.0.0",
@@ -49,6 +52,7 @@
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.38",
     "eslint": "^8.57.0",
-    "eslint-config-next": "15.0.0"
+    "eslint-config-next": "15.0.0",
+    "@playwright/test": "^1.45.0"
   }
 }
