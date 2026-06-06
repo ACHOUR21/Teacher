@@ -142,6 +142,8 @@ export class AuthService {
 
     const tenant = await this.prisma.tenant.findUnique({ where: { id: cmd.tenantId }, select: { name: true, slug: true } });
     this.notifications.sendWelcomeEmail(user.email, user.firstName, tenant?.name ?? 'EduAI').catch(() => {});
+    // Send email verification link (fire-and-forget)
+    this.sendVerificationEmail(user.id).catch(() => {});
 
     return {
       user: new AuthUser({
@@ -390,6 +392,27 @@ export class AuthService {
 
     this.logger.log(`Password reset token generated for ${email}`);
     this.notifications.sendPasswordResetEmail(user.email, user.firstName, resetToken).catch(() => {});
+  }
+
+  async sendVerificationEmail(userId: string): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+    if (user.emailVerified) return; // already verified
+
+    const verificationToken = uuidv4();
+    await this.redis.set(`email:verify:${verificationToken}`, userId, 24 * 3600); // 24 hours
+    await this.notifications.sendEmailVerification(user.email, user.firstName, verificationToken).catch(() => {});
+    this.logger.log(`Email verification token sent to ${user.email}`);
+  }
+
+  async verifyEmail(token: string): Promise<{ verified: boolean }> {
+    const userId = await this.redis.get(`email:verify:${token}`);
+    if (!userId) throw new BadRequestException('Invalid or expired verification token');
+
+    await this.prisma.user.update({ where: { id: userId }, data: { emailVerified: true } });
+    await this.redis.del(`email:verify:${token}`);
+    this.logger.log(`Email verified for user ${userId}`);
+    return { verified: true };
   }
 
   async resetPassword(token: string, newPassword: string): Promise<void> {

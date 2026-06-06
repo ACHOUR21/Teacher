@@ -148,6 +148,23 @@ export class NotificationsService {
     await this.sendEmail(to, 'Reset your EduAI password', html);
   }
 
+  async sendEmailVerification(to: string, firstName: string, verificationToken: string) {
+    const verifyUrl = `${process.env['APP_URL'] ?? 'http://localhost:3000'}/verify-email?token=${verificationToken}`;
+    const html = emailTemplate({
+      title: 'Verify your email address',
+      preheader: 'Confirm your email to activate your EduAI account.',
+      body: `
+        <h2 style="margin:0 0 16px;font-size:22px;color:#111827">Hi ${firstName},</h2>
+        <p style="margin:0 0 16px;color:#374151">Thanks for signing up for EduAI! Please verify your email address to activate your account.</p>
+        <a href="${verifyUrl}"
+           style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">
+          Verify Email Address →
+        </a>
+        <p style="margin:20px 0 0;color:#6b7280;font-size:12px">This link expires in 24 hours. If you didn't create an account, ignore this email.</p>`,
+    });
+    await this.sendEmail(to, 'Verify your EduAI email address', html);
+  }
+
   async sendCourseEnrollmentEmail(to: string, firstName: string, courseTitle: string, courseId: string) {
     const courseUrl = `${process.env.APP_URL ?? 'http://localhost:3000'}/courses/${courseId}`;
     const html = emailTemplate({

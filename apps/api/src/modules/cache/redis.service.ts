@@ -112,6 +112,10 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  async ping(): Promise<string> {
+    return this.client.ping();
+  }
+
   getClient(): Redis {
     return this.client;
   }

@@ -216,4 +216,21 @@ export class AuthController {
     await this.authService.changePassword(userId, body.currentPassword, body.newPassword);
     return { message: 'Password changed successfully' };
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('send-verification')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Resend email verification link' })
+  async sendVerification(@CurrentUser('id') userId: string) {
+    await this.authService.sendVerificationEmail(userId);
+    return { message: 'Verification email sent' };
+  }
+
+  @Public()
+  @Get('verify-email')
+  @ApiOperation({ summary: 'Verify email address with token' })
+  async verifyEmail(@Query('token') token: string) {
+    return this.authService.verifyEmail(token);
+  }
 }
