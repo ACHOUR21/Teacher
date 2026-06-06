@@ -106,6 +106,8 @@ class _AppDrawer extends StatelessWidget {
         _drawerItem(context, Icons.smart_toy_outlined, 'AI Tutor', '/home/ai-tutor'),
         _drawerItem(context, Icons.psychology_outlined, 'AI Agents', '/home/ai-agents'),
         _drawerItem(context, Icons.store_outlined, 'Marketplace', '/home/marketplace'),
+        _drawerItem(context, Icons.assignment_outlined, 'Assignments', '/home/assignments'),
+        _drawerItem(context, Icons.workspace_premium_outlined, 'Certificates', '/home/certificates'),
         _drawerItem(context, Icons.emoji_events_outlined, 'Gamification', '/home/gamification'),
         _drawerItem(context, Icons.chat_outlined, 'Messages', '/home/messages'),
         _drawerItem(context, Icons.notifications_outlined, 'Notifications', '/home/notifications'),
