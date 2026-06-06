@@ -30,6 +30,7 @@ interface AuthState {
   accessToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  _hasHydrated: boolean;
 }
 
 interface AuthActions {
@@ -38,6 +39,7 @@ interface AuthActions {
   updateUser: (updates: Partial<User>) => void;
   setAccessToken: (token: string) => void;
   setLoading: (loading: boolean) => void;
+  setHasHydrated: (v: boolean) => void;
 }
 
 export const useAuthStore = create<AuthState & AuthActions>()(
@@ -47,6 +49,9 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       accessToken: null,
       isAuthenticated: false,
       isLoading: false,
+      _hasHydrated: false,
+
+      setHasHydrated: (v) => set({ _hasHydrated: v }),
 
       login: (user, accessToken) => {
         set({ user, accessToken, isAuthenticated: true, isLoading: false });
@@ -83,6 +88,9 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         accessToken: state.accessToken,
         isAuthenticated: state.isAuthenticated,
       }),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );

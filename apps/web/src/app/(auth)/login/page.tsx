@@ -54,7 +54,8 @@ export default function LoginPage() {
       if (data.schoolCode?.trim()) {
         setResolvingTenant(true);
         try {
-          const tenant = await apiGet<{ id: string; name: string }>(`/auth/tenant/lookup?slug=${encodeURIComponent(data.schoolCode.trim().toLowerCase())}`);
+          const resp = await apiGet<any>(`/auth/tenant/lookup?slug=${encodeURIComponent(data.schoolCode.trim().toLowerCase())}`);
+          const tenant = resp?.data ?? resp;
           tenantId = tenant.id;
         } catch {
           toast.error('School not found', `No school with code "${data.schoolCode}" exists.`);

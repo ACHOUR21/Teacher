@@ -56,7 +56,8 @@ export function useAuth() {
       try {
         const { tenantId, ...body } = credentials;
         const headers = tenantId ? { 'x-tenant-id': tenantId } : undefined;
-        const data = await apiPost<AuthResponse>('/auth/login', body, { headers });
+        const resp = await apiPost<any>('/auth/login', body, { headers });
+        const data: AuthResponse = resp?.data ?? resp;
         if (data.requiresMfa) {
           return { requiresMfa: true };
         }
