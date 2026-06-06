@@ -95,6 +95,7 @@ const navSections: NavSection[] = [
   {
     title: 'Administration',
     items: [
+      { label: 'Super Admin', href: '/super-admin', icon: Shield, roles: ['SUPER_ADMIN'], badge: 'SA' },
       { label: 'Analytics', href: '/analytics', icon: BarChart3, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] },
       { label: 'Billing', href: '/billing', icon: CreditCard, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
       { label: 'Settings', href: '/settings', icon: Settings, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
