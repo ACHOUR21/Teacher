@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/api/endpoints.dart';
 import '../../../../features/auth/presentation/providers/auth_provider.dart';
 import '../../../../shared/widgets/loading_indicator.dart';
 import '../widgets/stats_card.dart';
@@ -71,88 +72,66 @@ class AIRecommendation {
   });
 }
 
-// Mock providers — replace with real API calls
 final dashboardStatsProvider = FutureProvider.autoDispose<DashboardStats>((ref) async {
-  await Future.delayed(const Duration(milliseconds: 800));
-  return const DashboardStats(
-    enrolledCourses: 8,
-    completedCourses: 3,
-    upcomingSessions: 2,
-    totalPoints: 1240,
+  final apiClient = ref.watch(apiClientProvider);
+  final response = await apiClient.dio.get('${Endpoints.baseUrl}${Endpoints.dashboardStats}');
+  final data = (response.data['data'] ?? response.data) as Map<String, dynamic>;
+  return DashboardStats(
+    enrolledCourses: (data['enrolledCourses'] as num?)?.toInt() ?? 0,
+    completedCourses: (data['completedCourses'] as num?)?.toInt() ?? 0,
+    upcomingSessions: (data['upcomingSessions'] as num?)?.toInt() ?? 0,
+    totalPoints: (data['totalPoints'] as num?)?.toInt() ?? 0,
   );
 });
 
 final recentCoursesProvider = FutureProvider.autoDispose<List<RecentCourse>>((ref) async {
-  await Future.delayed(const Duration(milliseconds: 900));
-  return [
-    const RecentCourse(
-      id: '1',
-      title: 'Introduction to Machine Learning',
-      instructor: 'Dr. Sarah Chen',
-      progress: 0.65,
-      nextLesson: 'Neural Networks Basics',
-    ),
-    const RecentCourse(
-      id: '2',
-      title: 'Advanced Mathematics',
-      instructor: 'Prof. James Wilson',
-      progress: 0.3,
-      nextLesson: 'Linear Algebra Part 2',
-    ),
-    const RecentCourse(
-      id: '3',
-      title: 'Python Programming',
-      instructor: 'Alice Thompson',
-      progress: 0.9,
-      nextLesson: 'Final Project',
-    ),
-  ];
+  final apiClient = ref.watch(apiClientProvider);
+  final response = await apiClient.dio.get('${Endpoints.baseUrl}${Endpoints.recentCourses}');
+  final list = ((response.data['data'] ?? response.data) as List<dynamic>);
+  return list.map((item) {
+    final m = item as Map<String, dynamic>;
+    return RecentCourse(
+      id: m['id']?.toString() ?? '',
+      title: m['title']?.toString() ?? '',
+      instructor: m['instructor']?.toString() ?? '',
+      progress: (m['progress'] as num?)?.toDouble() ?? 0.0,
+      thumbnailUrl: m['thumbnailUrl']?.toString(),
+      nextLesson: m['nextLesson']?.toString(),
+    );
+  }).toList();
 });
 
 final upcomingSessionsProvider =
     FutureProvider.autoDispose<List<UpcomingSession>>((ref) async {
-  await Future.delayed(const Duration(milliseconds: 700));
-  return [
-    UpcomingSession(
-      id: 's1',
-      title: 'Live Q&A: ML Concepts',
-      instructor: 'Dr. Sarah Chen',
-      startsAt: DateTime.now().add(const Duration(hours: 2)),
-      participantCount: 24,
-    ),
-    UpcomingSession(
-      id: 's2',
-      title: 'Python Workshop',
-      instructor: 'Alice Thompson',
-      startsAt: DateTime.now().add(const Duration(days: 1, hours: 3)),
-      participantCount: 18,
-    ),
-  ];
+  final apiClient = ref.watch(apiClientProvider);
+  final response = await apiClient.dio.get('${Endpoints.baseUrl}/dashboard/upcoming-sessions');
+  final list = ((response.data['data'] ?? response.data) as List<dynamic>);
+  return list.map((item) {
+    final m = item as Map<String, dynamic>;
+    return UpcomingSession(
+      id: m['id']?.toString() ?? '',
+      title: m['title']?.toString() ?? '',
+      instructor: m['instructor']?.toString() ?? '',
+      startsAt: DateTime.tryParse(m['startsAt']?.toString() ?? '') ?? DateTime.now(),
+      participantCount: (m['participantCount'] as num?)?.toInt() ?? 0,
+    );
+  }).toList();
 });
 
 final aiRecommendationsProvider =
     FutureProvider.autoDispose<List<AIRecommendation>>((ref) async {
-  await Future.delayed(const Duration(milliseconds: 1000));
-  return [
-    const AIRecommendation(
-      id: 'r1',
-      title: 'Deep Learning Fundamentals',
-      reason: 'Based on your ML progress',
-      category: 'AI/ML',
-    ),
-    const AIRecommendation(
-      id: 'r2',
-      title: 'Data Structures & Algorithms',
-      reason: 'Popular among Python learners',
-      category: 'Computer Science',
-    ),
-    const AIRecommendation(
-      id: 'r3',
-      title: 'Statistics for Data Science',
-      reason: 'Complements your current courses',
-      category: 'Mathematics',
-    ),
-  ];
+  final apiClient = ref.watch(apiClientProvider);
+  final response = await apiClient.dio.get('${Endpoints.baseUrl}${Endpoints.aiRecommendations}');
+  final list = ((response.data['data'] ?? response.data) as List<dynamic>);
+  return list.map((item) {
+    final m = item as Map<String, dynamic>;
+    return AIRecommendation(
+      id: m['id']?.toString() ?? '',
+      title: m['title']?.toString() ?? '',
+      reason: m['reason']?.toString() ?? '',
+      category: m['category']?.toString() ?? '',
+    );
+  }).toList();
 });
 
 class DashboardScreen extends ConsumerWidget {
