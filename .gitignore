@@ -12,6 +12,8 @@ out/
 lib/
 # Flutter source is in apps/mobile/lib/ — not a build output
 !apps/mobile/lib/
+# Next.js source lib directories — not build outputs
+!apps/web/src/lib/
 
 # ─── Next.js ───────────────────────────────────────────────────────────────────
 .next/

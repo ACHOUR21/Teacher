@@ -1,8 +1,18 @@
-import { Controller, Get, Patch, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Patch, Param, Query, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { IsString, IsOptional } from 'class-validator';
 import { NotificationsService } from '../../notifications.service';
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+
+class RegisterFcmTokenDto {
+  @IsString() token: string;
+  @IsOptional() @IsString() platform?: string;
+}
+
+class RemoveFcmTokenDto {
+  @IsString() token: string;
+}
 
 @ApiTags('Notifications')
 @ApiBearerAuth('JWT-auth')
@@ -10,6 +20,18 @@ import { CurrentUser } from '../../../core/decorators/current-user.decorator';
 @Controller('notifications')
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
+
+  @Post('fcm-token')
+  @ApiOperation({ summary: 'Register FCM device token for push notifications' })
+  registerFcmToken(@CurrentUser() user: any, @Body() dto: RegisterFcmTokenDto) {
+    return this.notificationsService.registerFcmToken(user.id, dto.token, dto.platform ?? 'WEB');
+  }
+
+  @Delete('fcm-token')
+  @ApiOperation({ summary: 'Remove FCM token (on logout)' })
+  removeFcmToken(@CurrentUser() user: any, @Body() dto: RemoveFcmTokenDto) {
+    return this.notificationsService.removeFcmToken(user.id, dto.token);
+  }
 
   @Get()
   @ApiOperation({ summary: 'Get user notifications' })

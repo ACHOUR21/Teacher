@@ -2,11 +2,12 @@
 
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { User, Palette, Bell, Shield, Key, Building, Eye, EyeOff, Check, AlertTriangle } from 'lucide-react';
+import { User, Palette, Bell, Shield, Key, Building, Eye, EyeOff, Check, AlertTriangle, BellRing, BellOff } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { cn } from '@/lib/utils';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 type Tab = 'profile' | 'general' | 'security' | 'notifications' | 'branding' | 'api';
 
@@ -34,6 +35,75 @@ function Input({ className, ...props }: React.InputHTMLAttributes<HTMLInputEleme
       className={cn('w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white', className)}
       {...props}
     />
+  );
+}
+
+function PushNotificationToggle() {
+  const { status, enable, disable } = usePushNotifications();
+
+  if (status === 'unsupported') {
+    return (
+      <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+        <BellOff className="h-5 w-5 text-gray-400 flex-shrink-0" />
+        <p className="text-sm text-gray-500">Push notifications are not supported in this browser.</p>
+      </div>
+    );
+  }
+
+  if (status === 'unconfigured') {
+    return (
+      <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg border border-amber-100">
+        <BellOff className="h-5 w-5 text-amber-500 flex-shrink-0" />
+        <p className="text-sm text-amber-700">Firebase is not configured. Set the <code className="font-mono text-xs bg-amber-100 px-1 py-0.5 rounded">NEXT_PUBLIC_FIREBASE_*</code> environment variables to enable push notifications.</p>
+      </div>
+    );
+  }
+
+  if (status === 'denied') {
+    return (
+      <div className="flex items-center gap-3 p-3 bg-red-50 rounded-lg border border-red-100">
+        <BellOff className="h-5 w-5 text-red-500 flex-shrink-0" />
+        <p className="text-sm text-red-700">Notifications are blocked. Please enable them in your browser settings and reload.</p>
+      </div>
+    );
+  }
+
+  const isGranted = status === 'granted';
+  const isLoading = status === 'loading';
+
+  return (
+    <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start gap-3">
+        {isGranted
+          ? <BellRing className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          : <BellOff className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
+        }
+        <div>
+          <p className="text-sm font-medium text-gray-900">
+            {isGranted ? 'Push notifications enabled' : 'Push notifications disabled'}
+          </p>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {isGranted
+              ? 'You will receive browser notifications for important updates.'
+              : 'Enable to get instant alerts even when the tab is in the background.'}
+          </p>
+        </div>
+      </div>
+      <button
+        onClick={isGranted ? disable : enable}
+        disabled={isLoading}
+        className={cn(
+          'relative flex-shrink-0 mt-0.5 w-10 h-6 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50',
+          isGranted ? 'bg-blue-600' : 'bg-gray-200',
+        )}
+        aria-label={isGranted ? 'Disable push notifications' : 'Enable push notifications'}
+      >
+        <span className={cn(
+          'absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform',
+          isGranted ? 'translate-x-4' : 'translate-x-0',
+        )} />
+      </button>
+    </div>
   );
 }
 
@@ -389,30 +459,9 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="border-t border-gray-100 pt-6">
-                  <h3 className="text-sm font-semibold text-gray-900 mb-3">Push Notifications</h3>
-                  <div className="space-y-3">
-                    {[
-                      { key: 'pushAll', label: 'All activity', desc: 'Receive all platform notifications' },
-                      { key: 'pushMentions', label: 'Mentions only', desc: 'Only when someone mentions you' },
-                    ].map(({ key, label, desc }) => (
-                      <label key={key} className="flex items-start justify-between gap-4 cursor-pointer py-2">
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{label}</p>
-                          <p className="text-xs text-gray-500">{desc}</p>
-                        </div>
-                        <div className="relative flex-shrink-0 mt-0.5">
-                          <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={notifPrefs[key as keyof typeof notifPrefs]}
-                            onChange={e => setNotifPrefs(p => ({ ...p, [key]: e.target.checked }))}
-                          />
-                          <div className="w-10 h-6 bg-gray-200 peer-checked:bg-blue-600 rounded-full transition-colors" />
-                          <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4" />
-                        </div>
-                      </label>
-                    ))}
-                  </div>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-1">Push Notifications</h3>
+                  <p className="text-xs text-gray-500 mb-4">Get instant alerts in your browser, even when the tab is in the background.</p>
+                  <PushNotificationToggle />
                 </div>
 
                 <Button onClick={() => api.patch('/users/me/notifications', notifPrefs)}>Save Preferences</Button>

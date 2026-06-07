@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../../core/notifications/fcm_service.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -10,13 +11,33 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  bool _pushNotifications = true;
+  bool? _pushNotifications;
   bool _emailNotifications = true;
   bool _courseReminders = true;
   bool _marketingEmails = false;
   bool _darkMode = false;
   String _language = 'English';
   String _timezone = 'America/New_York';
+
+  @override
+  void initState() {
+    super.initState();
+    ref.read(pushPermissionProvider.future).then((granted) {
+      if (mounted) setState(() => _pushNotifications = granted);
+    });
+  }
+
+  Future<void> _togglePush(bool enable) async {
+    setState(() => _pushNotifications = null); // loading
+    final fcm = ref.read(fcmServiceProvider);
+    if (enable) {
+      final success = await fcm.registerToken();
+      if (mounted) setState(() => _pushNotifications = success);
+    } else {
+      await fcm.unregisterToken();
+      if (mounted) setState(() => _pushNotifications = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,9 +75,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           SwitchListTile(
             title: const Text('Push Notifications'),
             subtitle: const Text('Receive alerts on this device'),
-            value: _pushNotifications,
-            onChanged: (v) => setState(() => _pushNotifications = v),
-            secondary: const Icon(Icons.notifications_outlined),
+            value: _pushNotifications ?? false,
+            onChanged: _pushNotifications == null ? null : _togglePush,
+            secondary: _pushNotifications == null
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.notifications_outlined),
           ),
           SwitchListTile(
             title: const Text('Email Notifications'),

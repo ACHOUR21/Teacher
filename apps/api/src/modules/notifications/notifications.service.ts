@@ -80,6 +80,33 @@ export class NotificationsService {
     }
   }
 
+  async registerFcmToken(userId: string, fcmToken: string, platform = 'WEB') {
+    const deviceId = `${userId}-${platform.toLowerCase()}-fcm`;
+    return this.prisma.userDevice.upsert({
+      where: { deviceId },
+      create: {
+        userId,
+        deviceId,
+        fcmToken,
+        deviceType: platform.toUpperCase(),
+        deviceName: `${platform} (Push)`,
+        isActive: true,
+      },
+      update: {
+        fcmToken,
+        isActive: true,
+        lastSeenAt: new Date(),
+      },
+    });
+  }
+
+  async removeFcmToken(userId: string, fcmToken: string) {
+    await this.prisma.userDevice.updateMany({
+      where: { userId, fcmToken },
+      data: { fcmToken: null },
+    });
+  }
+
   async getUserNotifications(userId: string, page = 1, limit = 20) {
     const skip = (page - 1) * limit;
     const [notifications, total] = await Promise.all([
