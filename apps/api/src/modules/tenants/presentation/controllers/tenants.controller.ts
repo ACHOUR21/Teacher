@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Put,
+  Patch,
   Delete,
   Body,
   Param,
@@ -20,13 +21,25 @@ import { CurrentUser, CurrentUserPayload } from '../../../core/decorators/curren
 import { TenantId } from '../../../core/decorators/tenant.decorator';
 import { PaginationDto } from '../../../core/pagination/pagination.dto';
 import { UserRole } from '@prisma/client';
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, IsBoolean, IsArray, IsNumber } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 class UpdateSettingsDto {
   @ApiPropertyOptional()
   @IsOptional()
   settings: Record<string, unknown>;
+}
+
+class UpdateOnboardingDto {
+  @IsArray() completedSteps: number[];
+  @IsBoolean() completed: boolean;
+}
+
+class UpdateTenantProfileDto {
+  @IsOptional() @IsString() name?: string;
+  @IsOptional() @IsString() logoUrl?: string;
+  @IsOptional() @IsString() description?: string;
+  @IsOptional() @IsString() website?: string;
 }
 
 @ApiTags('Tenants')
@@ -85,6 +98,25 @@ export class TenantsController {
     @Body() dto: UpdateSettingsDto,
   ) {
     return this.tenantsService.updateSettings(tenantId, dto.settings);
+  }
+
+  @Get('me/onboarding')
+  @ApiOperation({ summary: 'Get onboarding status for current tenant' })
+  getOnboarding(@TenantId() tenantId: string) {
+    return this.tenantsService.getOnboardingStatus(tenantId);
+  }
+
+  @Patch('me/onboarding')
+  @ApiOperation({ summary: 'Update onboarding progress' })
+  updateOnboarding(@TenantId() tenantId: string, @Body() dto: UpdateOnboardingDto) {
+    return this.tenantsService.updateOnboarding(tenantId, dto.completedSteps, dto.completed);
+  }
+
+  @Patch('me/profile')
+  @Roles(UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.UNIVERSITY_ADMIN)
+  @ApiOperation({ summary: 'Update tenant profile (logo, description, website)' })
+  updateProfile(@TenantId() tenantId: string, @Body() dto: UpdateTenantProfileDto) {
+    return this.tenantsService.updateTenantProfile(tenantId, dto);
   }
 
   @Delete(':id')

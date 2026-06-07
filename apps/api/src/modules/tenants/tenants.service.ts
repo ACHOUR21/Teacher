@@ -202,4 +202,67 @@ export class TenantsService {
     await this.redis.delPattern(`tenant:${tenantId}*`);
     return updated;
   }
+
+  async getOnboardingStatus(tenantId: string) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { settings: true, logoUrl: true, name: true, slug: true },
+    });
+    if (!tenant) throw new NotFoundException('Tenant not found');
+    const s = (tenant.settings as Record<string, unknown>) ?? {};
+    return {
+      completed: (s.onboardingCompleted as boolean) ?? false,
+      completedSteps: (s.onboardingCompletedSteps as number[]) ?? [],
+      logoUrl: tenant.logoUrl,
+      name: tenant.name,
+      slug: tenant.slug,
+    };
+  }
+
+  async updateOnboarding(tenantId: string, completedSteps: number[], completed: boolean) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { settings: true },
+    });
+    if (!tenant) throw new NotFoundException('Tenant not found');
+    const s = (tenant.settings as Record<string, unknown>) ?? {};
+    await this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        settings: {
+          ...s,
+          onboardingCompleted: completed,
+          onboardingCompletedSteps: completedSteps,
+        } as Prisma.InputJsonValue,
+      },
+    });
+    await this.redis.delPattern(`tenant:${tenantId}*`);
+    return { completed, completedSteps };
+  }
+
+  async updateTenantProfile(
+    tenantId: string,
+    dto: { logoUrl?: string; description?: string; website?: string; name?: string },
+  ) {
+    const tenant = await this.prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { settings: true },
+    });
+    if (!tenant) throw new NotFoundException('Tenant not found');
+    const s = (tenant.settings as Record<string, unknown>) ?? {};
+    const updated = await this.prisma.tenant.update({
+      where: { id: tenantId },
+      data: {
+        ...(dto.name ? { name: dto.name } : {}),
+        ...(dto.logoUrl !== undefined ? { logoUrl: dto.logoUrl } : {}),
+        settings: {
+          ...s,
+          ...(dto.description !== undefined ? { description: dto.description } : {}),
+          ...(dto.website !== undefined ? { website: dto.website } : {}),
+        } as Prisma.InputJsonValue,
+      },
+    });
+    await this.redis.delPattern(`tenant:${tenantId}*`);
+    return updated;
+  }
 }

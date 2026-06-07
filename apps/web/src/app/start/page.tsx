@@ -110,6 +110,8 @@ export default function StartPage() {
         },
       );
       login(result.user, result.tokens.accessToken);
+      // Small delay so auth store persists before redirect
+      setTimeout(() => router.push('/onboarding'), 300);
       setStep(2);
     } catch (err) {
       toast.error('Registration failed', parseErrorMessage(err));

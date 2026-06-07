@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { Users, BookOpen, Video, DollarSign, Link2, Copy, Check, Play, CheckCircle, Target, Trophy } from 'lucide-react';
+import { Users, BookOpen, Video, DollarSign, Link2, Copy, Check, Play, CheckCircle, Target, Trophy, Rocket, ChevronRight, X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -11,6 +11,46 @@ import { useAuthStore } from '@/stores/authStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useState } from 'react';
 import Link from 'next/link';
+
+function SetupBanner() {
+  const { isAdmin } = useAuth();
+  const [dismissed, setDismissed] = useState(false);
+
+  const { data: onboarding } = useQuery({
+    queryKey: ['onboarding-status'],
+    queryFn: () => api.get('/tenants/me/onboarding').then(r => r.data.data),
+    enabled: isAdmin,
+  });
+
+  if (!isAdmin || dismissed || !onboarding || onboarding.completed) return null;
+
+  const done = (onboarding.completedSteps?.length ?? 0);
+  const total = 3;
+  const pct = Math.round((done / total) * 100);
+
+  return (
+    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl px-5 py-4 flex items-center gap-4 text-white shadow-sm">
+      <div className="h-10 w-10 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+        <Rocket className="h-5 w-5 text-white" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold">Complete your school setup — {done}/{total} steps done</p>
+        <div className="mt-1.5 h-1.5 bg-white/30 rounded-full overflow-hidden w-48">
+          <div className="h-full bg-white rounded-full transition-all" style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+      <Link
+        href="/onboarding"
+        className="flex items-center gap-1 px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors shrink-0"
+      >
+        Continue <ChevronRight className="h-3.5 w-3.5" />
+      </Link>
+      <button onClick={() => setDismissed(true)} className="p-1 hover:bg-white/20 rounded transition-colors">
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
 
 function InviteCard() {
   const user = useAuthStore((s) => s.user);
@@ -79,6 +119,7 @@ function TeacherDashboard() {
 
   return (
     <div className="space-y-6">
+      <SetupBanner />
       <div>
         <h1 className="text-2xl font-bold text-gray-900">
           Welcome back, {user?.firstName}!
