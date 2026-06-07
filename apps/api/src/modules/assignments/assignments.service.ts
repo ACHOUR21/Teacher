@@ -6,6 +6,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { AssignmentStatus } from '@prisma/client';
 
 export class CreateAssignmentDto {
@@ -29,10 +30,13 @@ export class GradeSubmissionDto {
 
 @Injectable()
 export class AssignmentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async create(teacherId: string, dto: CreateAssignmentDto) {
-    return this.prisma.assignment.create({
+    const assignment = await this.prisma.assignment.create({
       data: {
         teacherId,
         title: dto.title,
@@ -43,6 +47,27 @@ export class AssignmentsService {
         attachments: dto.attachments ?? [],
       },
     });
+
+    // fire-and-forget notification to enrolled students
+    if (dto.lessonId) {
+      this.prisma.courseProgress.findMany({
+        where: { course: { sections: { some: { lessons: { some: { id: dto.lessonId } } } } } },
+        include: { student: { select: { userId: true } } },
+      }).then(async (enrollments) => {
+        for (const e of enrollments) {
+          if (e.student?.userId) {
+            await this.notifications.notifyUser(
+              e.student.userId,
+              'New Assignment',
+              `A new assignment "${dto.title}" has been posted`,
+              { type: 'ASSIGNMENT_DUE', assignmentId: assignment.id }
+            ).catch(() => {});
+          }
+        }
+      }).catch(() => {});
+    }
+
+    return assignment;
   }
 
   async findAll(teacherId?: string, studentId?: string, lessonId?: string) {
