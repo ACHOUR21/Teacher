@@ -1,7 +1,7 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ClipboardList, Users, BarChart3, Check, X, Clock, BookOpen } from 'lucide-react';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -39,11 +39,34 @@ interface SummaryRow {
   rate: number;
 }
 
-const STATUS_CONFIG: Record<AttendanceStatus, { label: string; color: string; bg: string; icon: React.ElementType }> = {
-  PRESENT: { label: 'Present', color: 'text-green-700', bg: 'bg-green-100 hover:bg-green-200 border-green-200', icon: Check },
-  ABSENT: { label: 'Absent', color: 'text-red-700', bg: 'bg-red-100 hover:bg-red-200 border-red-200', icon: X },
-  LATE: { label: 'Late', color: 'text-amber-700', bg: 'bg-amber-100 hover:bg-amber-200 border-amber-200', icon: Clock },
-  EXCUSED: { label: 'Excused', color: 'text-blue-700', bg: 'bg-blue-100 hover:bg-blue-200 border-blue-200', icon: BookOpen },
+const STATUS_CONFIG: Record<
+  AttendanceStatus,
+  { label: string; color: string; bg: string; icon: React.ElementType }
+> = {
+  PRESENT: {
+    label: 'Present',
+    color: 'text-green-700',
+    bg: 'bg-green-100 hover:bg-green-200 border-green-200',
+    icon: Check,
+  },
+  ABSENT: {
+    label: 'Absent',
+    color: 'text-red-700',
+    bg: 'bg-red-100 hover:bg-red-200 border-red-200',
+    icon: X,
+  },
+  LATE: {
+    label: 'Late',
+    color: 'text-amber-700',
+    bg: 'bg-amber-100 hover:bg-amber-200 border-amber-200',
+    icon: Clock,
+  },
+  EXCUSED: {
+    label: 'Excused',
+    color: 'text-blue-700',
+    bg: 'bg-blue-100 hover:bg-blue-200 border-blue-200',
+    icon: BookOpen,
+  },
 };
 
 const STATUS_ACTIVE: Record<AttendanceStatus, string> = {
@@ -79,13 +102,15 @@ export default function AttendancePage() {
   // Fetch schools
   const { data: schools } = useQuery<any[]>({
     queryKey: ['attendance-schools'],
-    queryFn: () =>
-      api.get('/school-erp/schools').then((r) => {
-        const data = r.data.data as any[];
-        if (data?.length && !selectedSchoolId) setSelectedSchoolId(data[0].id);
-        return data;
-      }),
+    queryFn: () => api.get('/school-erp/schools').then((r) => r.data.data as any[]),
   });
+
+  // Auto-select first school
+  useEffect(() => {
+    if (schools?.length && !selectedSchoolId) {
+      setSelectedSchoolId(schools[0].id);
+    }
+  }, [schools, selectedSchoolId]);
 
   const schoolId = selectedSchoolId ?? (schools?.[0]?.id ?? null);
 
@@ -93,56 +118,66 @@ export default function AttendancePage() {
   const { data: classes } = useQuery<any[]>({
     queryKey: ['attendance-classes', schoolId],
     queryFn: () =>
-      api.get(`/school-erp/schools/${schoolId}/classes`).then((r) => {
-        const data = r.data.data ?? [];
-        if (data.length && !selectedClassId) setSelectedClassId(data[0].id);
-        return data;
-      }),
+      api.get(`/school-erp/schools/${schoolId}/classes`).then((r) => r.data.data ?? []),
     enabled: !!schoolId,
   });
 
+  // Auto-select first class
+  useEffect(() => {
+    if (classes?.length && !selectedClassId) {
+      setSelectedClassId(classes[0].id);
+    }
+  }, [classes, selectedClassId]);
+
   const classId = selectedClassId ?? (classes?.[0]?.id ?? null);
 
-  // Fetch roster for mark tab
+  // Fetch roster
   const { data: roster, isLoading: rosterLoading } = useQuery<Student[]>({
     queryKey: ['attendance-roster', classId],
-    queryFn: () => api.get(`/attendance/class/${classId}/roster`).then((r) => r.data.data ?? r.data ?? []),
+    queryFn: () =>
+      api.get(`/attendance/class/${classId}/roster`).then((r) => r.data.data ?? r.data ?? []),
     enabled: !!classId && activeTab === 'mark',
-    onSuccess: (students: Student[]) => {
-      setAttendanceMap((prev) => {
-        const next: Record<string, AttendanceStatus> = {};
-        for (const s of students) {
-          next[s.id] = prev[s.id] ?? 'PRESENT';
-        }
-        return next;
-      });
-    },
   });
 
-  // Fetch existing attendance for this class+date to pre-populate
-  useQuery({
-    queryKey: ['attendance-class', classId, date],
-    queryFn: () => api.get(`/attendance/class/${classId}?date=${date}`).then((r) => r.data.data ?? r.data ?? []),
-    enabled: !!classId && activeTab === 'mark',
-    onSuccess: (records: any[]) => {
-      if (records.length > 0) {
-        setAttendanceMap((prev) => {
-          const next = { ...prev };
-          for (const rec of records) {
-            next[rec.studentId] = rec.status as AttendanceStatus;
-          }
-          return next;
-        });
-        setNoteMap((prev) => {
-          const next = { ...prev };
-          for (const rec of records) {
-            if (rec.note) next[rec.studentId] = rec.note;
-          }
-          return next;
-        });
+  // Pre-populate attendance map when roster loads
+  useEffect(() => {
+    if (!roster) return;
+    setAttendanceMap((prev) => {
+      const next: Record<string, AttendanceStatus> = {};
+      for (const s of roster) {
+        next[s.id] = prev[s.id] ?? 'PRESENT';
       }
-    },
+      return next;
+    });
+  }, [roster]);
+
+  // Fetch existing attendance for this class+date to pre-populate saved statuses
+  const { data: existingAttendance } = useQuery<any[]>({
+    queryKey: ['attendance-class', classId, date],
+    queryFn: () =>
+      api
+        .get(`/attendance/class/${classId}?date=${date}`)
+        .then((r) => r.data.data ?? r.data ?? []),
+    enabled: !!classId && activeTab === 'mark',
   });
+
+  useEffect(() => {
+    if (!existingAttendance?.length) return;
+    setAttendanceMap((prev) => {
+      const next = { ...prev };
+      for (const rec of existingAttendance) {
+        next[rec.studentId] = rec.status as AttendanceStatus;
+      }
+      return next;
+    });
+    setNoteMap((prev) => {
+      const next = { ...prev };
+      for (const rec of existingAttendance) {
+        if (rec.note) next[rec.studentId] = rec.note;
+      }
+      return next;
+    });
+  }, [existingAttendance]);
 
   // Fetch summary
   const { data: summary, isLoading: summaryLoading } = useQuery<SummaryRow[]>({
@@ -171,7 +206,7 @@ export default function AttendancePage() {
     const records: AttendanceRecord[] = roster.map((s) => ({
       studentId: s.id,
       status: attendanceMap[s.id] ?? 'PRESENT',
-      note: noteMap[s.id] ?? undefined,
+      note: noteMap[s.id] || undefined,
     }));
     markMutation.mutate(records);
   };
@@ -356,7 +391,8 @@ export default function AttendancePage() {
                       {roster.map((student) => {
                         const { firstName, lastName, avatarUrl } = student.user;
                         const initials = `${firstName[0] ?? ''}${lastName[0] ?? ''}`.toUpperCase();
-                        const currentStatus = attendanceMap[student.id] ?? 'PRESENT';
+                        const currentStatus: AttendanceStatus =
+                          attendanceMap[student.id] ?? 'PRESENT';
 
                         return (
                           <tr key={student.id} className="hover:bg-gray-50">
@@ -378,37 +414,43 @@ export default function AttendancePage() {
                                     {firstName} {lastName}
                                   </p>
                                   {student.studentId && (
-                                    <p className="text-xs text-gray-400 font-mono">{student.studentId}</p>
+                                    <p className="text-xs text-gray-400 font-mono">
+                                      {student.studentId}
+                                    </p>
                                   )}
                                 </div>
                               </div>
                             </td>
                             <td className="py-3 px-4">
                               <div className="flex gap-1 flex-wrap">
-                                {(Object.keys(STATUS_CONFIG) as AttendanceStatus[]).map((status) => {
-                                  const cfg = STATUS_CONFIG[status];
-                                  const Icon = cfg.icon;
-                                  const isActive = currentStatus === status;
-                                  return (
-                                    <button
-                                      key={status}
-                                      onClick={() =>
-                                        setAttendanceMap((prev) => ({
-                                          ...prev,
-                                          [student.id]: status,
-                                        }))
-                                      }
-                                      title={cfg.label}
-                                      className={cn(
-                                        'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors',
-                                        isActive ? STATUS_ACTIVE[status] : `${cfg.bg} ${cfg.color}`,
-                                      )}
-                                    >
-                                      <Icon className="h-3 w-3" />
-                                      <span className="hidden sm:inline">{cfg.label}</span>
-                                    </button>
-                                  );
-                                })}
+                                {(Object.keys(STATUS_CONFIG) as AttendanceStatus[]).map(
+                                  (status) => {
+                                    const cfg = STATUS_CONFIG[status];
+                                    const Icon = cfg.icon;
+                                    const isActive = currentStatus === status;
+                                    return (
+                                      <button
+                                        key={status}
+                                        onClick={() =>
+                                          setAttendanceMap((prev) => ({
+                                            ...prev,
+                                            [student.id]: status,
+                                          }))
+                                        }
+                                        title={cfg.label}
+                                        className={cn(
+                                          'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors',
+                                          isActive
+                                            ? STATUS_ACTIVE[status]
+                                            : `${cfg.bg} ${cfg.color}`,
+                                        )}
+                                      >
+                                        <Icon className="h-3 w-3" />
+                                        <span className="hidden sm:inline">{cfg.label}</span>
+                                      </button>
+                                    );
+                                  },
+                                )}
                               </div>
                             </td>
                             <td className="py-3 px-4 hidden md:table-cell">
@@ -417,7 +459,10 @@ export default function AttendancePage() {
                                 placeholder="Optional note..."
                                 value={noteMap[student.id] ?? ''}
                                 onChange={(e) =>
-                                  setNoteMap((prev) => ({ ...prev, [student.id]: e.target.value }))
+                                  setNoteMap((prev) => ({
+                                    ...prev,
+                                    [student.id]: e.target.value,
+                                  }))
                                 }
                                 className="w-full max-w-xs px-2.5 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                               />
@@ -433,19 +478,20 @@ export default function AttendancePage() {
               {/* Save button */}
               {roster && roster.length > 0 && (
                 <div className="flex items-center justify-between">
-                  {saved && (
+                  {saved ? (
                     <span className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
                       <Check className="h-4 w-4" /> Attendance saved successfully
                     </span>
+                  ) : (
+                    <span />
                   )}
-                  {!saved && <span />}
                   <button
                     onClick={handleSave}
-                    disabled={markMutation.isLoading}
+                    disabled={markMutation.isPending}
                     className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:pointer-events-none transition-colors"
                   >
                     <ClipboardList className="h-4 w-4" />
-                    {markMutation.isLoading ? 'Saving...' : 'Save Attendance'}
+                    {markMutation.isPending ? 'Saving...' : 'Save Attendance'}
                   </button>
                 </div>
               )}
@@ -530,7 +576,9 @@ export default function AttendancePage() {
                               {row.excused}
                             </span>
                           </td>
-                          <td className="py-3 px-4 text-center text-gray-500 text-xs">{row.total}</td>
+                          <td className="py-3 px-4 text-center text-gray-500 text-xs">
+                            {row.total}
+                          </td>
                           <td className="py-3 px-4 text-center">
                             <div className="flex items-center justify-center gap-2">
                               <div className="h-1.5 w-16 bg-gray-100 rounded-full overflow-hidden">
@@ -540,8 +588,8 @@ export default function AttendancePage() {
                                     row.rate >= 90
                                       ? 'bg-green-500'
                                       : row.rate >= 75
-                                      ? 'bg-amber-500'
-                                      : 'bg-red-500',
+                                        ? 'bg-amber-500'
+                                        : 'bg-red-500',
                                   )}
                                   style={{ width: `${row.rate}%` }}
                                 />
@@ -552,8 +600,8 @@ export default function AttendancePage() {
                                   row.rate >= 90
                                     ? 'text-green-700'
                                     : row.rate >= 75
-                                    ? 'text-amber-700'
-                                    : 'text-red-700',
+                                      ? 'text-amber-700'
+                                      : 'text-red-700',
                                 )}
                               >
                                 {row.rate}%
