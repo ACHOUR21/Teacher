@@ -50,6 +50,260 @@ function VideoPlayer({ url, onEnded }: { url: string; onEnded?: () => void }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// QuizLesson component
+// ---------------------------------------------------------------------------
+
+interface QuizOption {
+  id: string;
+  text: string;
+}
+
+interface QuizQuestion {
+  id: string;
+  question: string;
+  type: 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'SHORT_ANSWER';
+  options?: QuizOption[];
+  correctAnswer?: string;
+}
+
+interface Quiz {
+  id: string;
+  title: string;
+  passingScore: number;
+  questions: QuizQuestion[];
+}
+
+interface AttemptResult {
+  score: number;
+  passed: boolean;
+  totalQuestions: number;
+  correctCount: number;
+  answers: { questionId: string; correct: boolean; correctAnswer: string; givenAnswer: string }[];
+}
+
+function QuizLesson({
+  lesson,
+  courseId,
+  onPassed,
+}: {
+  lesson: { id: string; title: string };
+  courseId: string;
+  onPassed?: () => void;
+}) {
+  const qc = useQueryClient();
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [result, setResult] = useState<AttemptResult | null>(null);
+
+  const { data: quiz, isLoading, isError, error } = useQuery<Quiz | null>({
+    queryKey: ['quiz', 'lesson', lesson.id],
+    queryFn: async () => {
+      try {
+        const r = await api.get(`/quizzes/lesson/${lesson.id}`);
+        return (r.data?.data ?? r.data) as Quiz;
+      } catch (err: unknown) {
+        const e = err as { response?: { status?: number } };
+        if (e?.response?.status === 404) return null;
+        throw err;
+      }
+    },
+    retry: false,
+  });
+
+  const submitMutation = useMutation({
+    mutationFn: (payload: { answers: { questionId: string; answer: string }[] }) =>
+      api.post(`/quizzes/${quiz!.id}/attempt`, payload).then(r => r.data?.data ?? r.data),
+    onSuccess: (data: AttemptResult) => {
+      setResult(data);
+      if (data.passed && onPassed) {
+        onPassed();
+      }
+    },
+  });
+
+  const handleRetake = () => {
+    setAnswers({});
+    setResult(null);
+  };
+
+  const handleSubmit = () => {
+    if (!quiz) return;
+    const payload = quiz.questions.map(q => ({
+      questionId: q.id,
+      answer: answers[q.id] ?? '',
+    }));
+    submitMutation.mutate({ answers: payload });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-4">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="animate-pulse space-y-2">
+            <div className="h-4 bg-gray-200 rounded w-3/4" />
+            <div className="h-3 bg-gray-100 rounded w-1/2" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="bg-white rounded-lg border border-red-200 p-6 text-red-500 text-sm">
+        Failed to load quiz: {(error as Error)?.message ?? 'Unknown error'}
+      </div>
+    );
+  }
+
+  if (!quiz) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+        <BookOpen className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+        <p className="text-gray-400 text-sm">No quiz attached to this lesson yet.</p>
+      </div>
+    );
+  }
+
+  // Results screen
+  if (result) {
+    const pct = Math.round(result.score);
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+        <div className="text-center space-y-2">
+          <div className={cn(
+            'inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-semibold',
+            result.passed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
+          )}>
+            {result.passed ? <CheckCircle className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
+            {result.passed ? 'Passed' : 'Failed'}
+          </div>
+          <p className="text-4xl font-bold text-gray-900">{pct}%</p>
+          <p className="text-sm text-gray-500">
+            {result.correctCount} / {result.totalQuestions} correct &middot; passing score {quiz.passingScore}%
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          {quiz.questions.map((q, qi) => {
+            const ans = result.answers.find(a => a.questionId === q.id);
+            const isCorrect = ans?.correct ?? false;
+            return (
+              <div
+                key={q.id}
+                className={cn(
+                  'rounded-lg border p-4 text-sm',
+                  isCorrect ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
+                )}
+              >
+                <p className="font-medium text-gray-800 mb-2">
+                  {qi + 1}. {q.question}
+                </p>
+                <p className={cn('text-xs', isCorrect ? 'text-green-700' : 'text-red-600')}>
+                  Your answer: <span className="font-medium">{ans?.givenAnswer || '(no answer)'}</span>
+                </p>
+                {!isCorrect && ans?.correctAnswer && (
+                  <p className="text-xs text-green-700 mt-0.5">
+                    Correct answer: <span className="font-medium">{ans.correctAnswer}</span>
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <button
+          onClick={handleRetake}
+          className="w-full py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          Retake Quiz
+        </button>
+      </div>
+    );
+  }
+
+  // Quiz taking screen — all questions at once
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-base font-semibold text-gray-900">{quiz.title}</h2>
+        <span className="text-xs text-gray-400">{quiz.questions.length} question{quiz.questions.length !== 1 ? 's' : ''}</span>
+      </div>
+
+      <div className="space-y-6">
+        {quiz.questions.map((q, qi) => (
+          <div key={q.id} className="space-y-3">
+            <p className="text-sm font-medium text-gray-800">
+              {qi + 1}. {q.question}
+            </p>
+
+            {q.type === 'SHORT_ANSWER' ? (
+              <textarea
+                rows={3}
+                value={answers[q.id] ?? ''}
+                onChange={e => setAnswers(prev => ({ ...prev, [q.id]: e.target.value }))}
+                placeholder="Type your answer here..."
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              />
+            ) : q.type === 'TRUE_FALSE' ? (
+              <div className="flex gap-4">
+                {['True', 'False'].map(opt => (
+                  <label key={opt} className="flex items-center gap-2 cursor-pointer text-sm text-gray-700">
+                    <input
+                      type="radio"
+                      name={`q-${q.id}`}
+                      value={opt}
+                      checked={answers[q.id] === opt}
+                      onChange={() => setAnswers(prev => ({ ...prev, [q.id]: opt }))}
+                      className="accent-blue-600"
+                    />
+                    {opt}
+                  </label>
+                ))}
+              </div>
+            ) : (
+              // MULTIPLE_CHOICE
+              <div className="space-y-2">
+                {(q.options ?? []).map(opt => (
+                  <label key={opt.id} className="flex items-center gap-2.5 cursor-pointer text-sm text-gray-700 hover:text-gray-900">
+                    <input
+                      type="radio"
+                      name={`q-${q.id}`}
+                      value={opt.id}
+                      checked={answers[q.id] === opt.id}
+                      onChange={() => setAnswers(prev => ({ ...prev, [q.id]: opt.id }))}
+                      className="accent-blue-600"
+                    />
+                    {opt.text}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={handleSubmit}
+        disabled={submitMutation.isPending}
+        className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
+      >
+        {submitMutation.isPending ? (
+          <>
+            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            Submitting…
+          </>
+        ) : (
+          'Submit Quiz'
+        )}
+      </button>
+    </div>
+  );
+}
+
 function LessonIcon({ type }: { type: string }) {
   if (type === 'VIDEO') return <Video className="h-3.5 w-3.5 text-blue-500" />;
   if (type === 'QUIZ') return <BookOpen className="h-3.5 w-3.5 text-purple-500" />;
@@ -204,6 +458,16 @@ export default function LearnPage() {
                 <p className="text-sm">No video uploaded for this lesson yet.</p>
               </div>
             </div>
+          ) : currentLesson?.contentType === 'QUIZ' ? (
+            <QuizLesson
+              lesson={currentLesson}
+              courseId={courseId}
+              onPassed={() => {
+                if (!currentLesson.completed) {
+                  completeMutation.mutate(currentLesson.id);
+                }
+              }}
+            />
           ) : (
             <div className="bg-white rounded-lg border border-gray-200 p-6 min-h-48">
               <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">

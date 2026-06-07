@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/api/endpoints.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
-final _dioProvider = Provider((ref) => Dio());
-
-final _assignmentsProvider = FutureProvider<List<dynamic>>((ref) async {
-  final dio = ref.read(_dioProvider);
-  final res = await dio.get('/assignments/my');
+final _assignmentsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  final apiClient = ref.watch(apiClientProvider);
+  final res = await apiClient.dio.get('${Endpoints.baseUrl}/assignments/my');
   final data = res.data['data'];
   return (data is Map ? data['items'] ?? data['data'] ?? [] : data) as List;
 });
@@ -155,8 +154,8 @@ class _AssignmentCardState extends ConsumerState<_AssignmentCard> {
     if (confirmed == true && mounted) {
       setState(() => _submitting = true);
       try {
-        final dio = ref.read(_dioProvider);
-        await dio.post('/assignments/${widget.assignment['id']}/submit', data: {
+        final apiClient = ref.read(apiClientProvider);
+        await apiClient.dio.post('${Endpoints.baseUrl}/assignments/${widget.assignment['id']}/submit', data: {
           'content': textController.text,
         });
         if (mounted) {

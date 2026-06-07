@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
+import '../../../../core/api/endpoints.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
-final _dioProvider = Provider((ref) => Dio());
-
-final _certificatesProvider = FutureProvider<List<dynamic>>((ref) async {
-  final dio = ref.read(_dioProvider);
-  final res = await dio.get('/certificates');
+final _certificatesProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  final apiClient = ref.watch(apiClientProvider);
+  final res = await apiClient.dio.get('${Endpoints.baseUrl}${Endpoints.myCertificates}');
   final data = res.data['data'];
   return (data is Map ? data['items'] ?? data['data'] ?? [] : data) as List;
 });

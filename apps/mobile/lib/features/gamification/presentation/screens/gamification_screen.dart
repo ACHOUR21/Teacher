@@ -1,22 +1,16 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/api/endpoints.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
 // ---------------------------------------------------------------------------
 // Providers
 // ---------------------------------------------------------------------------
 
-final _gamificationStatsProvider = FutureProvider<Map<String, dynamic>>((ref) async {
-  const storage = FlutterSecureStorage();
-  final token = await storage.read(key: 'access_token');
-  final dio = Dio();
-  final response = await dio.get(
-    '${Endpoints.baseUrl}${Endpoints.gamificationStats}',
-    options: Options(headers: {'Authorization': 'Bearer $token'}),
-  );
+final _gamificationStatsProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  final apiClient = ref.watch(apiClientProvider);
+  final response = await apiClient.dio.get('${Endpoints.baseUrl}${Endpoints.gamificationStats}');
   final data = response.data;
   if (data is Map<String, dynamic>) {
     return (data['data'] as Map<String, dynamic>?) ?? data;
@@ -24,14 +18,9 @@ final _gamificationStatsProvider = FutureProvider<Map<String, dynamic>>((ref) as
   return {};
 });
 
-final _achievementsProvider = FutureProvider<List<dynamic>>((ref) async {
-  const storage = FlutterSecureStorage();
-  final token = await storage.read(key: 'access_token');
-  final dio = Dio();
-  final response = await dio.get(
-    '${Endpoints.baseUrl}${Endpoints.achievements}',
-    options: Options(headers: {'Authorization': 'Bearer $token'}),
-  );
+final _achievementsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  final apiClient = ref.watch(apiClientProvider);
+  final response = await apiClient.dio.get('${Endpoints.baseUrl}${Endpoints.achievements}');
   final data = response.data;
   if (data is Map<String, dynamic>) {
     final inner = data['data'];
@@ -44,14 +33,9 @@ final _achievementsProvider = FutureProvider<List<dynamic>>((ref) async {
   return [];
 });
 
-final _leaderboardProvider = FutureProvider<List<dynamic>>((ref) async {
-  const storage = FlutterSecureStorage();
-  final token = await storage.read(key: 'access_token');
-  final dio = Dio();
-  final response = await dio.get(
-    '${Endpoints.baseUrl}${Endpoints.leaderboard}',
-    options: Options(headers: {'Authorization': 'Bearer $token'}),
-  );
+final _leaderboardProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+  final apiClient = ref.watch(apiClientProvider);
+  final response = await apiClient.dio.get('${Endpoints.baseUrl}${Endpoints.leaderboard}');
   final data = response.data;
   if (data is Map<String, dynamic>) {
     final inner = data['data'];
