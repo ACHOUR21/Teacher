@@ -10,6 +10,7 @@ import { Plus, Trash2, ArrowLeft, GripVertical, ChevronDown, ChevronUp } from 'l
 import { api } from '@/lib/api';
 import { Button } from '@/components/ui/Button';
 import { VideoUpload } from '@/components/ui/VideoUpload';
+import { ImageUpload } from '@/components/ui/ImageUpload';
 import { cn } from '@/lib/utils';
 
 const lessonSchema = z.object({
@@ -42,6 +43,7 @@ const CATEGORIES = ['Mathematics', 'Science', 'History', 'Language', 'Technology
 export default function NewCoursePage() {
   const router = useRouter();
   const [expandedSections, setExpandedSections] = useState<number[]>([0]);
+  const [thumbnailUrl, setThumbnailUrl] = useState('');
 
   const { register, control, handleSubmit, formState: { errors } } = useForm<CourseFormData>({
     resolver: zodResolver(courseSchema),
@@ -53,6 +55,7 @@ export default function NewCoursePage() {
   const createMutation = useMutation({
     mutationFn: (data: CourseFormData) => api.post('/courses', {
       ...data,
+      thumbnailUrl: thumbnailUrl || undefined,
       tags: data.tags ? data.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
     }),
     onSuccess: (res) => router.push(`/courses/${res.data.data.id}`),
@@ -96,6 +99,18 @@ export default function NewCoursePage() {
               rows={4}
               placeholder="What will students learn in this course?"
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Course Thumbnail</label>
+            <ImageUpload
+              value={thumbnailUrl}
+              onChange={setThumbnailUrl}
+              folder="thumbnails"
+              label="Upload course thumbnail"
+              maxSizeMB={5}
+              aspectRatio="video"
             />
           </div>
 

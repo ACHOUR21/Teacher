@@ -2,29 +2,89 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../../core/api/endpoints.dart';
 
 final _profileProvider = FutureProvider<Map<String, dynamic>>((ref) async {
-  final dio = ref.read(_dioProvider);
-  final res = await dio.get('/users/me');
+  final apiClient = ref.read(apiClientProvider);
+  final res = await apiClient.dio.get('${Endpoints.baseUrl}/users/me');
   return res.data['data'] as Map<String, dynamic>;
 });
 
-final _dioProvider = Provider((ref) => Dio());
-
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends ConsumerState<ProfileScreen> {
+  bool _uploadingAvatar = false;
+
+  Future<void> _pickAndUploadAvatar() async {
+    final picker = ImagePicker();
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from Gallery'),
+              onTap: () => Navigator.pop(context, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('Take a Photo'),
+              onTap: () => Navigator.pop(context, ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null) return;
+
+    final picked = await picker.pickImage(source: source, maxWidth: 512, imageQuality: 85);
+    if (picked == null) return;
+
+    setState(() => _uploadingAvatar = true);
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(picked.path, filename: 'avatar.jpg'),
+        'folder': 'avatars',
+      });
+      final uploadRes = await apiClient.dio.post(
+        '${Endpoints.baseUrl}/storage/upload',
+        data: formData,
+      );
+      final avatarUrl = ((uploadRes.data['data'] ?? uploadRes.data) as Map<String, dynamic>)['url'] as String?;
+      if (avatarUrl != null) {
+        await apiClient.dio.patch('${Endpoints.baseUrl}/users/me', data: {'avatarUrl': avatarUrl});
+        ref.invalidate(_profileProvider);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Avatar upload failed. Please try again.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingAvatar = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final profileAsync = ref.watch(_profileProvider);
-    final auth = ref.watch(authProvider);
 
     return Scaffold(
       body: profileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (_, __) => _ProfileBody(user: null, ref: ref),
-        data: (profile) => _ProfileBody(user: profile, ref: ref),
+        error: (_, __) => _ProfileBody(user: null, ref: ref, onAvatarTap: _pickAndUploadAvatar, uploadingAvatar: _uploadingAvatar),
+        data: (profile) => _ProfileBody(user: profile, ref: ref, onAvatarTap: _pickAndUploadAvatar, uploadingAvatar: _uploadingAvatar),
       ),
     );
   }
@@ -33,7 +93,9 @@ class ProfileScreen extends ConsumerWidget {
 class _ProfileBody extends ConsumerWidget {
   final Map<String, dynamic>? user;
   final WidgetRef ref;
-  const _ProfileBody({required this.user, required this.ref});
+  final VoidCallback onAvatarTap;
+  final bool uploadingAvatar;
+  const _ProfileBody({required this.user, required this.ref, required this.onAvatarTap, required this.uploadingAvatar});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -62,7 +124,13 @@ class _ProfileBody extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const SizedBox(height: 20),
-                    _Avatar(avatarUrl: avatarUrl, firstName: firstName, lastName: lastName),
+                    _Avatar(
+                      avatarUrl: avatarUrl,
+                      firstName: firstName,
+                      lastName: lastName,
+                      onTap: onAvatarTap,
+                      uploading: uploadingAvatar,
+                    ),
                     const SizedBox(height: 12),
                     Text(
                       '$firstName $lastName',
@@ -230,19 +298,53 @@ class _Avatar extends StatelessWidget {
   final String? avatarUrl;
   final String firstName;
   final String lastName;
-  const _Avatar({this.avatarUrl, required this.firstName, required this.lastName});
+  final VoidCallback onTap;
+  final bool uploading;
+  const _Avatar({
+    this.avatarUrl,
+    required this.firstName,
+    required this.lastName,
+    required this.onTap,
+    required this.uploading,
+  });
 
   @override
   Widget build(BuildContext context) {
-    if (avatarUrl != null) {
-      return CircleAvatar(radius: 40, backgroundImage: NetworkImage(avatarUrl!));
-    }
-    return CircleAvatar(
-      radius: 40,
-      backgroundColor: Colors.white.withOpacity(0.3),
-      child: Text(
-        '${firstName.isNotEmpty ? firstName[0] : ''}${lastName.isNotEmpty ? lastName[0] : ''}',
-        style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+    return GestureDetector(
+      onTap: uploading ? null : onTap,
+      child: Stack(
+        children: [
+          if (avatarUrl != null)
+            CircleAvatar(radius: 40, backgroundImage: NetworkImage(avatarUrl!))
+          else
+            CircleAvatar(
+              radius: 40,
+              backgroundColor: Colors.white.withOpacity(0.3),
+              child: Text(
+                '${firstName.isNotEmpty ? firstName[0] : ''}${lastName.isNotEmpty ? lastName[0] : ''}',
+                style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+            ),
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.15), blurRadius: 4)],
+              ),
+              child: uploading
+                  ? const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.camera_alt, size: 14, color: Colors.grey),
+            ),
+          ),
+        ],
       ),
     );
   }

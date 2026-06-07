@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { User, Lock, Bell, Smartphone, Shield, Camera, Save } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -20,6 +20,9 @@ export default function ProfilePage() {
   const [tab, setTab] = useState('profile');
   const { user, updateUser } = useAuthStore();
   const qc = useQueryClient();
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string>('');
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   const [profileForm, setProfileForm] = useState({
     firstName: user?.firstName ?? '',
@@ -51,8 +54,38 @@ export default function ProfilePage() {
         timezone: profile.profile?.timezone ?? 'UTC',
         language: profile.profile?.language ?? 'en',
       });
+      if (profile.profile?.avatarUrl) setAvatarUrl(profile.profile.avatarUrl);
     }
   }, [profile]);
+
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) return;
+    setAvatarUploading(true);
+    try {
+      const { data: presigned } = await api.post('/storage/presigned-url', {
+        filename: file.name,
+        contentType: file.type || 'image/jpeg',
+        folder: 'avatars',
+      });
+      const { uploadUrl, publicUrl } = presigned.data ?? presigned;
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('PUT', uploadUrl, true);
+        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+        xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error('Upload failed'));
+        xhr.onerror = () => reject(new Error('Network error'));
+        xhr.send(file);
+      });
+      await api.patch('/users/me', { avatarUrl: publicUrl });
+      setAvatarUrl(publicUrl);
+      qc.invalidateQueries({ queryKey: ['my-profile'] });
+    } finally {
+      setAvatarUploading(false);
+      if (avatarInputRef.current) avatarInputRef.current.value = '';
+    }
+  };
 
   const { data: devices } = useQuery({
     queryKey: ['my-devices'],
@@ -99,11 +132,24 @@ export default function ProfilePage() {
         <CardContent className="pt-6">
           <div className="flex items-center gap-6">
             <div className="relative">
-              <div className="h-20 w-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold">
-                {initials}
-              </div>
-              <button className="absolute bottom-0 right-0 h-6 w-6 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center hover:bg-gray-50">
-                <Camera className="h-3 w-3 text-gray-600" />
+              <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarFileChange} />
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Avatar" className="h-20 w-20 rounded-full object-cover" />
+              ) : (
+                <div className="h-20 w-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold">
+                  {initials}
+                </div>
+              )}
+              <button
+                type="button"
+                disabled={avatarUploading}
+                onClick={() => avatarInputRef.current?.click()}
+                className="absolute bottom-0 right-0 h-6 w-6 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center hover:bg-gray-50 disabled:opacity-50"
+              >
+                {avatarUploading
+                  ? <svg className="h-3 w-3 animate-spin text-gray-500" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                  : <Camera className="h-3 w-3 text-gray-600" />
+                }
               </button>
             </div>
             <div>
