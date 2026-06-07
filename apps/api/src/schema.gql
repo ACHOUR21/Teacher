@@ -18,6 +18,54 @@ type Achievement {
   unlockedAt: DateTime
 }
 
+type AssignmentGql {
+  createdAt: DateTime!
+  description: String
+  dueDate: DateTime
+  id: ID!
+  lessonId: String
+  maxScore: Float
+  status: String!
+  teacherId: String
+  title: String!
+}
+
+type AssignmentGradedEvent {
+  assignmentId: ID!
+  feedback: String
+  score: Float!
+  submissionId: ID!
+}
+
+type AssignmentPage {
+  data: [AssignmentGql!]!
+  meta: PaginationMeta!
+}
+
+type AssignmentSubmissionGql {
+  assignmentId: ID!
+  content: String
+  createdAt: DateTime!
+  feedback: String
+  id: ID!
+  score: Float
+  status: String!
+  studentId: ID!
+}
+
+type BillingOverview {
+  totalInvoices: Int!
+  totalRevenue: Float!
+}
+
+type ChatMessage {
+  content: String!
+  conversationId: String!
+  createdAt: DateTime!
+  id: ID!
+  senderName: String!
+}
+
 type Course {
   category: String
   createdAt: DateTime!
@@ -51,6 +99,14 @@ type CoursePage {
   meta: PaginationMeta!
 }
 
+input CreateAssignmentInput {
+  description: String
+  dueDate: String
+  lessonId: String
+  maxScore: Float
+  title: String!
+}
+
 input CreateCourseInput {
   category: String
   description: String
@@ -77,6 +133,11 @@ type GamificationProfile {
   points: UserPoints
 }
 
+input GradeSubmissionInput {
+  feedback: String
+  score: Float!
+}
+
 type LeaderboardEntry {
   avatarUrl: String
   firstName: String!
@@ -85,6 +146,13 @@ type LeaderboardEntry {
   points: Int!
   rank: Int!
   userId: ID!
+}
+
+type LiveSessionEvent {
+  event: String!
+  sessionId: ID!
+  timestamp: DateTime!
+  title: String!
 }
 
 type MonthlyRevenue {
@@ -96,19 +164,40 @@ type Mutation {
   """Assign a role to a user (ADMIN+)"""
   assignRole(role: String!, userId: ID!): User!
 
+  """Create a new assignment (teacher)"""
+  createAssignment(input: CreateAssignmentInput!): AssignmentGql!
+
   """Create a new course"""
   createCourse(input: CreateCourseInput!): Course!
 
   """Deactivate a user account"""
   deactivateUser(id: ID!): Boolean!
 
+  """Delete an assignment (teacher)"""
+  deleteAssignment(id: ID!): Boolean!
+
   """Delete a course"""
   deleteCourse(id: ID!): Boolean!
+
+  """Delete a tenant and all its data (SUPER_ADMIN only)"""
+  deleteTenant(id: ID!): Boolean!
+
+  """Grade a student submission (teacher)"""
+  gradeSubmission(input: GradeSubmissionInput!, submissionId: ID!): AssignmentSubmissionGql!
+
+  """Get impersonation token for a user (SUPER_ADMIN only)"""
+  impersonateUser(userId: ID!): String!
   markAllNotificationsRead: Boolean!
   markNotificationRead(id: String!): Notification!
 
   """Publish a course"""
   publishCourse(id: ID!): Boolean!
+
+  """Submit an assignment (student)"""
+  submitAssignment(assignmentId: ID!, content: String): AssignmentSubmissionGql!
+
+  """Update tenant details (SUPER_ADMIN only)"""
+  updateTenant(id: ID!, input: UpdateTenantInput!): TenantSummary!
 }
 
 type Notification {
@@ -133,6 +222,20 @@ type PaginationMeta {
   totalPages: Int!
 }
 
+type PlatformKPI {
+  activeTenants: Int!
+  totalCourses: Int!
+  totalEnrollments: Int!
+  totalRevenue: Float!
+  totalTenants: Int!
+  totalUsers: Int!
+}
+
+type PlatformOverview {
+  kpis: PlatformKPI!
+  recentTenants: [TenantSummary!]!
+}
+
 type PlatformStats {
   activeSessions: Int!
   totalCourses: Int!
@@ -144,6 +247,15 @@ type Query {
   """AI token usage by module"""
   aiUsageStats: [AIModuleUsage!]!
 
+  """Get a single assignment by ID"""
+  assignment(id: ID!): AssignmentGql
+
+  """Get all submissions for an assignment"""
+  assignmentSubmissions(assignmentId: ID!): [AssignmentSubmissionGql!]!
+
+  """List assignments (teacher sees all, student sees own)"""
+  assignments(limit: Int = 20, page: Int = 1): AssignmentPage!
+
   """Get a single course by ID"""
   course(id: ID!): Course!
 
@@ -153,8 +265,17 @@ type Query {
 
   """Get current authenticated user"""
   me: User!
+
+  """Get assignments for the current student"""
+  myAssignments: [AssignmentGql!]!
   myGamificationProfile: GamificationProfile!
   myNotifications(limit: Int = 20, page: Int = 1): NotificationPage!
+
+  """Platform-wide billing overview (SUPER_ADMIN only)"""
+  platformBilling: BillingOverview!
+
+  """Platform-wide KPIs and recent tenants"""
+  platformOverview: PlatformOverview!
 
   """Platform-wide statistics"""
   platformStats: PlatformStats!
@@ -164,6 +285,9 @@ type Query {
 
   """Student engagement metrics"""
   studentActivity(days: Int = 7): StudentActivity!
+
+  """List all tenants (SUPER_ADMIN only)"""
+  tenants(limit: Int = 20, page: Int = 1, search: String): TenantPage!
   unreadNotificationCount: Int!
 
   """Get a user by ID"""
@@ -180,6 +304,45 @@ type StudentActivity {
   activeStudents: Int!
   completions: Int!
   submissions: Int!
+}
+
+type Subscription {
+  """Notified when one of your assignment submissions is graded"""
+  assignmentGraded: AssignmentGradedEvent!
+
+  """Notified when a live session starts for your enrolled courses"""
+  liveSessionStarted: LiveSessionEvent!
+
+  """Receive new messages in a conversation"""
+  messageReceived(conversationId: ID!): ChatMessage!
+
+  """Receive real-time notifications for the authenticated user"""
+  notificationAdded: Notification!
+}
+
+type TenantPage {
+  items: [TenantSummary!]!
+  page: Int!
+  total: Int!
+  totalPages: Int!
+}
+
+type TenantSummary {
+  courseCount: Int!
+  createdAt: DateTime!
+  domain: String
+  id: ID!
+  isActive: Boolean!
+  name: String!
+  plan: String!
+  userCount: Int!
+}
+
+input UpdateTenantInput {
+  domain: String
+  isActive: Boolean
+  name: String
+  plan: String
 }
 
 type User {
