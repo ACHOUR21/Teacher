@@ -67,6 +67,12 @@ export class SchoolErpService {
     return this.prisma.timetable.create({ data: { classId, ...dto } });
   }
 
+  async deleteTimetableEntry(id: string) {
+    const entry = await this.prisma.timetable.findUnique({ where: { id } });
+    if (!entry) throw new NotFoundException('Timetable entry not found');
+    return this.prisma.timetable.delete({ where: { id } });
+  }
+
   async getSchoolStats(schoolId: string) {
     const [totalStudents, totalTeachers, totalClasses, activeSessions] = await Promise.all([
       this.prisma.student.count({ where: { schoolId } }),

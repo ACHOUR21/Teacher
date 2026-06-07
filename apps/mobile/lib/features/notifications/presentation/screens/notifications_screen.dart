@@ -1,20 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../../../../core/api/endpoints.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
 // ---------------------------------------------------------------------------
 // Providers
 // ---------------------------------------------------------------------------
 
 final _notificationsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
-  const storage = FlutterSecureStorage();
-  final token = await storage.read(key: 'access_token');
-  final dio = Dio();
-  final response = await dio.get(
+  final apiClient = ref.watch(apiClientProvider);
+  final response = await apiClient.dio.get(
     '${Endpoints.baseUrl}${Endpoints.notifications}',
-    options: Options(headers: {'Authorization': 'Bearer $token'}),
   );
   final data = response.data;
   if (data is Map<String, dynamic>) {
@@ -38,12 +34,9 @@ class NotificationsScreen extends ConsumerWidget {
 
   Future<void> _markAllRead(BuildContext context, WidgetRef ref) async {
     try {
-      const storage = FlutterSecureStorage();
-      final token = await storage.read(key: 'access_token');
-      final dio = Dio();
-      await dio.patch(
+      final apiClient = ref.read(apiClientProvider);
+      await apiClient.dio.patch(
         '${Endpoints.baseUrl}${Endpoints.markAllNotificationsRead}',
-        options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
       ref.invalidate(_notificationsProvider);
     } catch (e) {
@@ -110,13 +103,9 @@ class NotificationsScreen extends ConsumerWidget {
                     final id = n['id'] as String?;
                     if (id != null && n['readAt'] == null) {
                       try {
-                        const storage = FlutterSecureStorage();
-                        final token = await storage.read(key: 'access_token');
-                        final dio = Dio();
-                        await dio.patch(
+                        final apiClient = ref.read(apiClientProvider);
+                        await apiClient.dio.patch(
                           '${Endpoints.baseUrl}${Endpoints.markNotificationRead(id)}',
-                          options: Options(
-                              headers: {'Authorization': 'Bearer $token'}),
                         );
                         ref.invalidate(_notificationsProvider);
                       } catch (_) {
