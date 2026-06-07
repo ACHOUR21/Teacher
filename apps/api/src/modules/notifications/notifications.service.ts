@@ -208,6 +208,115 @@ export class NotificationsService {
     });
     await this.sendEmail(to, `You're enrolled in ${courseTitle}`, html);
   }
+
+  async sendGradePublishedEmail(to: string, firstName: string, assignmentTitle: string, grade: number, maxGrade: number, feedback?: string) {
+    const pct = Math.round((grade / maxGrade) * 100);
+    const html = emailTemplate({
+      title: `Grade published: ${assignmentTitle}`,
+      preheader: `You scored ${pct}% on ${assignmentTitle}.`,
+      body: `
+        <h2 style="margin:0 0 16px;font-size:22px;color:#111827">Hi ${firstName}, your grade is in!</h2>
+        <p style="margin:0 0 16px;color:#374151">Your submission for <strong>${assignmentTitle}</strong> has been graded.</p>
+        <div style="background:#f3f4f6;border-radius:8px;padding:16px 20px;margin:0 0 16px">
+          <span style="font-size:32px;font-weight:700;color:#111827">${pct}%</span>
+          <span style="color:#6b7280;font-size:14px;margin-left:8px">(${grade} / ${maxGrade} points)</span>
+        </div>
+        ${feedback ? `<p style="margin:0 0 16px;color:#374151"><strong>Instructor feedback:</strong> ${feedback}</p>` : ''}
+        <a href="${process.env.APP_URL ?? 'http://localhost:3000'}/assignments"
+           style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">
+          View Assignment →
+        </a>`,
+    });
+    await this.sendEmail(to, `Grade published: ${assignmentTitle}`, html);
+  }
+
+  async sendAssignmentDueReminderEmail(to: string, firstName: string, assignmentTitle: string, courseTitle: string, dueDate: Date) {
+    const dueDateStr = dueDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const html = emailTemplate({
+      title: `Assignment due soon: ${assignmentTitle}`,
+      preheader: `${assignmentTitle} is due ${dueDateStr}.`,
+      body: `
+        <h2 style="margin:0 0 16px;font-size:22px;color:#111827">Hi ${firstName}, don't forget!</h2>
+        <p style="margin:0 0 16px;color:#374151">Your assignment <strong>${assignmentTitle}</strong> in <strong>${courseTitle}</strong> is due soon.</p>
+        <div style="background:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:12px 16px;margin:0 0 16px">
+          <span style="color:#92400e;font-weight:600">⏰ Due: ${dueDateStr}</span>
+        </div>
+        <a href="${process.env.APP_URL ?? 'http://localhost:3000'}/assignments"
+           style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">
+          Submit Now →
+        </a>`,
+    });
+    await this.sendEmail(to, `Due soon: ${assignmentTitle}`, html);
+  }
+
+  async sendCertificateAwardedEmail(to: string, firstName: string, courseTitle: string, verifyCode: string) {
+    const verifyUrl = `${process.env.APP_URL ?? 'http://localhost:3000'}/certificates/verify/${verifyCode}`;
+    const html = emailTemplate({
+      title: `Certificate awarded: ${courseTitle}`,
+      preheader: `Congratulations! You've completed ${courseTitle}.`,
+      body: `
+        <h2 style="margin:0 0 16px;font-size:22px;color:#111827">Congratulations, ${firstName}! 🏆</h2>
+        <p style="margin:0 0 16px;color:#374151">You've successfully completed <strong>${courseTitle}</strong> and earned your certificate.</p>
+        <div style="background:linear-gradient(135deg,#fef3c7,#fde68a);border:2px solid #f59e0b;border-radius:12px;padding:20px;text-align:center;margin:0 0 16px">
+          <span style="font-size:40px">🎓</span>
+          <p style="margin:8px 0 0;font-weight:700;color:#92400e">${courseTitle}</p>
+          <p style="margin:4px 0 0;font-size:12px;color:#b45309">Certificate ID: ${verifyCode}</p>
+        </div>
+        <a href="${verifyUrl}"
+           style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">
+          View Certificate →
+        </a>`,
+    });
+    await this.sendEmail(to, `You earned a certificate: ${courseTitle}`, html);
+  }
+
+  async sendAssignmentSubmittedEmail(to: string, instructorName: string, studentName: string, assignmentTitle: string, courseTitle: string) {
+    const html = emailTemplate({
+      title: `New submission: ${assignmentTitle}`,
+      preheader: `${studentName} submitted ${assignmentTitle}.`,
+      body: `
+        <h2 style="margin:0 0 16px;font-size:22px;color:#111827">Hi ${instructorName},</h2>
+        <p style="margin:0 0 16px;color:#374151"><strong>${studentName}</strong> has submitted their assignment for <strong>${assignmentTitle}</strong> in <strong>${courseTitle}</strong>.</p>
+        <a href="${process.env.APP_URL ?? 'http://localhost:3000'}/assignments/gradebook"
+           style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">
+          Review Submission →
+        </a>`,
+    });
+    await this.sendEmail(to, `New submission: ${assignmentTitle}`, html);
+  }
+
+  async sendCourseCompletionEmail(to: string, firstName: string, courseTitle: string, courseId: string) {
+    const html = emailTemplate({
+      title: `You completed ${courseTitle}!`,
+      preheader: `Course completed: ${courseTitle}.`,
+      body: `
+        <h2 style="margin:0 0 16px;font-size:22px;color:#111827">Amazing work, ${firstName}! 🎉</h2>
+        <p style="margin:0 0 16px;color:#374151">You have successfully completed <strong>${courseTitle}</strong>. Your dedication and hard work have paid off!</p>
+        <a href="${process.env.APP_URL ?? 'http://localhost:3000'}/courses/${courseId}"
+           style="display:inline-block;background:#2563eb;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">
+          View Course →
+        </a>`,
+    });
+    await this.sendEmail(to, `Course completed: ${courseTitle}`, html);
+  }
+
+  async sendAdminAlertEmail(to: string, adminName: string, alertTitle: string, alertBody: string) {
+    const html = emailTemplate({
+      title: alertTitle,
+      preheader: alertTitle,
+      body: `
+        <h2 style="margin:0 0 16px;font-size:22px;color:#111827">Hi ${adminName},</h2>
+        <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:16px;margin:0 0 16px">
+          <p style="margin:0;color:#991b1b;font-weight:600">⚠️ ${alertTitle}</p>
+          <p style="margin:8px 0 0;color:#7f1d1d">${alertBody}</p>
+        </div>
+        <a href="${process.env.APP_URL ?? 'http://localhost:3000'}/admin"
+           style="display:inline-block;background:#dc2626;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">
+          View Admin Panel →
+        </a>`,
+    });
+    await this.sendEmail(to, `[Alert] ${alertTitle}`, html);
+  }
 }
 
 // ── Shared email layout ──────────────────────────────────────────────────────

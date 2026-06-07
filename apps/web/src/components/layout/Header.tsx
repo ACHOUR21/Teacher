@@ -15,7 +15,10 @@ import {
   ChevronDown,
   Check,
   BookMarked,
+  Moon,
+  Sun,
 } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { cn, formatRelativeDate } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
@@ -34,6 +37,8 @@ export function Header() {
     markNotificationRead,
   } = useUIStore();
   const { signOut } = useAuth();
+
+  const { theme, setTheme } = useTheme();
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -120,6 +125,19 @@ export function Header() {
       )}
 
       <div className="ml-auto sm:ml-0 flex items-center gap-1">
+        {/* Dark mode toggle */}
+        <button
+          onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+          aria-label="Toggle dark mode"
+        >
+          {theme === 'dark' ? (
+            <Sun className="h-5 w-5" />
+          ) : (
+            <Moon className="h-5 w-5" />
+          )}
+        </button>
+
         {/* Notifications */}
         <div className="relative">
           <button

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../core/notifications/fcm_service.dart';
+import '../../../../app.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -15,7 +16,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   bool _emailNotifications = true;
   bool _courseReminders = true;
   bool _marketingEmails = false;
-  bool _darkMode = false;
   String _language = 'English';
   String _timezone = 'America/New_York';
 
@@ -110,8 +110,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _SectionHeader('Appearance & Language'),
           SwitchListTile(
             title: const Text('Dark Mode'),
-            value: _darkMode,
-            onChanged: (v) => setState(() => _darkMode = v),
+            value: ref.watch(themeModeProvider) == ThemeMode.dark,
+            onChanged: (v) => ref.read(themeModeProvider.notifier).state =
+                v ? ThemeMode.dark : ThemeMode.light,
             secondary: const Icon(Icons.dark_mode_outlined),
           ),
           ListTile(

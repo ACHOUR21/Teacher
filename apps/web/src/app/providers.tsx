@@ -7,6 +7,7 @@ import { queryClient } from '@/lib/queryClient';
 import { initApiInterceptors } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 import { Toaster } from '@/components/ui/Toaster';
+import { ThemeProvider } from 'next-themes';
 
 function ApiInterceptorInit() {
   const { accessToken, logout } = useAuthStore();
@@ -33,13 +34,15 @@ function ApiInterceptorInit() {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ApiInterceptorInit />
-      {children}
-      <Toaster />
-      {process.env.NODE_ENV === 'development' && (
-        <ReactQueryDevtools initialIsOpen={false} />
-      )}
-    </QueryClientProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <QueryClientProvider client={queryClient}>
+        <ApiInterceptorInit />
+        {children}
+        <Toaster />
+        {process.env.NODE_ENV === 'development' && (
+          <ReactQueryDevtools initialIsOpen={false} />
+        )}
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }

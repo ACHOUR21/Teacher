@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Plus, MoreHorizontal, X, Mail, User, BookOpen, Calendar } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Search, Plus, MoreHorizontal, X, Mail, User, BookOpen, Calendar, FileText } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useStudents, studentKeys } from '@/hooks/useStudents';
 import type { Student } from '@/hooks/useStudents';
@@ -158,6 +159,7 @@ function ActionMenu({
   onViewProfile: () => void;
   onClose: () => void;
 }) {
+  const router = useRouter();
   const qc = useQueryClient();
   const remove = useMutation({
     mutationFn: () => api.delete(`/students/${student.id}`),
@@ -174,6 +176,12 @@ function ActionMenu({
         className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
       >
         <User className="h-4 w-4 text-gray-400" /> View Profile
+      </button>
+      <button
+        onClick={() => { router.push(`/students/${student.id}/report-card`); onClose(); }}
+        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+      >
+        <FileText className="h-4 w-4 text-gray-400" /> Report Card
       </button>
       <button
         onClick={() => { /* TODO: navigate to messages */ onClose(); }}

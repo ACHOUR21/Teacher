@@ -12,6 +12,8 @@ export default function TwoFactorPage() {
   const [code, setCode] = useState(['', '', '', '', '', '']);
   const [error, setError] = useState('');
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const [recoveryMode, setRecoveryMode] = useState(false);
+  const [recoveryCode, setRecoveryCode] = useState('');
 
   useEffect(() => {
     inputRefs.current[0]?.focus();
@@ -65,6 +67,18 @@ export default function TwoFactorPage() {
     }
   };
 
+  const handleRecoverySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!recoveryCode.trim()) return;
+    try {
+      await verifyMfa(recoveryCode.trim());
+    } catch (err) {
+      const message = parseErrorMessage(err);
+      setError(message || 'Invalid recovery code.');
+      toast.error('Verification failed', message);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const fullCode = code.join('');
@@ -110,63 +124,96 @@ export default function TwoFactorPage() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} noValidate>
-        <div className="flex gap-2 justify-center mb-6" onPaste={handlePaste}>
-          {code.map((digit, index) => (
+      {recoveryMode ? (
+        <form onSubmit={handleRecoverySubmit} noValidate>
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-foreground mb-2">Recovery Code</label>
             <input
-              key={index}
-              ref={(el) => { inputRefs.current[index] = el; }}
               type="text"
-              inputMode="numeric"
-              maxLength={1}
-              value={digit}
-              onChange={(e) => handleChange(index, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(index, e)}
-              className={`w-11 h-14 text-center text-xl font-bold rounded-lg border-2 bg-background transition-all focus:outline-none ${
-                error
-                  ? 'border-destructive text-destructive'
-                  : digit
-                  ? 'border-primary text-foreground'
-                  : 'border-input text-foreground focus:border-primary'
-              }`}
-              aria-label={`Digit ${index + 1}`}
+              placeholder="XXXX-XXXX-XXXX"
+              value={recoveryCode}
+              onChange={(e) => { setRecoveryCode(e.target.value); setError(''); }}
+              className="w-full h-10 px-3 rounded-md border-2 border-input bg-background text-sm font-mono focus:outline-none focus:border-primary"
+              autoFocus
             />
-          ))}
-        </div>
+          </div>
+          {error && <p className="text-xs text-destructive text-center mb-4">{error}</p>}
+          <button
+            type="submit"
+            disabled={isLoading || !recoveryCode.trim()}
+            className="w-full flex items-center justify-center gap-2 h-10 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50 transition-colors"
+          >
+            {isLoading ? 'Verifying...' : <>Verify recovery code <ArrowRight className="h-4 w-4" /></>}
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={handleSubmit} noValidate>
+          <div className="flex gap-2 justify-center mb-6" onPaste={handlePaste}>
+            {code.map((digit, index) => (
+              <input
+                key={index}
+                ref={(el) => { inputRefs.current[index] = el; }}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                value={digit}
+                onChange={(e) => handleChange(index, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(index, e)}
+                className={`w-11 h-14 text-center text-xl font-bold rounded-lg border-2 bg-background transition-all focus:outline-none ${
+                  error
+                    ? 'border-destructive text-destructive'
+                    : digit
+                    ? 'border-primary text-foreground'
+                    : 'border-input text-foreground focus:border-primary'
+                }`}
+                aria-label={`Digit ${index + 1}`}
+              />
+            ))}
+          </div>
 
-        {error && (
-          <p className="text-xs text-destructive text-center mb-4">{error}</p>
-        )}
-
-        <button
-          type="submit"
-          disabled={isLoading || !isComplete}
-          className="w-full flex items-center justify-center gap-2 h-10 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 transition-colors"
-        >
-          {isLoading ? (
-            <>
-              <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
-              Verifying...
-            </>
-          ) : (
-            <>
-              Verify & sign in
-              <ArrowRight className="h-4 w-4" />
-            </>
+          {error && (
+            <p className="text-xs text-destructive text-center mb-4">{error}</p>
           )}
-        </button>
-      </form>
+
+          <button
+            type="submit"
+            disabled={isLoading || !isComplete}
+            className="w-full flex items-center justify-center gap-2 h-10 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 transition-colors"
+          >
+            {isLoading ? (
+              <>
+                <svg className="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Verifying...
+              </>
+            ) : (
+              <>
+                Verify & sign in
+                <ArrowRight className="h-4 w-4" />
+              </>
+            )}
+          </button>
+        </form>
+      )}
 
       <div className="mt-6 text-center space-y-2">
-        <p className="text-xs text-muted-foreground">
-          Lost access to your authenticator?
-        </p>
-        <button className="text-xs text-primary hover:underline">
-          Use a recovery code
-        </button>
+        {recoveryMode ? (
+          <>
+            <p className="text-xs text-muted-foreground">Have your authenticator?</p>
+            <button onClick={() => { setRecoveryMode(false); setError(''); }} className="text-xs text-primary hover:underline">
+              Use authenticator app instead
+            </button>
+          </>
+        ) : (
+          <>
+            <p className="text-xs text-muted-foreground">Lost access to your authenticator?</p>
+            <button onClick={() => { setRecoveryMode(true); setError(''); }} className="text-xs text-primary hover:underline">
+              Use a recovery code
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
