@@ -43,7 +43,7 @@ export function Header() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      router.push(`/dashboard/search?q=${encodeURIComponent(searchQuery)}`);
+      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
       setSearchOpen(false);
       setSearchQuery('');
     }
