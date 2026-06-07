@@ -19,8 +19,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _passwordController = TextEditingController();
   final _emailFocus = FocusNode();
   final _passwordFocus = FocusNode();
-  bool _forgotPasswordLoading = false;
-
   @override
   void dispose() {
     _emailController.dispose();
@@ -36,33 +34,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           email: _emailController.text.trim(),
           password: _passwordController.text,
         );
-  }
-
-  Future<void> _forgotPassword() async {
-    final email = _emailController.text.trim();
-    if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter your email address first'),
-        ),
-      );
-      return;
-    }
-
-    setState(() => _forgotPasswordLoading = true);
-    try {
-      await ref.read(authProvider.notifier).forgotPassword(email);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Password reset email sent to $email'),
-            backgroundColor: AppTheme.success,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _forgotPasswordLoading = false);
-    }
   }
 
   @override
@@ -176,14 +147,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: _forgotPasswordLoading ? null : _forgotPassword,
-                    child: _forgotPasswordLoading
-                        ? const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Forgot Password?'),
+                    onPressed: () => context.push('/forgot-password'),
+                    child: const Text('Forgot Password?'),
                   ),
                 ),
                 const SizedBox(height: 24),

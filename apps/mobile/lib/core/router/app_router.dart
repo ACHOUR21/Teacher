@@ -5,6 +5,8 @@ import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
 import '../../features/auth/presentation/screens/register_screen.dart';
 import '../../features/auth/presentation/screens/mfa_screen.dart';
+import '../../features/auth/presentation/screens/forgot_password_screen.dart';
+import '../../features/auth/presentation/screens/reset_password_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
 import '../../features/dashboard/presentation/screens/dashboard_screen.dart';
 import '../../features/courses/presentation/screens/courses_screen.dart';
@@ -45,7 +47,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       }
 
       if (!isAuthenticated && !requiresMfa) {
-        if (location == '/login' || location == '/register') return null;
+        if (location == '/login' || location == '/register' ||
+            location == '/forgot-password' || location.startsWith('/reset-password')) return null;
         return '/login';
       }
 
@@ -76,6 +79,17 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/verify-mfa',
         builder: (context, state) => const MFAScreen(),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+      GoRoute(
+        path: '/reset-password',
+        builder: (context, state) {
+          final token = state.uri.queryParameters['token'];
+          return ResetPasswordScreen(token: token);
+        },
       ),
       ShellRoute(
         builder: (context, state, child) => HomeScreen(child: child),
