@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../../features/auth/presentation/providers/auth_provider.dart';
 
 class AiAgentsScreen extends ConsumerStatefulWidget {
   const AiAgentsScreen({super.key});
@@ -14,6 +15,7 @@ class _AiAgentsScreenState extends ConsumerState<AiAgentsScreen> {
   final _scrollController = ScrollController();
   final List<_Message> _messages = [];
   bool _isTyping = false;
+  String? _sessionId;
 
   static const _agents = [
     _Agent('STUDY_PLANNER', 'Study Planner', 'Create personalized study schedules and track your learning goals.', '📅', Color(0xFF1565C0)),
@@ -54,19 +56,44 @@ class _AiAgentsScreenState extends ConsumerState<AiAgentsScreen> {
     _messageController.clear();
     _scrollToBottom();
 
-    // Simulate AI response
-    await Future.delayed(const Duration(milliseconds: 1500));
-    if (mounted) {
-      setState(() {
-        _messages.add(_Message(
-          id: 'a-${_messages.length}',
-          isAgent: true,
-          content: _mockResponse(_selectedAgent!.type, text),
-          time: _now(),
-        ));
-        _isTyping = false;
+    try {
+      final apiClient = ref.read(apiClientProvider);
+      final response = await apiClient.dio.post('/ai/agents/chat', data: {
+        'agentType': _selectedAgent!.type,
+        'message': text,
+        if (_sessionId != null) 'sessionId': _sessionId,
       });
-      _scrollToBottom();
+
+      final data = response.data;
+      if (data['sessionId'] != null) {
+        _sessionId = data['sessionId'] as String;
+      }
+
+      if (mounted) {
+        setState(() {
+          _messages.add(_Message(
+            id: 'a-${_messages.length}',
+            isAgent: true,
+            content: data['reply'] as String? ?? 'Sorry, I could not process that.',
+            time: _now(),
+          ));
+          _isTyping = false;
+        });
+        _scrollToBottom();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _messages.add(_Message(
+            id: 'err-${_messages.length}',
+            isAgent: true,
+            content: 'Error: Could not connect to AI service.',
+            time: _now(),
+          ));
+          _isTyping = false;
+        });
+        _scrollToBottom();
+      }
     }
   }
 
@@ -81,14 +108,6 @@ class _AiAgentsScreenState extends ConsumerState<AiAgentsScreen> {
       }
     });
   }
-
-  String _mockResponse(String type, String input) => switch (type) {
-    'STUDY_PLANNER' => 'Based on your goals, I\'d recommend breaking your study sessions into 25-minute focused blocks (Pomodoro technique). Let\'s create a schedule: Monday-Wednesday for core subjects, Thursday for practice problems, Friday for review. What subjects should we prioritize?',
-    'HOMEWORK_ASSISTANT' => 'Great question! Let\'s work through this step by step. First, what information do you already have? Understanding what you know will help us identify exactly where to focus. What have you tried so far?',
-    'RESEARCH_ASSISTANT' => 'For this topic, I\'d suggest checking peer-reviewed sources from JSTOR, Google Scholar, or PubMed. Can you share your thesis statement? That will help me suggest the most relevant search terms and help you evaluate source credibility.',
-    'CAREER_ADVISOR' => 'That\'s a great career direction! The field has strong growth projections — around 15% over the next decade. Key skills to develop include data analysis, communication, and domain expertise. Would you like me to outline a learning roadmap?',
-    _ => 'I\'ve analyzed your current performance data. Your strongest area is problem-solving (top 20%), while time management could use improvement. I recommend scheduling difficult tasks in your peak focus hours (9-11 AM based on your activity patterns). Shall we set some specific goals?',
-  };
 
   String _now() {
     final now = DateTime.now();

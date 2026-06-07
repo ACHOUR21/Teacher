@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:dio/dio.dart';
-
-final _dioProvider = Provider((ref) => Dio());
+import '../../../../../features/auth/presentation/providers/auth_provider.dart';
 
 class AIMessage {
   final String role;
@@ -52,8 +50,8 @@ class _AITutorScreenState extends ConsumerState<AITutorScreen> {
     _scrollToBottom();
 
     try {
-      final dio = ref.read(_dioProvider);
-      final response = await dio.post('/ai/tutor/chat', data: {
+      final apiClient = ref.read(apiClientProvider);
+      final response = await apiClient.dio.post('/ai/tutor/chat', data: {
         'message': text,
         'subject': subject,
         if (conversationId != null) 'conversationId': conversationId,
