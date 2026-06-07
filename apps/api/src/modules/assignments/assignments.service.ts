@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ApiEcosystemService } from '../api-ecosystem/api-ecosystem.service';
 import { AssignmentStatus } from '@prisma/client';
 
 export class CreateAssignmentDto {
@@ -33,6 +34,7 @@ export class AssignmentsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly apiEcosystem: ApiEcosystemService,
   ) {}
 
   async create(teacherId: string, dto: CreateAssignmentDto) {
@@ -131,39 +133,47 @@ export class AssignmentsService {
     const assignment = await this.prisma.assignment.findUnique({ where: { id: assignmentId } });
     if (!assignment) throw new NotFoundException('Assignment not found');
 
+    let status: AssignmentStatus;
+
     if (assignment.dueDate && new Date() > assignment.dueDate) {
       const existing = await this.prisma.submission.findUnique({
         where: { assignmentId_studentId: { assignmentId, studentId } },
       });
       if (existing) throw new ConflictException('Already submitted');
-
-      return this.prisma.submission.create({
-        data: {
-          assignmentId,
-          studentId,
-          content: dto.content,
-          attachments: dto.attachments ?? [],
-          status: AssignmentStatus.LATE,
-          submittedAt: new Date(),
-        },
+      status = AssignmentStatus.LATE;
+    } else {
+      const existing = await this.prisma.submission.findUnique({
+        where: { assignmentId_studentId: { assignmentId, studentId } },
       });
+      if (existing) throw new ConflictException('Already submitted');
+      status = AssignmentStatus.SUBMITTED;
     }
 
-    const existing = await this.prisma.submission.findUnique({
-      where: { assignmentId_studentId: { assignmentId, studentId } },
-    });
-    if (existing) throw new ConflictException('Already submitted');
-
-    return this.prisma.submission.create({
+    const submission = await this.prisma.submission.create({
       data: {
         assignmentId,
         studentId,
         content: dto.content,
         attachments: dto.attachments ?? [],
-        status: AssignmentStatus.SUBMITTED,
+        status,
         submittedAt: new Date(),
       },
     });
+
+    // Fire-and-forget webhook
+    this.prisma.teacher
+      .findUnique({ where: { id: assignment.teacherId ?? '' }, include: { user: { select: { tenantId: true } } } })
+      .then((teacher) => {
+        const tenantId = teacher?.user?.tenantId ?? '';
+        if (tenantId) {
+          this.apiEcosystem
+            .deliverWebhook(tenantId, 'assignment.submitted', { assignmentId, studentId, status })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
+
+    return submission;
   }
 
   async getSubmissions(assignmentId: string, teacherId: string) {
@@ -220,6 +230,23 @@ export class AssignmentsService {
         { type: 'GRADE_PUBLISHED', assignmentId: submission.assignmentId }
       );
     }
+
+    // Fire-and-forget webhook
+    this.prisma.teacher
+      .findUnique({ where: { id: teacherId }, include: { user: { select: { tenantId: true } } } })
+      .then((teacher) => {
+        const tenantId = teacher?.user?.tenantId ?? '';
+        if (tenantId) {
+          this.apiEcosystem
+            .deliverWebhook(tenantId, 'assignment.graded', {
+              submissionId,
+              score: dto.score,
+              passed: dto.score >= submission.assignment.maxScore * 0.7,
+            })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
 
     return result;
   }

@@ -8,6 +8,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../database/prisma.service';
 import { RedisService } from '../cache/redis.service';
+import { ApiEcosystemService } from '../api-ecosystem/api-ecosystem.service';
 import Stripe from 'stripe';
 import { SubscriptionPlan, SubscriptionStatus } from '@prisma/client';
 import Decimal from 'decimal.js';
@@ -30,6 +31,7 @@ export class BillingService {
     private prisma: PrismaService,
     private redis: RedisService,
     private configService: ConfigService,
+    private apiEcosystem: ApiEcosystemService,
   ) {
     this.stripe = new Stripe(
       this.configService.get<string>('STRIPE_SECRET_KEY', 'sk_test_placeholder'),
@@ -404,6 +406,19 @@ export class BillingService {
     ]);
 
     this.logger.log(`Course enrollment via Stripe checkout: user=${userId}, course=${courseId}`);
+
+    // Fire-and-forget webhook
+    this.prisma.course
+      .findUnique({ where: { id: courseId }, select: { tenantId: true } })
+      .then((course) => {
+        const tenantId = course?.tenantId ?? '';
+        if (tenantId) {
+          this.apiEcosystem
+            .deliverWebhook(tenantId, 'payment.completed', { sessionId: session.id, courseId, userId })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
   }
 
   // PayPal integration stub

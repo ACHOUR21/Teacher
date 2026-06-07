@@ -9,6 +9,7 @@ import {
 import { PrismaService } from '../database/prisma.service';
 import { RedisService } from '../cache/redis.service';
 import { SearchService } from '../search/search.service';
+import { ApiEcosystemService } from '../api-ecosystem/api-ecosystem.service';
 import { PaginationDto, paginate } from '../core/pagination/pagination.dto';
 import { CourseLevel, ContentType, UserRole } from '@prisma/client';
 import slugify from 'slugify';
@@ -60,6 +61,7 @@ export class CoursesService {
     private prisma: PrismaService,
     private redis: RedisService,
     private searchService: SearchService,
+    private apiEcosystem: ApiEcosystemService,
   ) {}
 
   async findAll(tenantId: string, pagination: PaginationDto, filters?: {
@@ -356,6 +358,11 @@ export class CoursesService {
       where: { id: courseId },
       data: { enrollCount: { increment: 1 } },
     });
+
+    // Fire-and-forget webhook
+    this.apiEcosystem
+      .deliverWebhook(tenantId, 'course.enrolled', { courseId, studentId })
+      .catch(() => {});
 
     return progress;
   }
