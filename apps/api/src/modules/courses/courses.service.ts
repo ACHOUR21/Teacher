@@ -387,7 +387,45 @@ export class CoursesService {
       },
     });
 
+    if (progressPercent >= 100) {
+      // fire-and-forget: issue certificate if a template exists for this course
+      this.issueCertificateIfTemplate(courseId, studentId).catch(() => {});
+    }
+
     return updated;
+  }
+
+  private async issueCertificateIfTemplate(courseId: string, studentId: string) {
+    const template = await this.prisma.certificateTemplate.findFirst({
+      where: { courseId },
+    });
+    if (!template) return;
+
+    const alreadyIssued = await this.prisma.issuedCertificate.findFirst({
+      where: { templateId: template.id, studentId },
+    });
+    if (alreadyIssued) return;
+
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      include: { user: { select: { firstName: true, lastName: true } } },
+    });
+    const course = await this.prisma.course.findUnique({ where: { id: courseId }, select: { title: true } });
+    if (!student || !course) return;
+
+    await this.prisma.issuedCertificate.create({
+      data: {
+        templateId: template.id,
+        studentId,
+        issuedAt: new Date(),
+        verifyCode: Math.random().toString(36).substring(2, 12).toUpperCase(),
+        metadata: {
+          studentName: `${student.user.firstName} ${student.user.lastName}`,
+          courseName: course.title,
+          issuedDate: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
+        },
+      },
+    });
   }
 
   async addReview(courseId: string, userId: string, rating: number, comment?: string) {

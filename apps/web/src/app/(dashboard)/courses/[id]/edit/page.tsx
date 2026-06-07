@@ -19,6 +19,7 @@ import {
   Save,
   X,
   Check,
+  BookOpen,
 } from 'lucide-react';
 import Link from 'next/link';
 

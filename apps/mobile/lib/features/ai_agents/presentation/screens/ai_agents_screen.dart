@@ -35,6 +35,7 @@ class _AiAgentsScreenState extends ConsumerState<AiAgentsScreen> {
   void _selectAgent(_Agent agent) {
     setState(() {
       _selectedAgent = agent;
+      _sessionId = null;
       _messages.clear();
       _messages.add(_Message(
         id: 'welcome',
@@ -129,7 +130,7 @@ class _AiAgentsScreenState extends ConsumerState<AiAgentsScreen> {
             Text(_selectedAgent!.name),
           ],
         ),
-        leading: BackButton(onPressed: () => setState(() { _selectedAgent = null; _messages.clear(); })),
+        leading: BackButton(onPressed: () => setState(() { _selectedAgent = null; _sessionId = null; _messages.clear(); })),
       ),
       body: Column(
         children: [
