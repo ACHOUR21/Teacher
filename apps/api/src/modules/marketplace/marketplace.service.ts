@@ -1,12 +1,14 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { BillingService } from '../billing/billing.service';
 
 @Injectable()
 export class MarketplaceService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly billing: BillingService,
   ) {}
 
   async browseCourses(query: {
@@ -63,22 +65,32 @@ export class MarketplaceService {
     return { data: courses, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
-  async purchaseCourse(userId: string, courseId: string) {
-    const existing = await this.prisma.courseProgress.findUnique({
-      where: { studentId_courseId: { studentId: userId, courseId } },
-    });
-    if (existing) throw new ConflictException('Already enrolled in this course');
-
+  async purchaseCourse(
+    userId: string,
+    courseId: string,
+    successUrl?: string,
+    cancelUrl?: string,
+  ) {
     const course = await this.prisma.course.findUnique({ where: { id: courseId } });
     if (!course) throw new NotFoundException('Course not found');
 
-    // For paid courses, a Stripe payment intent would be created here
-    // For free courses, direct enrollment
-    const [student] = await Promise.all([
-      this.prisma.student.findFirst({ where: { userId } }),
-    ]);
+    // Paid course → Stripe Checkout Session
+    if (course.price && Number(course.price) > 0) {
+      const origin = successUrl ? new URL(successUrl).origin : 'http://localhost:3000';
+      const sUrl = successUrl ?? `${origin}/marketplace/success`;
+      const cUrl = cancelUrl ?? `${origin}/marketplace`;
+      return this.billing.createCourseCheckoutSession(userId, courseId, sUrl, cUrl)
+        .then(result => ({ ...result, requiresPayment: true }));
+    }
 
+    // Free course → direct enrollment
+    const student = await this.prisma.student.findFirst({ where: { userId } });
     if (!student) throw new NotFoundException('Student profile required to enroll');
+
+    const alreadyEnrolled = await this.prisma.courseProgress.findUnique({
+      where: { studentId_courseId: { studentId: student.id, courseId } },
+    });
+    if (alreadyEnrolled) throw new ConflictException('Already enrolled in this course');
 
     const [progress] = await this.prisma.$transaction([
       this.prisma.courseProgress.create({ data: { studentId: student.id, courseId } }),
@@ -90,7 +102,7 @@ export class MarketplaceService {
       this.notifications.sendCourseEnrollmentEmail(user.email, user.firstName, course.title, courseId).catch(() => {});
     }
 
-    return progress;
+    return { requiresPayment: false, progress };
   }
 
   async addReview(userId: string, courseId: string, rating: number, comment?: string) {

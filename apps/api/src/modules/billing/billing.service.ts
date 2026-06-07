@@ -194,6 +194,58 @@ export class BillingService {
     return { invoices, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
+  async createCourseCheckoutSession(
+    userId: string,
+    courseId: string,
+    successUrl: string,
+    cancelUrl: string,
+  ) {
+    const [course, student] = await Promise.all([
+      this.prisma.course.findUnique({ where: { id: courseId } }),
+      this.prisma.student.findFirst({ where: { userId } }),
+    ]);
+    if (!course) throw new NotFoundException('Course not found');
+
+    if (student) {
+      const enrolled = await this.prisma.courseProgress.findUnique({
+        where: { studentId_courseId: { studentId: student.id, courseId } },
+      });
+      if (enrolled) throw new ConflictException('Already enrolled in this course');
+    }
+
+    const session = await this.stripe.checkout.sessions.create({
+      mode: 'payment',
+      line_items: [
+        {
+          price_data: {
+            currency: this.configService.get<string>('STRIPE_CURRENCY', 'usd'),
+            product_data: {
+              name: course.title,
+              description: course.description ?? undefined,
+              images: (course as any).thumbnailUrl ? [(course as any).thumbnailUrl] : undefined,
+            },
+            unit_amount: Math.round(Number(course.price) * 100),
+          },
+          quantity: 1,
+        },
+      ],
+      metadata: { userId, courseId },
+      success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: cancelUrl,
+    });
+
+    return { checkoutUrl: session.url, sessionId: session.id };
+  }
+
+  async getCurrentSubscription(tenantId: string) {
+    return this.prisma.subscription.findUnique({
+      where: { tenantId },
+      include: {
+        invoices: { orderBy: { issuedAt: 'desc' }, take: 10 },
+      },
+    });
+  }
+
   async handleStripeWebhook(payload: Buffer, signature: string): Promise<void> {
     const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET', '');
     let event: Stripe.Event;
@@ -221,6 +273,9 @@ export class BillingService {
         break;
       case 'customer.subscription.trial_will_end':
         await this.handleTrialWillEnd(event.data.object as Stripe.Subscription);
+        break;
+      case 'checkout.session.completed':
+        await this.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
         break;
       default:
         this.logger.debug(`Unhandled Stripe event: ${event.type}`);
@@ -325,6 +380,30 @@ export class BillingService {
     }
     // In production: send notification email to tenant admin
     this.logger.log(`Trial ending soon for tenant ${subscription.tenantId}`);
+  }
+
+  private async handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
+    const { userId, courseId } = session.metadata ?? {};
+    if (!userId || !courseId) return;
+    if (session.payment_status !== 'paid') return;
+
+    const student = await this.prisma.student.findFirst({ where: { userId } });
+    if (!student) {
+      this.logger.warn(`checkout.session.completed: no student profile for user ${userId}`);
+      return;
+    }
+
+    const existing = await this.prisma.courseProgress.findUnique({
+      where: { studentId_courseId: { studentId: student.id, courseId } },
+    });
+    if (existing) return;
+
+    await this.prisma.$transaction([
+      this.prisma.courseProgress.create({ data: { studentId: student.id, courseId } }),
+      this.prisma.course.update({ where: { id: courseId }, data: { enrollCount: { increment: 1 } } }),
+    ]);
+
+    this.logger.log(`Course enrollment via Stripe checkout: user=${userId}, course=${courseId}`);
   }
 
   // PayPal integration stub

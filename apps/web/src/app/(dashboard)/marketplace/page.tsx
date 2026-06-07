@@ -38,9 +38,19 @@ export default function MarketplacePage() {
     }).then(r => r.data.data),
   });
 
-  const enrollMutation = useMutation({
-    mutationFn: (courseId: string) => api.post(`/marketplace/courses/${courseId}/purchase`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['marketplace'] }),
+  const purchaseMutation = useMutation({
+    mutationFn: (courseId: string) =>
+      api.post(`/marketplace/courses/${courseId}/purchase`, {
+        successUrl: `${window.location.origin}/marketplace/success`,
+        cancelUrl: `${window.location.origin}/marketplace`,
+      }).then(r => r.data.data),
+    onSuccess: (data: any) => {
+      if (data?.requiresPayment && data?.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        qc.invalidateQueries({ queryKey: ['marketplace'] });
+      }
+    },
   });
 
   const courses: any[] = data?.data ?? [];
@@ -124,8 +134,8 @@ export default function MarketplacePage() {
               <MarketplaceCourseCard
                 key={course.id}
                 course={course}
-                onEnroll={() => enrollMutation.mutate(course.id)}
-                enrolling={enrollMutation.isPending}
+                onEnroll={() => purchaseMutation.mutate(course.id)}
+                enrolling={purchaseMutation.isPending && purchaseMutation.variables === course.id}
               />
             ))}
           </div>
@@ -212,7 +222,7 @@ function MarketplaceCourseCard({ course, onEnroll, enrolling }: {
         {/* Price + Enroll */}
         <div className="flex items-center justify-between">
           <span className="font-bold text-gray-900">
-            {course.price === 0 ? 'Free' : `$${course.price?.toFixed(2)}`}
+            {course.price === 0 ? 'Free' : `$${Number(course.price).toFixed(2)}`}
           </span>
           <button
             onClick={onEnroll}
@@ -221,10 +231,19 @@ function MarketplaceCourseCard({ course, onEnroll, enrolling }: {
               'flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
               course.isEnrolled
                 ? 'bg-green-100 text-green-700 cursor-default'
-                : 'bg-blue-600 text-white hover:bg-blue-700',
+                : course.price > 0
+                  ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                  : 'bg-blue-600 text-white hover:bg-blue-700',
             )}
           >
-            {course.isEnrolled ? 'Enrolled' : (
+            {enrolling ? (
+              <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+            ) : course.isEnrolled ? 'Enrolled' : course.price > 0 ? (
+              <><ShoppingCart className="h-3 w-3" /> Buy</>
+            ) : (
               <><ShoppingCart className="h-3 w-3" /> Enroll</>
             )}
           </button>

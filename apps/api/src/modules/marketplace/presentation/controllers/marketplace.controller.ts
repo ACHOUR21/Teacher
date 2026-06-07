@@ -11,6 +11,11 @@ class AddReviewDto {
   @IsOptional() @IsString() comment?: string;
 }
 
+class PurchaseCourseDto {
+  @IsOptional() @IsString() successUrl?: string;
+  @IsOptional() @IsString() cancelUrl?: string;
+}
+
 @ApiTags('Marketplace')
 @Controller('marketplace')
 export class MarketplaceController {
@@ -42,9 +47,9 @@ export class MarketplaceController {
   @Post('courses/:id/purchase')
   @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Purchase or enroll in a course' })
-  purchase(@Param('id') courseId: string, @CurrentUser() user: any) {
-    return this.marketplaceService.purchaseCourse(user.id, courseId);
+  @ApiOperation({ summary: 'Purchase or enroll in a course. Paid courses return checkoutUrl for Stripe redirect.' })
+  purchase(@Param('id') courseId: string, @CurrentUser() user: any, @Body() dto: PurchaseCourseDto) {
+    return this.marketplaceService.purchaseCourse(user.id, courseId, dto.successUrl, dto.cancelUrl);
   }
 
   @Post('courses/:id/reviews')

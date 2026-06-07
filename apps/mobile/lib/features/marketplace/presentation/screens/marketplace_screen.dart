@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/api/endpoints.dart';
 
 // ---------------------------------------------------------------------------
@@ -317,15 +318,27 @@ class _CourseCard extends ConsumerWidget {
           );
         }
       } else {
-        await dio.post(
+        final res = await dio.post(
           '${Endpoints.baseUrl}${Endpoints.purchaseCourse(course.id)}',
+          data: {'successUrl': null, 'cancelUrl': null},
           options: Options(headers: {'Authorization': 'Bearer $token'}),
         );
-        if (context.mounted) {
+        final data = (res.data['data'] ?? res.data) as Map<String, dynamic>;
+        if (data['requiresPayment'] == true && data['checkoutUrl'] != null) {
+          final uri = Uri.tryParse(data['checkoutUrl'] as String);
+          if (uri != null && context.mounted) {
+            final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+            if (!launched && context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Could not open payment page'), backgroundColor: Colors.red),
+              );
+            }
+          }
+        } else if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Purchase initiated for "${course.title}"'),
-              backgroundColor: Colors.deepPurple,
+              content: Text('Enrolled in "${course.title}"'),
+              backgroundColor: Colors.green,
             ),
           );
         }

@@ -91,6 +91,13 @@ export class BillingController {
     return this.billingService.applyCoupon(tenantId, dto.couponCode);
   }
 
+  @Get('subscription')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN, UserRole.TEACHER, UserRole.STUDENT)
+  @ApiOperation({ summary: 'Get current subscription and recent invoices' })
+  getSubscription(@TenantId() tenantId: string) {
+    return this.billingService.getCurrentSubscription(tenantId);
+  }
+
   @Get('invoices')
   @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
   @ApiOperation({ summary: 'List billing invoices' })
