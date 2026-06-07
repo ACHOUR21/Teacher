@@ -113,6 +113,134 @@ export class StudentsService {
     };
   }
 
+  async getReportCard(studentId: string) {
+    // Step 1: fetch student first so we have userId for subsequent queries
+    const student = await this.prisma.student.findUnique({
+      where: { id: studentId },
+      include: {
+        user: { select: { firstName: true, lastName: true, email: true, avatarUrl: true } },
+        school: { select: { name: true } },
+        class: { select: { name: true, grade: true } },
+      },
+    });
+
+    if (!student) throw new NotFoundException('Student not found');
+
+    const userId = student.userId;
+
+    // Step 2: fetch all related data in parallel
+    const [submissions, quizAttempts, certificates, points, courseProgress, attendance] = await Promise.all([
+      this.prisma.submission.findMany({
+        where: { studentId, status: 'GRADED' },
+        include: { assignment: { select: { title: true, maxScore: true, dueDate: true } } },
+        orderBy: { gradedAt: 'desc' },
+      }),
+      this.prisma.quizAttempt.findMany({
+        where: { userId },
+        include: { quiz: { select: { title: true } } },
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.issuedCertificate.findMany({
+        where: { studentId },
+        include: { template: { select: { name: true, course: { select: { title: true } } } } },
+      }),
+      this.prisma.userPoints.findUnique({ where: { userId } }),
+      this.prisma.courseProgress.findMany({
+        where: { studentId },
+        include: { course: { select: { title: true, category: true } } },
+      }),
+      this.prisma.attendance.findMany({
+        where: { studentId },
+        orderBy: { date: 'desc' },
+        take: 90,
+      }),
+    ]);
+
+    const totalGraded = submissions.length;
+    const avgScore =
+      totalGraded > 0
+        ? Math.round(
+            submissions.reduce((sum, s) => sum + (s.score! / s.assignment.maxScore) * 100, 0) /
+              totalGraded,
+          )
+        : null;
+
+    const attendanceTotal = attendance.length;
+    const attendancePresent = attendance.filter(
+      (a) => a.status === 'PRESENT' || a.status === 'LATE',
+    ).length;
+    const attendanceRate =
+      attendanceTotal > 0 ? Math.round((attendancePresent / attendanceTotal) * 100) : null;
+
+    const completedCourses = courseProgress.filter((p) => p.completedAt).length;
+    const inProgressCourses = courseProgress.filter((p) => !p.completedAt).length;
+
+    return {
+      student: {
+        id: student.id,
+        studentId: student.studentId,
+        firstName: student.user.firstName,
+        lastName: student.user.lastName,
+        email: student.user.email,
+        avatarUrl: student.user.avatarUrl,
+        grade: student.grade ?? student.class?.grade,
+        class: student.class?.name,
+        school: student.school?.name,
+        gpa: student.gpa,
+      },
+      summary: {
+        avgScore,
+        attendanceRate,
+        completedCourses,
+        inProgressCourses,
+        certificatesEarned: certificates.length,
+        totalPoints: points?.total ?? 0,
+        quizzesTaken: quizAttempts.length,
+        quizPassRate:
+          quizAttempts.length > 0
+            ? Math.round(
+                (quizAttempts.filter((a) => a.passed).length / quizAttempts.length) * 100,
+              )
+            : null,
+      },
+      assignments: submissions.map((s) => ({
+        title: s.assignment.title,
+        score: s.score,
+        maxScore: s.assignment.maxScore,
+        percentage: Math.round((s.score! / s.assignment.maxScore) * 100),
+        gradedAt: s.gradedAt,
+        feedback: s.feedback,
+      })),
+      courses: courseProgress.map((p) => ({
+        title: p.course.title,
+        category: p.course.category,
+        progress: p.progressPercent,
+        completed: !!p.completedAt,
+        completedAt: p.completedAt,
+      })),
+      certificates: certificates.map((c) => ({
+        name: c.template?.name,
+        course: c.template?.course?.title,
+        issuedAt: c.issuedAt,
+        verifyCode: c.verifyCode,
+      })),
+      quizAttempts: quizAttempts.slice(0, 20).map((a) => ({
+        quiz: a.quiz.title,
+        score: Math.round(a.score),
+        passed: a.passed,
+        date: a.createdAt,
+      })),
+      attendance: {
+        rate: attendanceRate,
+        present: attendance.filter((a) => a.status === 'PRESENT').length,
+        absent: attendance.filter((a) => a.status === 'ABSENT').length,
+        late: attendance.filter((a) => a.status === 'LATE').length,
+        excused: attendance.filter((a) => a.status === 'EXCUSED').length,
+        total: attendanceTotal,
+      },
+    };
+  }
+
   async inviteStudent(tenantId: string, dto: { email: string; firstName?: string; lastName?: string; grade?: string }) {
     const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, slug: true } });
     const inviteLink = `${process.env['APP_URL'] ?? 'http://localhost:3000'}/join/${tenant?.slug ?? ''}`;

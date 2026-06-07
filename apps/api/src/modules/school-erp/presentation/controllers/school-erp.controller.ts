@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Param, Body, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { SchoolErpService } from '../../school-erp.service';
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
@@ -89,6 +89,14 @@ export class SchoolErpController {
   @ApiOperation({ summary: 'Add timetable entry' })
   addTimetable(@Param('classId') classId: string, @Body() body: any) {
     return this.schoolErpService.createTimetableEntry(classId, body);
+  }
+
+  @Delete('timetable/:id')
+  @Roles(UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.TEACHER)
+  @ApiOperation({ summary: 'Delete a timetable entry' })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  deleteTimetable(@Param('id') id: string) {
+    return this.schoolErpService.deleteTimetableEntry(id);
   }
 
   @Post('classes/:classId/students')

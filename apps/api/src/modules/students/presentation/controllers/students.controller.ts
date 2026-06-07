@@ -63,6 +63,13 @@ export class StudentsController {
     return this.studentsService.getPerformanceSummary(id);
   }
 
+  @Get(':id/report-card')
+  @Roles('TEACHER', 'ADMIN', 'SUPER_ADMIN', 'SCHOOL_ADMIN', 'STUDENT')
+  @ApiOperation({ summary: 'Get comprehensive student report card' })
+  reportCard(@Param('id') id: string) {
+    return this.studentsService.getReportCard(id);
+  }
+
   @Post('invite')
   @HttpCode(HttpStatus.OK)
   @Roles('ADMIN', 'SUPER_ADMIN', 'SCHOOL_ADMIN', 'TEACHER')
