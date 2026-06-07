@@ -191,7 +191,7 @@ export class AssignmentsService {
   async grade(submissionId: string, teacherId: string, dto: GradeSubmissionDto) {
     const submission = await this.prisma.submission.findUnique({
       where: { id: submissionId },
-      include: { assignment: true },
+      include: { assignment: true, student: { select: { userId: true } } },
     });
     if (!submission) throw new NotFoundException('Submission not found');
     if (submission.assignment.teacherId !== teacherId) throw new ForbiddenException('Not your assignment');
@@ -199,7 +199,7 @@ export class AssignmentsService {
       throw new BadRequestException(`Score must be between 0 and ${submission.assignment.maxScore}`);
     }
 
-    return this.prisma.submission.update({
+    const result = await this.prisma.submission.update({
       where: { id: submissionId },
       data: {
         score: dto.score,
@@ -208,6 +208,20 @@ export class AssignmentsService {
         gradedAt: new Date(),
       },
     });
+
+    // notify the student
+    const studentUserId = submission.student?.userId ??
+      (await this.prisma.student.findUnique({ where: { id: submission.studentId }, select: { userId: true } }))?.userId;
+    if (studentUserId) {
+      await this.notifications.notifyUser(
+        studentUserId,
+        'Assignment Graded',
+        `You scored ${dto.score}/${submission.assignment.maxScore} on "${submission.assignment.title}"`,
+        { type: 'GRADE_PUBLISHED', assignmentId: submission.assignmentId }
+      );
+    }
+
+    return result;
   }
 
   async getStudentAssignments(studentId: string) {

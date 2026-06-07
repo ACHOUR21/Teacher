@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { LiveSessionStatus, Prisma } from '@prisma/client';
 
 @Injectable()
 export class LiveService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async createSession(teacherId: string, dto: {
     title: string;
@@ -13,7 +17,7 @@ export class LiveService {
     maxParticipants?: number;
     settings?: Record<string, unknown>;
   }) {
-    return this.prisma.liveSession.create({
+    const session = await this.prisma.liveSession.create({
       data: {
         teacherId,
         title: dto.title,
@@ -24,6 +28,23 @@ export class LiveService {
       },
       include: { teacher: { include: { user: { select: { firstName: true, lastName: true, avatarUrl: true } } } } },
     });
+
+    // fire-and-forget: notify any participants already added to this session
+    this.prisma.liveParticipant.findMany({
+      where: { sessionId: session.id, leftAt: null },
+      select: { userId: true },
+    }).then(async (participants) => {
+      for (const p of participants) {
+        await this.notifications.notifyUser(
+          p.userId,
+          'New Live Session Scheduled',
+          `"${dto.title}" has been scheduled for ${new Date(dto.scheduledAt).toLocaleString()}`,
+          { type: 'GENERAL', sessionId: session.id }
+        ).catch(() => {});
+      }
+    }).catch(() => {});
+
+    return session;
   }
 
   async findAll(tenantId: string, query: { page?: number; limit?: number; status?: LiveSessionStatus }) {
