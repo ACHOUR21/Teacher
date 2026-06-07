@@ -4,6 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export interface QuizQuestion {
   id: number;
@@ -38,7 +39,10 @@ export class SubmitAttemptDto {
 
 @Injectable()
 export class QuizzesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async getByLesson(lessonId: string) {
     return this.prisma.quiz.findFirst({
@@ -131,6 +135,15 @@ export class QuizzesService {
         passed,
       },
     });
+
+    if (passed) {
+      await this.notifications.notifyUser(
+        userId,
+        'Quiz Passed!',
+        `You scored ${Math.round(score)}% on "${quiz.title}" — great work!`,
+        { type: 'GENERAL', quizId }
+      ).catch(() => {});
+    }
 
     return {
       attemptId: attempt.id,

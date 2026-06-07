@@ -92,10 +92,27 @@ export class LiveService {
     if (session.teacherId !== teacherId) throw new BadRequestException('Not session owner');
     if (session.status !== LiveSessionStatus.SCHEDULED) throw new BadRequestException('Session already started or ended');
 
-    return this.prisma.liveSession.update({
+    const updatedSession = await this.prisma.liveSession.update({
       where: { id },
       data: { status: LiveSessionStatus.LIVE, startedAt: new Date() },
     });
+
+    // notify all active participants that the session is now live
+    this.prisma.liveParticipant.findMany({
+      where: { sessionId: id, leftAt: null },
+      select: { userId: true },
+    }).then(async (participants) => {
+      for (const p of participants) {
+        await this.notifications.notifyUser(
+          p.userId,
+          'Live Session Started',
+          `"${session.title}" is now live. Join now!`,
+          { type: 'GENERAL', sessionId: id }
+        ).catch(() => {});
+      }
+    }).catch(() => {});
+
+    return updatedSession;
   }
 
   async endSession(id: string, teacherId: string) {

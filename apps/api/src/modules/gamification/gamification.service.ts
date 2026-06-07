@@ -1,9 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class GamificationService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async awardPoints(userId: string, points: number) {
     return this.prisma.userPoints.upsert({
@@ -40,6 +44,12 @@ export class GamificationService {
       if (earned) {
         await this.prisma.userAchievement.create({ data: { userId, achievementId: achievement.id } });
         newlyEarned.push(achievement.id);
+        await this.notifications.notifyUser(
+          userId,
+          'Achievement Unlocked! 🏆',
+          `You earned the "${achievement.name}" achievement`,
+          { type: 'ACHIEVEMENT_EARNED', achievementId: achievement.id }
+        ).catch(() => {});
       }
     }
 
