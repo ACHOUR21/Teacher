@@ -151,6 +151,302 @@ function LessonForm({ onSave, onCancel, initial }: {
   );
 }
 
+type QuestionType = 'multiple_choice' | 'true_false' | 'short_answer';
+
+interface Question {
+  id: number;
+  type: QuestionType;
+  question: string;
+  options: string[] | null;
+  answer: string;
+  points: number;
+}
+
+function LessonQuizBadge({ lessonId }: { lessonId: string }) {
+  const { data } = useQuery<any>({
+    queryKey: ['quiz-lesson', lessonId],
+    queryFn: () =>
+      api.get(`/quizzes/lesson/${lessonId}`).then(r => r.data.data).catch((err: any) => {
+        if (err?.response?.status === 404) return null;
+        throw err;
+      }),
+    retry: false,
+  });
+
+  if (!data) return null;
+  return (
+    <span className="text-xs px-1.5 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded shrink-0 font-medium">
+      Quiz
+    </span>
+  );
+}
+
+function QuizEditorModal({ lessonId, lessonTitle, onClose }: {
+  lessonId: string;
+  lessonTitle: string;
+  onClose: () => void;
+}) {
+  const qc = useQueryClient();
+
+  const { data: existingQuiz, isLoading } = useQuery<any>({
+    queryKey: ['quiz-lesson', lessonId],
+    queryFn: () =>
+      api.get(`/quizzes/lesson/${lessonId}`).then(r => r.data.data).catch((err: any) => {
+        if (err?.response?.status === 404) return null;
+        throw err;
+      }),
+    retry: false,
+  });
+
+  const [title, setTitle] = useState('');
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [timeLimit, setTimeLimit] = useState<string>('');
+  const [initialized, setInitialized] = useState(false);
+  const [addType, setAddType] = useState<QuestionType>('multiple_choice');
+
+  React.useEffect(() => {
+    if (!isLoading && !initialized) {
+      if (existingQuiz) {
+        setTitle(existingQuiz.title ?? '');
+        setQuestions(
+          Array.isArray(existingQuiz.questions)
+            ? existingQuiz.questions.map((q: any, i: number) => ({ ...q, id: i }))
+            : []
+        );
+        setTimeLimit(existingQuiz.timeLimit != null ? String(existingQuiz.timeLimit) : '');
+      }
+      setInitialized(true);
+    }
+  }, [isLoading, existingQuiz, initialized]);
+
+  const saveMut = useMutation({
+    mutationFn: () => {
+      const payload = {
+        title,
+        questions,
+        timeLimit: timeLimit !== '' ? Number(timeLimit) : null,
+      };
+      if (existingQuiz?.id) {
+        return api.patch(`/quizzes/${existingQuiz.id}`, payload);
+      }
+      return api.post('/quizzes', { lessonId, ...payload });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['quiz-lesson', lessonId] });
+      onClose();
+    },
+  });
+
+  const addQuestion = () => {
+    const newQ: Question = {
+      id: Date.now(),
+      type: addType,
+      question: '',
+      options: addType === 'multiple_choice' ? ['', '', '', ''] : null,
+      answer: addType === 'true_false' ? 'True' : '',
+      points: 10,
+    };
+    setQuestions(prev => [...prev, newQ]);
+  };
+
+  const updateQuestion = (id: number, patch: Partial<Question>) => {
+    setQuestions(prev => prev.map(q => q.id === id ? { ...q, ...patch } : q));
+  };
+
+  const deleteQuestion = (id: number) => {
+    setQuestions(prev => prev.filter(q => q.id !== id));
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+      <div className="bg-background border border-border rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+        {/* Modal header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border shrink-0">
+          <div className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4 text-primary" />
+            <h2 className="font-semibold text-foreground text-sm">
+              Quiz — <span className="text-muted-foreground font-normal">{lessonTitle}</span>
+            </h2>
+          </div>
+          <button onClick={onClose} className="p-1.5 hover:bg-accent rounded-md transition-colors">
+            <X className="h-4 w-4 text-muted-foreground" />
+          </button>
+        </div>
+
+        {/* Modal body */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+            </div>
+          ) : (
+            <>
+              {/* Title + time limit */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className="text-xs text-muted-foreground block mb-1">Quiz Title *</label>
+                  <input
+                    className="w-full border border-border rounded-md px-2.5 py-1.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={title}
+                    onChange={e => setTitle(e.target.value)}
+                    placeholder="e.g. End-of-lesson quiz"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground block mb-1">Time Limit (min)</label>
+                  <input
+                    type="number"
+                    className="w-full border border-border rounded-md px-2.5 py-1.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={timeLimit}
+                    onChange={e => setTimeLimit(e.target.value)}
+                    placeholder="optional"
+                    min={1}
+                  />
+                </div>
+              </div>
+
+              {/* Questions */}
+              <div className="space-y-3">
+                {questions.map((q, idx) => (
+                  <div key={q.id} className="border border-border rounded-lg p-4 space-y-3 bg-muted/10">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider pt-0.5">
+                        Q{idx + 1} · {q.type.replace(/_/g, ' ')}
+                      </span>
+                      <button
+                        onClick={() => deleteQuestion(q.id)}
+                        className="p-1 text-red-400 hover:text-red-600 rounded transition-colors shrink-0"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Question</label>
+                      <input
+                        className="w-full border border-border rounded-md px-2.5 py-1.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                        value={q.question}
+                        onChange={e => updateQuestion(q.id, { question: e.target.value })}
+                        placeholder="Enter your question"
+                      />
+                    </div>
+
+                    {q.type === 'multiple_choice' && (
+                      <div className="space-y-2">
+                        <label className="text-xs text-muted-foreground block">Options (select correct)</label>
+                        {(q.options ?? ['', '', '', '']).map((opt, oi) => (
+                          <div key={oi} className="flex items-center gap-2">
+                            <input
+                              type="radio"
+                              name={`q-${q.id}-answer`}
+                              checked={q.answer === opt && opt !== ''}
+                              onChange={() => updateQuestion(q.id, { answer: opt })}
+                              className="shrink-0"
+                            />
+                            <input
+                              className="flex-1 border border-border rounded-md px-2.5 py-1 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                              value={opt}
+                              onChange={e => {
+                                const newOptions = [...(q.options ?? ['', '', '', ''])];
+                                newOptions[oi] = e.target.value;
+                                updateQuestion(q.id, {
+                                  options: newOptions,
+                                  answer: q.answer === (q.options ?? [])[oi] ? e.target.value : q.answer,
+                                });
+                              }}
+                              placeholder={`Option ${oi + 1}`}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {q.type === 'true_false' && (
+                      <div>
+                        <label className="text-xs text-muted-foreground block mb-1">Correct Answer</label>
+                        <div className="flex items-center gap-4">
+                          {['True', 'False'].map(val => (
+                            <label key={val} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                              <input
+                                type="radio"
+                                name={`q-${q.id}-tf`}
+                                checked={q.answer === val}
+                                onChange={() => updateQuestion(q.id, { answer: val })}
+                              />
+                              {val}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {q.type === 'short_answer' && (
+                      <div>
+                        <label className="text-xs text-muted-foreground block mb-1">Correct Answer</label>
+                        <input
+                          className="w-full border border-border rounded-md px-2.5 py-1.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                          value={q.answer}
+                          onChange={e => updateQuestion(q.id, { answer: e.target.value })}
+                          placeholder="Expected answer"
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-muted-foreground shrink-0">Points</label>
+                      <input
+                        type="number"
+                        className="w-20 border border-border rounded-md px-2 py-1 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                        value={q.points}
+                        onChange={e => updateQuestion(q.id, { points: Number(e.target.value) || 0 })}
+                        min={0}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add question */}
+              <div className="flex items-center gap-2">
+                <select
+                  className="border border-border rounded-md px-2.5 py-1.5 text-sm bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  value={addType}
+                  onChange={e => setAddType(e.target.value as QuestionType)}
+                >
+                  <option value="multiple_choice">Multiple Choice</option>
+                  <option value="true_false">True / False</option>
+                  <option value="short_answer">Short Answer</option>
+                </select>
+                <button
+                  onClick={addQuestion}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm border border-dashed border-primary/60 text-primary rounded-md hover:bg-primary/5 transition-colors"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Add Question
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-border shrink-0">
+          <button onClick={onClose} className="px-3 py-1.5 text-sm border border-border rounded-md hover:bg-accent transition-colors">
+            Cancel
+          </button>
+          <button
+            onClick={() => saveMut.mutate()}
+            disabled={saveMut.isPending || !title.trim()}
+            className="flex items-center gap-1.5 px-4 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
+          >
+            <Save className="h-3.5 w-3.5" />
+            {saveMut.isPending ? 'Saving...' : existingQuiz ? 'Update Quiz' : 'Create Quiz'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function CourseEditorPage() {
   const { id: courseId } = useParams<{ id: string }>();
   const router = useRouter();
@@ -160,6 +456,8 @@ export default function CourseEditorPage() {
   const [addingLesson, setAddingLesson] = useState<string | null>(null);
   const [addingSection, setAddingSection] = useState(false);
   const [newSectionTitle, setNewSectionTitle] = useState('');
+  const [quizModalLessonId, setQuizModalLessonId] = useState<string | null>(null);
+  const [quizModalLessonTitle, setQuizModalLessonTitle] = useState('');
 
   const { data: course, isLoading } = useQuery<any>({
     queryKey: ['course', courseId],
