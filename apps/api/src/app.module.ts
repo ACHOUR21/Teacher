@@ -36,6 +36,7 @@ import { AiAgentsModule } from './modules/ai-agents/ai-agents.module';
 import { AssignmentsModule } from './modules/assignments/assignments.module';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 import { AppGraphQLModule } from './modules/graphql/graphql.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { TenantMiddleware } from './modules/tenants/middleware/tenant.middleware';
 
 @Module({
@@ -79,6 +80,7 @@ import { TenantMiddleware } from './modules/tenants/middleware/tenant.middleware
     AiAgentsModule,
     AssignmentsModule,
     SuperAdminModule,
+    DashboardModule,
     AppGraphQLModule,
   ],
   providers: [

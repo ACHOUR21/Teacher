@@ -47,4 +47,16 @@ export class AnalyticsController {
   aiUsage(@Request() req: any) {
     return this.analyticsService.getAIUsageStats(req.tenant?.id);
   }
+
+  @Get('engagement')
+  @ApiOperation({ summary: 'Student engagement heatmap (day × hour)' })
+  engagement(@Request() req: any) {
+    return this.analyticsService.getEngagementHeatmap(req.tenant?.id);
+  }
+
+  @Get('top-courses')
+  @ApiOperation({ summary: 'Top courses with completion rates' })
+  topCourses(@Request() req: any) {
+    return this.analyticsService.getTopCourses(req.tenant?.id);
+  }
 }

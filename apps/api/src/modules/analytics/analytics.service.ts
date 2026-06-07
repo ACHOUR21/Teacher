@@ -121,4 +121,58 @@ export class AnalyticsService {
       orderBy: { _sum: { tokens: 'desc' } },
     });
   }
+
+  async getEngagementHeatmap(tenantId: string) {
+    const from = new Date();
+    from.setDate(from.getDate() - 28);
+
+    const activity = await this.prisma.courseProgress.findMany({
+      where: { course: { tenantId }, lastAccessedAt: { gte: from } },
+      select: { lastAccessedAt: true },
+    });
+
+    // Build day×hour heatmap (0=Sun..6=Sat, 0..23 hours)
+    const heatmap: Record<string, number> = {};
+    activity.forEach(a => {
+      const d = a.lastAccessedAt;
+      if (!d) return;
+      const key = `${d.getDay()}-${d.getHours()}`;
+      heatmap[key] = (heatmap[key] ?? 0) + 1;
+    });
+
+    return Object.entries(heatmap).map(([key, count]) => {
+      const [day, hour] = key.split('-').map(Number);
+      return { day, hour, count };
+    });
+  }
+
+  async getTopCourses(tenantId: string) {
+    const courses = await this.prisma.course.findMany({
+      where: { tenantId, isPublished: true },
+      select: {
+        id: true,
+        title: true,
+        enrollCount: true,
+        rating: true,
+        thumbnailUrl: true,
+        category: true,
+        _count: { select: { progress: true } },
+        teacher: { select: { user: { select: { firstName: true, lastName: true } } } },
+      },
+      orderBy: { enrollCount: 'desc' },
+      take: 10,
+    });
+
+    const completionData = await Promise.all(
+      courses.map(c =>
+        this.prisma.courseProgress.count({ where: { courseId: c.id, completedAt: { not: null } } })
+      )
+    );
+
+    return courses.map((c, i) => ({
+      ...c,
+      completions: completionData[i],
+      completionRate: c._count.progress > 0 ? Math.round((completionData[i] / c._count.progress) * 100) : 0,
+    }));
+  }
 }
