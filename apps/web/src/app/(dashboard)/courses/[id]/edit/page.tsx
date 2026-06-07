@@ -606,6 +606,7 @@ export default function CourseEditorPage() {
                         {contentTypeIcon(lesson.contentType)}
                       </span>
                       <span className="flex-1 text-sm text-foreground truncate">{lesson.title}</span>
+                      <LessonQuizBadge lessonId={lesson.id} />
                       {lesson.isPreview && (
                         <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded shrink-0">Preview</span>
                       )}
@@ -614,6 +615,13 @@ export default function CourseEditorPage() {
                           {Math.floor(lesson.duration / 60)}:{String(lesson.duration % 60).padStart(2, '0')}
                         </span>
                       )}
+                      <button
+                        onClick={() => { setQuizModalLessonId(lesson.id); setQuizModalLessonTitle(lesson.title); }}
+                        className="p-1 text-primary hover:text-primary/80 hover:bg-primary/10 rounded transition-colors shrink-0"
+                        title="Edit quiz"
+                      >
+                        <BookOpen className="h-3 w-3" />
+                      </button>
                       <button
                         onClick={() => deleteLessonMut.mutate({ sectionId: section.id, lessonId: lesson.id })}
                         className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors shrink-0"
@@ -687,6 +695,14 @@ export default function CourseEditorPage() {
         <div className="text-center py-8">
           <p className="text-muted-foreground text-sm">Add at least one section with lessons to publish this course.</p>
         </div>
+      )}
+
+      {quizModalLessonId && (
+        <QuizEditorModal
+          lessonId={quizModalLessonId}
+          lessonTitle={quizModalLessonTitle}
+          onClose={() => setQuizModalLessonId(null)}
+        />
       )}
     </div>
   );
