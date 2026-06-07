@@ -19,5 +19,6 @@ import { DatabaseModule } from '../database/database.module';
   ],
   controllers: [SuperAdminController],
   providers: [SuperAdminService],
+  exports: [SuperAdminService],
 })
 export class SuperAdminModule {}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { CheckCircle, XCircle, Loader2, MailCheck } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -8,7 +8,7 @@ import Link from 'next/link';
 
 type State = 'verifying' | 'success' | 'error' | 'no-token';
 
-export default function VerifyEmailPage() {
+function VerifyEmailPageInner() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const token = searchParams.get('token');
@@ -87,5 +87,13 @@ export default function VerifyEmailPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense>
+      <VerifyEmailPageInner />
+    </Suspense>
   );
 }

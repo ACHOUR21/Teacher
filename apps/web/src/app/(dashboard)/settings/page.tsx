@@ -53,25 +53,29 @@ export default function SettingsPage() {
     pushAll: true, pushMentions: true,
   });
 
-  const { data: me } = useQuery({
+  const { data: me } = useQuery<any>({
     queryKey: ['me'],
-    queryFn: () => api.get('/auth/me').then(r => r.data.data),
-    onSuccess: (data: any) => setProfileForm({
-      firstName: data.firstName ?? '',
-      lastName: data.lastName ?? '',
-      email: data.email ?? '',
-      bio: data.bio ?? '',
-      phone: data.phone ?? '',
+    queryFn: () => api.get('/auth/me').then(r => {
+      const d = r.data.data;
+      setProfileForm({
+        firstName: d.firstName ?? '',
+        lastName: d.lastName ?? '',
+        email: d.email ?? '',
+        bio: d.bio ?? '',
+        phone: d.phone ?? '',
+      });
+      return d;
     }),
-  } as any);
+  });
 
-  const { data: wlSettings } = useQuery({
+  const { data: wlSettings } = useQuery<any>({
     queryKey: ['white-label'],
-    queryFn: () => api.get('/white-label/settings').then(r => r.data.data),
-    onSuccess: (data: any) => {
-      if (data) setBrandForm({ brandName: data.brandName ?? '', primaryColor: data.primaryColor ?? '#2563EB', secondaryColor: data.secondaryColor ?? '#7C3AED' });
-    },
-  } as any);
+    queryFn: () => api.get('/white-label/settings').then(r => {
+      const d = r.data.data;
+      if (d) setBrandForm({ brandName: d.brandName ?? '', primaryColor: d.primaryColor ?? '#2563EB', secondaryColor: d.secondaryColor ?? '#7C3AED' });
+      return d;
+    }),
+  });
 
   const { data: apiKeys, refetch: refetchKeys } = useQuery({
     queryKey: ['api-keys'],
