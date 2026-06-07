@@ -66,6 +66,7 @@ model User {
   conversationParticipants ConversationParticipant[]
   reviews                  Review[]
   points                   UserPoints?
+  markedAttendance         Attendance[]               @relation("AttendanceMarkedBy")
   @@unique([tenantId, email])
   @@index([tenantId])
 }
@@ -187,6 +188,7 @@ model SchoolClass {
   department   Department? @relation(fields: [departmentId], references: [id])
   students     Student[]
   timetables   Timetable[]
+  attendance   Attendance[]
   @@index([schoolId])
 }
 
@@ -200,6 +202,23 @@ model Timetable {
   endTime     String
   room        String?
   class       SchoolClass @relation(fields: [classId], references: [id])
+}
+
+model Attendance {
+  id         String           @id @default(cuid())
+  classId    String
+  studentId  String
+  date       DateTime         @db.Date
+  status     AttendanceStatus @default(PRESENT)
+  note       String?
+  markedById String
+  createdAt  DateTime         @default(now())
+  class      SchoolClass      @relation(fields: [classId], references: [id], onDelete: Cascade)
+  student    Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  markedBy   User             @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
+
+  @@unique([classId, studentId, date])
+  @@index([classId, date])
 }
 
 // === UNIVERSITY ERP ===
@@ -298,6 +317,7 @@ model Student {
   submissions     Submission[]
   parentLinks     ParentStudent[]
   certificates    IssuedCertificate[]
+  attendance      Attendance[]
 }
 
 // === PARENTS ===
@@ -875,4 +895,11 @@ enum AuditAction {
   VIEW
   EXPORT
   IMPORT
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  EXCUSED
 }
