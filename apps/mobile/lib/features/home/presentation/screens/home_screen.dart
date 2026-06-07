@@ -17,7 +17,8 @@ class HomeScreen extends StatelessWidget {
         location.startsWith('/home/settings') ||
         location.startsWith('/home/billing') ||
         location.startsWith('/home/gamification') ||
-        location.startsWith('/home/messages')) return 5;
+        location.startsWith('/home/messages') ||
+        location.startsWith('/home/timetable')) return 5;
     return 0;
   }
 
@@ -111,6 +112,7 @@ class _AppDrawer extends StatelessWidget {
         _drawerItem(context, Icons.emoji_events_outlined, 'Gamification', '/home/gamification'),
         _drawerItem(context, Icons.chat_outlined, 'Messages', '/home/messages'),
         _drawerItem(context, Icons.notifications_outlined, 'Notifications', '/home/notifications'),
+        _drawerItem(context, Icons.calendar_month_outlined, 'Timetable', '/home/timetable'),
         const Divider(),
         _drawerItem(context, Icons.credit_card_outlined, 'Billing', '/home/billing'),
         _drawerItem(context, Icons.settings_outlined, 'Settings', '/home/settings'),

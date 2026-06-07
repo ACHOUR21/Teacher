@@ -25,6 +25,7 @@ import '../../features/ai_agents/presentation/screens/ai_agents_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/assignments/presentation/screens/assignments_screen.dart';
 import '../../features/certificates/presentation/screens/certificates_screen.dart';
+import '../../features/home/presentation/screens/timetable_screen.dart';
 import 'splash_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -180,6 +181,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/home/certificates',
             builder: (context, state) => const CertificatesScreen(),
+          ),
+          GoRoute(
+            path: '/home/timetable',
+            builder: (context, state) => const TimetableScreen(),
           ),
         ],
       ),
