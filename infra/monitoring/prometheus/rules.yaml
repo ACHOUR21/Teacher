@@ -32,6 +32,26 @@ groups:
           summary: "EduAI API is down"
           description: "The API has been unreachable for over 1 minute"
 
+      - alert: HighEventLoopLag
+        expr: eduai_nodejs_eventloop_lag_seconds > 0.2
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Node.js event loop lag is high"
+          description: "Event loop lag is {{ $value }}s (threshold: 200ms)"
+
+      - alert: HighHeapUsage
+        expr: |
+          eduai_nodejs_heap_size_used_bytes /
+          eduai_nodejs_heap_size_total_bytes > 0.9
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Node.js heap nearly full"
+          description: "Heap usage is {{ $value | humanizePercentage }}"
+
   - name: eduai.database
     rules:
       - alert: DatabaseConnectionPoolHigh
@@ -72,13 +92,54 @@ groups:
           severity: critical
         annotations:
           summary: "Disk space critically low"
-          description: "Only {{ $value | humanizePercentage }} disk used"
+          description: "Disk usage is {{ $value | humanizePercentage }}"
 
       - alert: PodCrashLooping
-        expr: |
-          increase(kube_pod_container_status_restarts_total[15m]) > 3
+        expr: increase(kube_pod_container_status_restarts_total[15m]) > 3
         labels:
           severity: critical
         annotations:
           summary: "Pod is crash looping"
           description: "{{ $labels.namespace }}/{{ $labels.pod }} restarted {{ $value }} times"
+
+  - name: eduai.business
+    interval: 60s
+    rules:
+      - alert: AIErrorRateHigh
+        expr: |
+          rate(eduai_ai_calls_total{status="error"}[5m]) /
+          rate(eduai_ai_calls_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "AI feature error rate elevated"
+          description: "AI {{ $labels.feature }} error rate is {{ $value | humanizePercentage }}"
+
+      - alert: BruteForceLoginAttempts
+        expr: rate(eduai_auth_login_failures_total[5m]) * 60 > 20
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Possible brute-force login attack"
+          description: "{{ $value }} failed logins/min in last 2 minutes"
+
+      - alert: QueueBacklogHigh
+        expr: |
+          sum(eduai_queue_jobs_total{status="waiting"}) by (queue) > 500
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "BullMQ queue backlog is high"
+          description: "Queue {{ $labels.queue }} has {{ $value }} waiting jobs"
+
+      - alert: WebSocketConnectionSpike
+        expr: eduai_active_websocket_connections > 5000
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Unusually high WebSocket connections"
+          description: "{{ $value }} active WebSocket connections"

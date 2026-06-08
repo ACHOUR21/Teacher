@@ -20,6 +20,7 @@ scrape_configs:
 
   - job_name: eduai-api
     metrics_path: /metrics
+    scrape_interval: 10s
     static_configs:
       - targets: ['api:4000']
     relabel_configs:
@@ -38,6 +39,16 @@ scrape_configs:
     static_configs:
       - targets: ['redis-exporter:9121']
 
+  - job_name: alertmanager
+    static_configs:
+      - targets: ['alertmanager:9093']
+
+  - job_name: loki
+    static_configs:
+      - targets: ['loki:3100']
+    metrics_path: /metrics
+
+  # Kubernetes pod autodiscovery (production/staging clusters)
   - job_name: kubernetes-pods
     kubernetes_sd_configs:
       - role: pod
@@ -56,3 +67,9 @@ scrape_configs:
         regex: ([^:]+)(?::\d+)?;(\d+)
         replacement: $1:$2
         target_label: __address__
+      - source_labels: [__meta_kubernetes_namespace]
+        target_label: namespace
+      - source_labels: [__meta_kubernetes_pod_name]
+        target_label: pod
+      - source_labels: [__meta_kubernetes_pod_label_app]
+        target_label: app

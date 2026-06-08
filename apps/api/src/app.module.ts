@@ -22,6 +22,7 @@ import { CertificatesModule } from './modules/certificates/certificates.module';
 import { GamificationModule } from './modules/gamification/gamification.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { HealthModule } from './modules/health/health.module';
+import { MetricsModule } from './modules/metrics/metrics.module';
 import { SchoolErpModule } from './modules/school-erp/school-erp.module';
 import { UniversityErpModule } from './modules/university-erp/university-erp.module';
 import { TeachersModule } from './modules/teachers/teachers.module';
@@ -42,6 +43,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ExamsModule } from './modules/exams/exams.module';
 import { FlashcardsModule } from './modules/flashcards/flashcards.module';
 import { TenantMiddleware } from './modules/tenants/middleware/tenant.middleware';
+import { MetricsMiddleware } from './modules/metrics/metrics.middleware';
 
 @Module({
   imports: [
@@ -71,6 +73,7 @@ import { TenantMiddleware } from './modules/tenants/middleware/tenant.middleware
     GamificationModule,
     AuditModule,
     HealthModule,
+    MetricsModule,
     SchoolErpModule,
     UniversityErpModule,
     TeachersModule,
@@ -100,6 +103,9 @@ import { TenantMiddleware } from './modules/tenants/middleware/tenant.middleware
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(MetricsMiddleware)
+      .forRoutes('*');
     consumer
       .apply(TenantMiddleware)
       .exclude({ path: 'health', method: RequestMethod.GET })

@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, HttpCode } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { HealthCheckService, HealthCheck, HealthCheckResult } from '@nestjs/terminus';
 import { PrismaService } from '../database/prisma.service';
@@ -17,10 +17,9 @@ export class HealthController {
   @Get()
   @Public()
   @HealthCheck()
-  @ApiOperation({ summary: 'Check system health — DB, Redis, and memory' })
+  @ApiOperation({ summary: 'Readiness probe — DB, Redis, memory' })
   async check(): Promise<HealthCheckResult> {
     return this.health.check([
-      // PostgreSQL — real query probe
       async () => {
         try {
           await this.prisma.$queryRaw`SELECT 1`;
@@ -29,7 +28,6 @@ export class HealthController {
           return { database: { status: 'down' as const, message: (err as Error).message } };
         }
       },
-      // Redis — PING probe
       async () => {
         try {
           const result = await this.redis.ping();
@@ -38,27 +36,31 @@ export class HealthController {
           return { redis: { status: 'down' as const, message: (err as Error).message } };
         }
       },
-      // Memory usage
       () => {
         const used = process.memoryUsage();
-        const heapUsedMb = Math.round(used.heapUsed / 1024 / 1024);
-        const heapTotalMb = Math.round(used.heapTotal / 1024 / 1024);
-        const rssM = Math.round(used.rss / 1024 / 1024);
         return Promise.resolve({
           memory: {
             status: 'up' as const,
-            heapUsedMb,
-            heapTotalMb,
-            rssMb: rssM,
+            heapUsedMb: Math.round(used.heapUsed / 1024 / 1024),
+            heapTotalMb: Math.round(used.heapTotal / 1024 / 1024),
+            rssMb: Math.round(used.rss / 1024 / 1024),
           },
         });
       },
     ]);
   }
 
+  @Get('live')
+  @Public()
+  @HttpCode(200)
+  @ApiOperation({ summary: 'Kubernetes liveness probe — always 200 if process is up' })
+  live() {
+    return { status: 'ok' };
+  }
+
   @Get('ping')
   @Public()
-  @ApiOperation({ summary: 'Simple liveness ping' })
+  @ApiOperation({ summary: 'Detailed liveness ping with uptime and version' })
   ping() {
     return {
       status: 'ok',
