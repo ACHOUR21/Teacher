@@ -1,10 +1,13 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { ArrowLeft, Send, Sparkles, ChevronRight } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { ArrowLeft, Send, Sparkles, ChevronRight, Square } from 'lucide-react';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { useAgentStream, type AgentMessage } from '@/hooks/useAgentStream';
+import { AgentToolCallCard } from '@/components/ai/AgentToolCallCard';
 
 interface Agent {
   type: string;
@@ -13,15 +16,58 @@ interface Agent {
   icon: string;
 }
 
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
+const API_BASE = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000';
+
+function getStoredToken() {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('accessToken');
 }
+
+// ─── Phase indicator ──────────────────────────────────────────────────────────
+
+const PHASE_LABELS: Record<string, string> = {
+  thinking:     'Thinking…',
+  tool_calling: 'Using tools…',
+  responding:   'Responding…',
+};
+
+// ─── Message bubble ───────────────────────────────────────────────────────────
+
+function MessageBubble({ msg, agentIcon }: { msg: AgentMessage; agentIcon: string }) {
+  if (msg.role === 'user') {
+    return (
+      <div className="flex items-end gap-3 justify-end">
+        <div className="max-w-[70%] rounded-2xl rounded-br-sm px-4 py-3 bg-blue-600 text-white">
+          <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-end gap-3 justify-start">
+      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-lg flex-shrink-0">
+        {agentIcon}
+      </div>
+      <div className="max-w-[75%] space-y-2">
+        {/* Tool calls rendered above the text */}
+        {(msg.toolCalls ?? []).map(tc => (
+          <AgentToolCallCard key={tc.id} toolCall={tc} />
+        ))}
+        {msg.content && (
+          <div className="rounded-2xl rounded-bl-sm px-4 py-3 bg-white border border-gray-200 shadow-sm">
+            <p className="text-sm leading-relaxed whitespace-pre-wrap text-gray-900">{msg.content}</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AiAgentsPage() {
   const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -30,36 +76,30 @@ export default function AiAgentsPage() {
     queryFn: () => api.get('/ai/agents').then(r => r.data.data as Agent[]),
   });
 
-  const chatMutation = useMutation({
-    mutationFn: (message: string) =>
-      api.post('/ai/agents/chat', {
-        agentType: selectedAgent?.type,
-        message,
-        sessionId,
-      }).then(r => r.data.data),
-    onSuccess: (data) => {
-      setSessionId(data.sessionId);
-      setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
-    },
+  const { messages, phase, error, send, abort, reset } = useAgentStream({
+    getToken: getStoredToken,
+    baseUrl: API_BASE,
   });
+
+  const isStreaming = phase === 'thinking' || phase === 'tool_calling' || phase === 'responding';
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, phase]);
 
   const handleSend = () => {
-    if (!draft.trim() || chatMutation.isPending) return;
+    if (!draft.trim() || isStreaming || !selectedAgent) return;
     const msg = draft.trim();
     setDraft('');
-    setMessages(prev => [...prev, { role: 'user', content: msg }]);
-    chatMutation.mutate(msg);
+    send(selectedAgent.type, msg);
   };
 
   const handleSelectAgent = (agent: Agent) => {
     setSelectedAgent(agent);
-    setMessages([]);
-    setSessionId(null);
+    reset();
   };
+
+  // ── Agent selection screen ──────────────────────────────────────────────────
 
   if (!selectedAgent) {
     return (
@@ -69,7 +109,7 @@ export default function AiAgentsPage() {
             <Sparkles className="h-6 w-6 text-purple-500" /> AI Agents Platform
           </h1>
           <p className="text-sm text-gray-500 mt-1">
-            Specialized AI agents to support every aspect of your learning journey
+            Specialized AI agents with real-time tool-use and streaming responses
           </p>
         </div>
 
@@ -81,7 +121,7 @@ export default function AiAgentsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {agents.map((agent) => (
+            {agents.map(agent => (
               <button
                 key={agent.type}
                 onClick={() => handleSelectAgent(agent)}
@@ -103,26 +143,43 @@ export default function AiAgentsPage() {
     );
   }
 
+  // ── Chat screen ─────────────────────────────────────────────────────────────
+
   return (
     <div className="flex flex-col h-[calc(100vh-64px-48px)] -mx-6 -mt-6">
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-4">
         <button
-          onClick={() => setSelectedAgent(null)}
+          onClick={() => { setSelectedAgent(null); reset(); }}
           className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
         >
           <ArrowLeft className="h-4 w-4 text-gray-600" />
         </button>
-        <div className="flex items-center gap-3">
-          <span className="text-2xl">{selectedAgent.icon}</span>
-          <div>
-            <p className="font-semibold text-gray-900 text-sm">{selectedAgent.name}</p>
-            <p className="text-xs text-gray-500">{selectedAgent.description}</p>
-          </div>
+        <span className="text-2xl">{selectedAgent.icon}</span>
+        <div>
+          <p className="font-semibold text-gray-900 text-sm">{selectedAgent.name}</p>
+          <p className="text-xs text-gray-500">{selectedAgent.description}</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <div className="h-2 w-2 rounded-full bg-green-400" />
-          <span className="text-xs text-gray-500">Active</span>
+          {isStreaming ? (
+            <>
+              <span className="text-xs text-purple-600 font-medium">
+                {PHASE_LABELS[phase] ?? 'Working…'}
+              </span>
+              <button
+                onClick={abort}
+                title="Stop"
+                className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+              >
+                <Square className="h-3.5 w-3.5 fill-current" />
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="h-2 w-2 rounded-full bg-green-400" />
+              <span className="text-xs text-gray-500">Ready</span>
+            </>
+          )}
         </div>
       </div>
 
@@ -132,50 +189,40 @@ export default function AiAgentsPage() {
           <div className="flex flex-col items-center justify-center h-full text-center">
             <div className="text-5xl mb-4">{selectedAgent.icon}</div>
             <h3 className="font-semibold text-gray-800 text-lg">{selectedAgent.name}</h3>
-            <p className="text-sm text-gray-500 mt-2 max-w-sm">{selectedAgent.description}</p>
+            <p className="text-sm text-gray-500 mt-2 max-w-sm leading-relaxed">
+              {selectedAgent.description}
+            </p>
             <p className="text-xs text-gray-400 mt-4">How can I help you today?</p>
           </div>
         )}
 
         {messages.map((msg, i) => (
-          <div
-            key={i}
-            className={cn('flex items-end gap-3', msg.role === 'user' ? 'justify-end' : 'justify-start')}
-          >
-            {msg.role === 'assistant' && (
-              <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-lg flex-shrink-0">
-                {selectedAgent.icon}
-              </div>
-            )}
-            <div
-              className={cn(
-                'max-w-[70%] rounded-2xl px-4 py-3',
-                msg.role === 'user'
-                  ? 'bg-blue-600 text-white rounded-br-sm'
-                  : 'bg-white text-gray-900 border border-gray-200 rounded-bl-sm shadow-sm',
-              )}
-            >
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-            </div>
-          </div>
+          <MessageBubble key={i} msg={msg} agentIcon={selectedAgent.icon} />
         ))}
 
-        {chatMutation.isPending && (
+        {/* Thinking indicator when phase is thinking but no delta yet */}
+        {isStreaming && messages[messages.length - 1]?.role !== 'assistant' && (
           <div className="flex items-end gap-3">
             <div className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-lg">
               {selectedAgent.icon}
             </div>
             <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
               <div className="flex items-center gap-1.5">
-                {[0, 1, 2].map(i => (
+                {[0, 1, 2].map(j => (
                   <div
-                    key={i}
+                    key={j}
                     className="h-1.5 w-1.5 rounded-full bg-gray-400 animate-bounce"
-                    style={{ animationDelay: `${i * 150}ms` }}
+                    style={{ animationDelay: `${j * 150}ms` }}
                   />
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-center">
+            {error}
           </div>
         )}
 
@@ -185,22 +232,26 @@ export default function AiAgentsPage() {
       {/* Input */}
       <div className="bg-white border-t border-gray-200 px-6 py-4">
         <div className="flex gap-3 max-w-4xl mx-auto">
-          <div className="flex-1 flex items-center gap-3 bg-gray-50 rounded-2xl px-4 py-3 border border-gray-200 focus-within:border-purple-300 focus-within:ring-2 focus-within:ring-purple-100 transition-all">
+          <div className={cn(
+            'flex-1 flex items-center gap-3 bg-gray-50 rounded-2xl px-4 py-3 border transition-all',
+            isStreaming ? 'border-gray-200 opacity-60' : 'border-gray-200 focus-within:border-purple-300 focus-within:ring-2 focus-within:ring-purple-100',
+          )}>
             <input
               type="text"
               value={draft}
               onChange={e => setDraft(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
-              placeholder={`Ask your ${selectedAgent.name}...`}
-              className="flex-1 bg-transparent text-sm text-gray-900 placeholder-gray-400 focus:outline-none"
+              disabled={isStreaming}
+              placeholder={isStreaming ? PHASE_LABELS[phase] : `Ask your ${selectedAgent.name}…`}
+              className="flex-1 bg-transparent text-sm text-gray-900 placeholder-gray-400 focus:outline-none disabled:cursor-not-allowed"
             />
           </div>
           <button
             onClick={handleSend}
-            disabled={!draft.trim() || chatMutation.isPending}
+            disabled={!draft.trim() || isStreaming}
             className={cn(
               'px-4 py-3 rounded-2xl font-medium text-sm transition-all flex items-center gap-2',
-              draft.trim() && !chatMutation.isPending
+              draft.trim() && !isStreaming
                 ? 'bg-purple-600 text-white hover:bg-purple-700'
                 : 'bg-gray-100 text-gray-400 cursor-not-allowed',
             )}

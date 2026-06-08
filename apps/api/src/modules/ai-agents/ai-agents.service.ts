@@ -4,6 +4,14 @@ import Anthropic from '@anthropic-ai/sdk';
 import { ConfigService } from '@nestjs/config';
 import { AIModuleType } from '@prisma/client';
 
+export type AgentEventType =
+  | { type: 'status'; phase: 'thinking' | 'tool_calling' | 'responding' }
+  | { type: 'delta'; text: string }
+  | { type: 'tool_call'; id: string; name: string; input: Record<string, unknown> }
+  | { type: 'tool_result'; id: string; name: string; output: string }
+  | { type: 'done'; sessionId: string; inputTokens: number; outputTokens: number }
+  | { type: 'error'; message: string };
+
 type AgentType = 'STUDY_PLANNER' | 'HOMEWORK_ASSISTANT' | 'RESEARCH_ASSISTANT' | 'CAREER_ADVISOR' | 'PERFORMANCE_COACH';
 
 interface AgentConfig {
@@ -234,6 +242,113 @@ export class AiAgentsService {
     ]);
 
     return { reply, sessionId: convId, toolResults };
+  }
+
+  async *streamChat(params: {
+    tenantId: string;
+    userId: string;
+    agentType: AgentType;
+    message: string;
+    sessionId?: string;
+  }): AsyncGenerator<AgentEventType> {
+    const { tenantId, userId, agentType, message, sessionId } = params;
+    const config = this.getAgentConfig(agentType);
+    const MAX_ITERATIONS = 10;
+
+    // Load conversation history
+    let history: Anthropic.MessageParam[] = [];
+    if (sessionId) {
+      const session = await this.prisma.aIConversation.findUnique({
+        where: { id: sessionId },
+        include: { messages: { orderBy: { createdAt: 'asc' } } },
+      });
+      if (session) {
+        history = session.messages.map(m => ({
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+        }));
+      }
+    }
+    history.push({ role: 'user', content: message });
+
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    let finalText = '';
+
+    for (let i = 0; i < MAX_ITERATIONS; i++) {
+      yield { type: 'status', phase: 'thinking' };
+
+      const stream = this.anthropic.messages.stream({
+        model: 'claude-opus-4-8',
+        max_tokens: 2048,
+        system: config.systemPrompt,
+        tools: config.tools,
+        messages: history,
+      });
+
+      let iterationText = '';
+      yield { type: 'status', phase: 'responding' };
+
+      for await (const event of stream) {
+        if (
+          event.type === 'content_block_delta' &&
+          event.delta.type === 'text_delta'
+        ) {
+          iterationText += event.delta.text;
+          finalText += event.delta.text;
+          yield { type: 'delta', text: event.delta.text };
+        }
+      }
+
+      const finalMsg = await stream.finalMessage();
+      totalInputTokens += finalMsg.usage.input_tokens;
+      totalOutputTokens += finalMsg.usage.output_tokens;
+      history.push({ role: 'assistant', content: finalMsg.content });
+
+      if (finalMsg.stop_reason !== 'tool_use') break;
+
+      // Execute tools and continue the loop
+      yield { type: 'status', phase: 'tool_calling' };
+      const toolResultContent: Anthropic.ToolResultBlockParam[] = [];
+
+      for (const block of finalMsg.content) {
+        if (block.type !== 'tool_use') continue;
+        yield { type: 'tool_call', id: block.id, name: block.name, input: block.input as Record<string, unknown> };
+        const output = await this.executeTool(block.name, block.input as Record<string, any>, userId, tenantId);
+        yield { type: 'tool_result', id: block.id, name: block.name, output };
+        toolResultContent.push({ type: 'tool_result', tool_use_id: block.id, content: output });
+      }
+
+      history.push({ role: 'user', content: toolResultContent });
+    }
+
+    // Persist conversation
+    const convId = sessionId ?? (await this.prisma.aIConversation.create({
+      data: {
+        tenantId,
+        userId,
+        module: AIModuleType.AI_AGENTS,
+        title: `${agentType} — ${new Date().toLocaleDateString()}`,
+      },
+    })).id;
+
+    await this.prisma.$transaction([
+      this.prisma.aIMessage.create({ data: { conversationId: convId, role: 'user', content: message } }),
+      this.prisma.aIMessage.create({ data: { conversationId: convId, role: 'assistant', content: finalText } }),
+      this.prisma.aIUsage.create({
+        data: {
+          tenantId,
+          userId,
+          module: AIModuleType.AI_AGENTS,
+          inputTokens: totalInputTokens,
+          outputTokens: totalOutputTokens,
+          cost: totalInputTokens * 0.000015 + totalOutputTokens * 0.000075,
+          model: 'claude-opus-4-8',
+        },
+      }),
+    ]);
+
+    yield { type: 'done', sessionId: convId, inputTokens: totalInputTokens, outputTokens: totalOutputTokens };
   }
 
   private async executeTool(toolName: string, input: Record<string, any>, userId: string, tenantId: string): Promise<string> {

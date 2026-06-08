@@ -1,8 +1,9 @@
-import { Controller, Get, Post, Body, Query, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards, Req, Res } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { AiAgentsService } from '../../ai-agents.service';
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
 import { TenantGuard } from '../../../core/guards/tenant.guard';
+import type { Response } from 'express';
 
 @ApiTags('ai-agents')
 @ApiBearerAuth()
@@ -27,7 +28,7 @@ export class AiAgentsController {
   }
 
   @Post('chat')
-  @ApiOperation({ summary: 'Chat with an AI agent' })
+  @ApiOperation({ summary: 'Chat with an AI agent (single-turn, non-streaming)' })
   chat(
     @Req() req: any,
     @Body() body: {
@@ -43,5 +44,48 @@ export class AiAgentsController {
       message: body.message,
       sessionId: body.sessionId,
     });
+  }
+
+  @Post('stream')
+  @ApiOperation({ summary: 'Stream an agent response with real-time tool-call events (SSE)' })
+  async streamChat(
+    @Req() req: any,
+    @Res() res: Response,
+    @Body() body: {
+      agentType: string;
+      message: string;
+      sessionId?: string;
+    },
+  ) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    const write = (event: Record<string, unknown>) => {
+      res.write(`data: ${JSON.stringify(event)}\n\n`);
+    };
+
+    try {
+      const gen = this.aiAgentsService.streamChat({
+        tenantId: req.tenantId,
+        userId: req.user.id,
+        agentType: body.agentType as any,
+        message: body.message,
+        sessionId: body.sessionId,
+      });
+
+      for await (const event of gen) {
+        if (res.writableEnded) break;
+        write(event);
+      }
+    } catch (err: any) {
+      if (!res.writableEnded) {
+        write({ type: 'error', message: err?.message ?? 'Unknown error' });
+      }
+    } finally {
+      if (!res.writableEnded) res.end();
+    }
   }
 }
