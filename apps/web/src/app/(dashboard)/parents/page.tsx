@@ -3,9 +3,9 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import {
-  Users, BookOpen, ClipboardList, BarChart2, MessageSquare,
+  Users, BookOpen, ClipboardList, BarChart2, MessageSquare, Bell,
   ArrowLeft, GraduationCap, TrendingUp, Clock, CheckCircle,
-  AlertCircle, Send, ChevronRight,
+  AlertCircle, Send, ChevronRight, ShieldAlert, Award, TrendingUp as Progress,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -194,7 +194,7 @@ function NoChildrenState() {
 
 // ─── Child Detail View ────────────────────────────────────────────────────────
 
-type ChildTab = 'courses' | 'assignments' | 'grades' | 'messages';
+type ChildTab = 'courses' | 'assignments' | 'grades' | 'messages' | 'notifications';
 
 function ChildDetailView({ child, onBack }: { child: ChildSummary; onBack: () => void }) {
   const [activeTab, setActiveTab] = useState<ChildTab>('courses');
@@ -213,10 +213,11 @@ function ChildDetailView({ child, onBack }: { child: ChildSummary; onBack: () =>
   };
 
   const TABS: { key: ChildTab; label: string; icon: React.ReactNode }[] = [
-    { key: 'courses', label: 'Active Courses', icon: <BookOpen className="h-4 w-4" /> },
-    { key: 'assignments', label: 'Assignments', icon: <ClipboardList className="h-4 w-4" /> },
-    { key: 'grades', label: 'Grades', icon: <BarChart2 className="h-4 w-4" /> },
-    { key: 'messages', label: 'Messages', icon: <MessageSquare className="h-4 w-4" /> },
+    { key: 'courses',       label: 'Active Courses', icon: <BookOpen className="h-4 w-4" /> },
+    { key: 'assignments',   label: 'Assignments',    icon: <ClipboardList className="h-4 w-4" /> },
+    { key: 'grades',        label: 'Grades',         icon: <BarChart2 className="h-4 w-4" /> },
+    { key: 'messages',      label: 'Messages',       icon: <MessageSquare className="h-4 w-4" /> },
+    { key: 'notifications', label: 'Alerts',         icon: <Bell className="h-4 w-4" /> },
   ];
 
   return (
@@ -294,10 +295,11 @@ function ChildDetailView({ child, onBack }: { child: ChildSummary; onBack: () =>
 
       {/* Tab Content */}
       <div>
-        {activeTab === 'courses' && <CoursesTab studentId={studentId} />}
-        {activeTab === 'assignments' && <AssignmentsTab studentId={studentId} />}
-        {activeTab === 'grades' && <GradesTab studentId={studentId} />}
-        {activeTab === 'messages' && <MessagesTab childName={`${child.firstName} ${child.lastName}`} />}
+        {activeTab === 'courses'       && <CoursesTab studentId={studentId} />}
+        {activeTab === 'assignments'   && <AssignmentsTab studentId={studentId} />}
+        {activeTab === 'grades'        && <GradesTab studentId={studentId} />}
+        {activeTab === 'messages'      && <MessagesTab childName={`${child.firstName} ${child.lastName}`} />}
+        {activeTab === 'notifications' && <NotificationsTab />}
       </div>
     </div>
   );
@@ -605,6 +607,81 @@ function MessagesTab({ childName }: { childName: string }) {
           {mutation.isPending ? 'Sending...' : 'Send Message'}
         </button>
       </div>
+    </div>
+  );
+}
+
+// ─── Notifications Tab ────────────────────────────────────────────────────────
+
+const NOTIF_ICONS: Record<string, React.ReactNode> = {
+  GRADE:       <Award className="h-4 w-4 text-purple-500" />,
+  ABSENCE:     <ShieldAlert className="h-4 w-4 text-red-500" />,
+  PROGRESS:    <Progress className="h-4 w-4 text-blue-500" />,
+  DUE_REMINDER:<Clock className="h-4 w-4 text-amber-500" />,
+};
+
+function NotificationsTab() {
+  const { data, isLoading } = useQuery({
+    queryKey: ['parent-notifications'],
+    queryFn: () => api.get('/notifications?limit=40').then(r => r.data.data),
+  });
+
+  const notifications = (data?.data ?? data ?? []) as Array<{
+    id: string;
+    title: string;
+    body: string;
+    isRead: boolean;
+    createdAt: string;
+    data?: { type?: string };
+  }>;
+
+  const markRead = useMutation({
+    mutationFn: (id: string) => api.patch(`/notifications/${id}/read`),
+  });
+
+  if (isLoading) return <LoadingSkeleton rows={5} />;
+
+  if (!notifications.length) {
+    return (
+      <EmptyTabState
+        icon={<Bell className="h-8 w-8 text-gray-300" />}
+        message="No notifications yet. You'll be notified about grades, absences, and progress milestones."
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {notifications.map(n => {
+        const type = n.data?.type ?? 'IN_APP';
+        const icon = NOTIF_ICONS[type] ?? <Bell className="h-4 w-4 text-gray-400" />;
+        return (
+          <div
+            key={n.id}
+            onClick={() => !n.isRead && markRead.mutate(n.id)}
+            className={cn(
+              'flex items-start gap-3 p-4 rounded-xl border transition-colors cursor-pointer',
+              n.isRead
+                ? 'bg-white border-gray-100 text-gray-500'
+                : 'bg-blue-50 border-blue-200',
+            )}
+          >
+            <div className="mt-0.5 flex-shrink-0">{icon}</div>
+            <div className="flex-1 min-w-0">
+              <p className={cn('text-sm font-medium', n.isRead ? 'text-gray-700' : 'text-gray-900')}>
+                {n.title}
+              </p>
+              <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{n.body}</p>
+              <p className="text-xs text-gray-400 mt-1">
+                {format(new Date(n.createdAt), 'MMM d, yyyy · h:mm a')}
+              </p>
+            </div>
+            {!n.isRead && (
+              <div className="h-2 w-2 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

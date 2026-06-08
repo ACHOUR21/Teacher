@@ -12,13 +12,18 @@ export function useNotificationSocket() {
   useEffect(() => {
     if (!accessToken) return;
 
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3001';
+    const wsUrl = process.env['NEXT_PUBLIC_WS_URL'] || 'http://localhost:3001';
 
     socket = io(wsUrl, {
       auth: { token: accessToken },
       transports: ['websocket', 'polling'],
       reconnectionAttempts: 5,
       reconnectionDelay: 2000,
+    });
+
+    // Join personal notification room so the backend can target this user
+    socket.on('connect', () => {
+      socket?.emit('subscribe');
     });
 
     socket.on('notification', (notification: {

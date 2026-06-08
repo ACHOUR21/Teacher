@@ -1,14 +1,18 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 import { PrismaService } from '../database/prisma.service';
 import { NotificationType, Prisma } from '@prisma/client';
+import type { NotificationsGateway } from './notifications.gateway';
 
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
   private transporter: nodemailer.Transporter;
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly gateway?: NotificationsGateway,
+  ) {
     this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT ?? '587'),
@@ -67,7 +71,18 @@ export class NotificationsService {
     });
     if (!user) return;
 
-    await this.createInApp(userId, NotificationType.IN_APP, title, body, data);
+    const notification = await this.createInApp(userId, NotificationType.IN_APP, title, body, data);
+
+    // Real-time delivery via Socket.IO
+    this.gateway?.sendToUser(userId, {
+      id: notification.id,
+      title,
+      message: body,
+      type: (data?.['type'] as string) ?? 'IN_APP',
+      href: data?.['href'] as string | undefined,
+      createdAt: notification.createdAt.toISOString(),
+      data,
+    });
 
     if (user.email) {
       await this.sendEmail(user.email, title, `<p>${body}</p>`);
