@@ -29,6 +29,7 @@ import '../../features/home/presentation/screens/timetable_screen.dart';
 import '../../features/courses/presentation/screens/my_learning_screen.dart';
 import '../../features/parents/presentation/screens/parents_screen.dart';
 import '../../features/analytics/presentation/screens/analytics_screen.dart';
+import '../../features/search/presentation/screens/search_screen.dart';
 import 'splash_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -94,6 +95,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           final token = state.uri.queryParameters['token'];
           return ResetPasswordScreen(token: token);
         },
+      ),
+      GoRoute(
+        path: '/search',
+        builder: (context, state) => const SearchScreen(),
       ),
       ShellRoute(
         builder: (context, state, child) => HomeScreen(child: child),
