@@ -191,6 +191,9 @@ describe('AuthService', () => {
         name: 'Test School',
         slug: 'test-school',
       });
+      // sendVerificationEmail calls user.findUnique internally
+      mockPrisma.user.findUnique.mockResolvedValueOnce(newUser);
+      mockRedis.set.mockResolvedValueOnce('OK');
 
       const result = await service.register(registerCmd);
 
@@ -214,6 +217,9 @@ describe('AuthService', () => {
         name: 'Test School',
         slug: 'test-school',
       });
+      // sendVerificationEmail calls user.findUnique internally
+      mockPrisma.user.findUnique.mockResolvedValueOnce(newUser);
+      mockRedis.set.mockResolvedValueOnce('OK');
 
       await service.register(registerCmd);
 
