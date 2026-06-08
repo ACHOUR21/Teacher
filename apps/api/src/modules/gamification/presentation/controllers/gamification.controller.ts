@@ -1,6 +1,7 @@
-import { Controller, Get, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { GamificationService } from '../../gamification.service';
+import { GamificationEventType } from '../../domain/gamification-rules';
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
 
@@ -39,5 +40,20 @@ export class GamificationController {
   @ApiOperation({ summary: 'Get tenant leaderboard' })
   leaderboard(@Request() req: any) {
     return this.gamificationService.getLeaderboard(req.tenant?.id);
+  }
+
+  @Get('events')
+  @ApiOperation({ summary: 'Get recent XP activity feed for current user' })
+  recentEvents(@CurrentUser() user: any, @Query('limit') limit?: string) {
+    return this.gamificationService.getRecentEvents(user.id, limit ? parseInt(limit, 10) : 20);
+  }
+
+  @Post('event')
+  @ApiOperation({ summary: 'Record a gamification event (internal / debug)' })
+  recordEvent(
+    @CurrentUser() user: any,
+    @Body() body: { eventType: GamificationEventType; metadata?: Record<string, unknown> },
+  ) {
+    return this.gamificationService.processEvent(user.id, body.eventType, body.metadata);
   }
 }
