@@ -26,6 +26,9 @@ import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/assignments/presentation/screens/assignments_screen.dart';
 import '../../features/certificates/presentation/screens/certificates_screen.dart';
 import '../../features/home/presentation/screens/timetable_screen.dart';
+import '../../features/courses/presentation/screens/my_learning_screen.dart';
+import '../../features/parents/presentation/screens/parents_screen.dart';
+import '../../features/analytics/presentation/screens/analytics_screen.dart';
 import 'splash_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -185,6 +188,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/home/timetable',
             builder: (context, state) => const TimetableScreen(),
+          ),
+          GoRoute(
+            path: '/home/my-learning',
+            builder: (context, state) => const MyLearningScreen(),
+          ),
+          GoRoute(
+            path: '/home/parents',
+            builder: (context, state) => const ParentsScreen(),
+          ),
+          GoRoute(
+            path: '/home/analytics',
+            builder: (context, state) => const AnalyticsScreen(),
           ),
         ],
       ),

@@ -154,8 +154,12 @@ export class AiController {
   }
 
   @Get('usage')
-  @ApiOperation({ summary: 'Get AI usage statistics for tenant' })
-  usage(@Request() req: any, @Query('period') period: 'day' | 'week' | 'month') {
-    return this.aiService.getUsageStats(req.tenant?.id, period);
+  @ApiOperation({ summary: 'Get AI usage stats for this billing period' })
+  getUsage(@Request() req: any, @Query('period') period = 'month') {
+    const startDate = new Date();
+    if (period === 'month') startDate.setDate(1);
+    else if (period === 'week') startDate.setDate(startDate.getDate() - 7);
+    startDate.setHours(0, 0, 0, 0);
+    return this.aiService.getAIUsageByPeriod(req.tenant?.id, startDate);
   }
 }
