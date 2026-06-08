@@ -4,14 +4,17 @@ import {
   NotFoundException,
   BadRequestException,
   ConflictException,
+  Optional,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../database/prisma.service';
 import { RedisService } from '../cache/redis.service';
 import { ApiEcosystemService } from '../api-ecosystem/api-ecosystem.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import Stripe from 'stripe';
 import { SubscriptionPlan, SubscriptionStatus } from '@prisma/client';
 import Decimal from 'decimal.js';
+import { PLAN_PRICE_CENTS } from './domain/plan-features';
 
 const PLAN_PRICES: Record<SubscriptionPlan, string> = {
   FREE_TRIAL: '',
@@ -28,10 +31,11 @@ export class BillingService {
   private stripe: Stripe;
 
   constructor(
-    private prisma: PrismaService,
-    private redis: RedisService,
-    private configService: ConfigService,
-    private apiEcosystem: ApiEcosystemService,
+    private readonly prisma: PrismaService,
+    private readonly redis: RedisService,
+    private readonly configService: ConfigService,
+    private readonly apiEcosystem: ApiEcosystemService,
+    @Optional() private readonly notifications?: NotificationsService,
   ) {
     this.stripe = new Stripe(
       this.configService.get<string>('STRIPE_SECRET_KEY', 'sk_test_placeholder'),
@@ -39,15 +43,28 @@ export class BillingService {
     );
   }
 
-  async subscribe(tenantId: string, plan: SubscriptionPlan, userId: string) {
-    const tenant = await this.prisma.tenant.findUnique({
-      where: { id: tenantId },
-      include: { subscription: true },
-    });
-    if (!tenant) throw new NotFoundException('Tenant not found');
+  // ------------------------------------------------------------------ subscribe
 
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+  /**
+   * Creates a Stripe Checkout Session (subscription mode) and returns the redirect URL.
+   * The DB subscription record is written only after the webhook confirms payment.
+   */
+  async subscribe(
+    tenantId: string,
+    plan: SubscriptionPlan,
+    userId: string,
+    successUrl: string,
+    cancelUrl: string,
+  ): Promise<{ checkoutUrl: string }> {
+    const [tenant, user] = await Promise.all([
+      this.prisma.tenant.findUnique({ where: { id: tenantId }, include: { subscription: true } }),
+      this.prisma.user.findUnique({ where: { id: userId } }),
+    ]);
+    if (!tenant) throw new NotFoundException('Tenant not found');
     if (!user) throw new NotFoundException('User not found');
+
+    const priceId = PLAN_PRICES[plan];
+    if (!priceId) throw new BadRequestException('Invalid plan or plan requires manual setup (Enterprise)');
 
     // Get or create Stripe customer
     let stripeCustomerId = tenant.subscription?.stripeCustomerId;
@@ -60,90 +77,58 @@ export class BillingService {
       stripeCustomerId = customer.id;
     }
 
-    const priceId = PLAN_PRICES[plan];
-    if (!priceId) throw new BadRequestException('Invalid plan or plan requires manual setup');
+    const isLifetime = plan === SubscriptionPlan.LIFETIME;
 
-    // Create subscription
-    const stripeSubscription = await this.stripe.subscriptions.create({
+    const session = await this.stripe.checkout.sessions.create({
+      mode: isLifetime ? 'payment' : 'subscription',
       customer: stripeCustomerId,
-      items: [{ price: priceId }],
-      payment_behavior: 'default_incomplete',
-      expand: ['latest_invoice.payment_intent'],
-      metadata: { tenantId, plan },
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${successUrl}?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: cancelUrl,
+      metadata: { tenantId, plan, userId },
+      ...(!isLifetime && {
+        subscription_data: {
+          metadata: { tenantId, plan },
+          // 14-day trial for STARTER
+          trial_period_days: plan === SubscriptionPlan.STARTER ? 14 : undefined,
+        },
+      }),
+      allow_promotion_codes: true,
     });
 
-    const now = new Date();
-    const periodEnd = new Date(stripeSubscription.current_period_end * 1000);
-
-    const subscription = await this.prisma.subscription.upsert({
-      where: { tenantId },
-      update: {
-        plan,
-        status: SubscriptionStatus.ACTIVE,
-        stripeCustomerId,
-        stripeSubscriptionId: stripeSubscription.id,
-        currentPeriodStart: now,
-        currentPeriodEnd: periodEnd,
-      },
-      create: {
-        tenantId,
-        plan,
-        status: SubscriptionStatus.ACTIVE,
-        stripeCustomerId,
-        stripeSubscriptionId: stripeSubscription.id,
-        currentPeriodStart: now,
-        currentPeriodEnd: periodEnd,
-      },
-    });
-
-    await this.prisma.tenant.update({ where: { id: tenantId }, data: { plan } });
-    await this.redis.delPattern(`tenant:${tenantId}*`);
-
-    const invoice = stripeSubscription.latest_invoice as Stripe.Invoice;
-    const paymentIntent = invoice.payment_intent as Stripe.PaymentIntent;
-
-    return {
-      subscription,
-      clientSecret: paymentIntent?.client_secret,
-      stripeSubscriptionId: stripeSubscription.id,
-    };
+    return { checkoutUrl: session.url! };
   }
 
+  // ------------------------------------------------------------------ portal / cancel
+
   async createPortalSession(tenantId: string, returnUrl: string): Promise<string> {
-    const subscription = await this.prisma.subscription.findUnique({
-      where: { tenantId },
-    });
+    const subscription = await this.prisma.subscription.findUnique({ where: { tenantId } });
     if (!subscription?.stripeCustomerId) {
       throw new NotFoundException('No billing account found');
     }
-
     const session = await this.stripe.billingPortal.sessions.create({
       customer: subscription.stripeCustomerId,
       return_url: returnUrl,
     });
-
     return session.url;
   }
 
   async cancelSubscription(tenantId: string): Promise<void> {
-    const subscription = await this.prisma.subscription.findUnique({
-      where: { tenantId },
-    });
+    const subscription = await this.prisma.subscription.findUnique({ where: { tenantId } });
     if (!subscription?.stripeSubscriptionId) {
       throw new NotFoundException('No active subscription found');
     }
-
     await this.stripe.subscriptions.update(subscription.stripeSubscriptionId, {
       cancel_at_period_end: true,
     });
-
     await this.prisma.subscription.update({
       where: { tenantId },
       data: { cancelAtPeriodEnd: true },
     });
-
     this.logger.log(`Subscription cancellation scheduled for tenant ${tenantId}`);
   }
+
+  // ------------------------------------------------------------------ coupons
 
   async applyCoupon(tenantId: string, couponCode: string) {
     const coupon = await this.prisma.coupon.findUnique({ where: { code: couponCode } });
@@ -157,14 +142,12 @@ export class BillingService {
 
     const subscription = await this.prisma.subscription.findUnique({ where: { tenantId } });
 
-    // Apply to Stripe subscription if exists
     if (subscription?.stripeSubscriptionId && coupon.stripeCouponId) {
       await this.stripe.subscriptions.update(subscription.stripeSubscriptionId, {
         coupon: coupon.stripeCouponId,
       });
     }
 
-    // Increment usage
     await this.prisma.coupon.update({
       where: { code: couponCode },
       data: { usedCount: { increment: 1 } },
@@ -177,6 +160,8 @@ export class BillingService {
       message: 'Coupon applied successfully',
     };
   }
+
+  // ------------------------------------------------------------------ invoices
 
   async getInvoices(tenantId: string, page = 1, limit = 20) {
     const subscription = await this.prisma.subscription.findUnique({ where: { tenantId } });
@@ -195,6 +180,92 @@ export class BillingService {
 
     return { invoices, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
+
+  async getCurrentSubscription(tenantId: string) {
+    return this.prisma.subscription.findUnique({
+      where: { tenantId },
+      include: { invoices: { orderBy: { issuedAt: 'desc' }, take: 10 } },
+    });
+  }
+
+  // ------------------------------------------------------------------ revenue analytics
+
+  async getRevenueAnalytics(tenantId?: string) {
+    const whereClause = tenantId
+      ? { subscription: { tenantId } }
+      : {};
+
+    // Total revenue
+    const totalAgg = await this.prisma.invoice.aggregate({
+      where: { ...whereClause, status: 'COMPLETED' },
+      _sum: { amount: true },
+    });
+
+    // Revenue last 12 months
+    const twelveMonthsAgo = new Date();
+    twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 11);
+    twelveMonthsAgo.setDate(1);
+    twelveMonthsAgo.setHours(0, 0, 0, 0);
+
+    const recentInvoices = await this.prisma.invoice.findMany({
+      where: { ...whereClause, status: 'COMPLETED', paidAt: { gte: twelveMonthsAgo } },
+      select: { amount: true, paidAt: true, currency: true },
+    });
+
+    // Group by month
+    const monthlyRevenue: Record<string, number> = {};
+    for (const inv of recentInvoices) {
+      if (!inv.paidAt) continue;
+      const key = `${inv.paidAt.getFullYear()}-${String(inv.paidAt.getMonth() + 1).padStart(2, '0')}`;
+      monthlyRevenue[key] = (monthlyRevenue[key] ?? 0) + Number(inv.amount);
+    }
+
+    // MRR — sum plan prices of all ACTIVE subscriptions
+    const activeSubscriptions = await this.prisma.subscription.findMany({
+      where: {
+        status: SubscriptionStatus.ACTIVE,
+        ...(tenantId ? { tenantId } : {}),
+      },
+      select: { plan: true },
+    });
+
+    const mrr = activeSubscriptions.reduce((acc, sub) => {
+      return acc + (PLAN_PRICE_CENTS[sub.plan] ?? 0) / 100;
+    }, 0);
+
+    // Plan distribution
+    const planDistribution = await this.prisma.subscription.groupBy({
+      by: ['plan'],
+      ...(tenantId ? { where: { tenantId } } : {}),
+      _count: { plan: true },
+    });
+
+    // Churn — subscriptions cancelled in the last 30 days
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const churnCount = await this.prisma.subscription.count({
+      where: {
+        status: SubscriptionStatus.CANCELLED,
+        updatedAt: { gte: thirtyDaysAgo },
+        ...(tenantId ? { tenantId } : {}),
+      },
+    });
+
+    return {
+      totalRevenue: Number(totalAgg._sum.amount ?? 0),
+      mrr,
+      arr: mrr * 12,
+      churnLast30Days: churnCount,
+      monthlyRevenue: Object.entries(monthlyRevenue)
+        .map(([month, revenue]) => ({ month, revenue }))
+        .sort((a, b) => a.month.localeCompare(b.month)),
+      planDistribution: planDistribution.map(p => ({
+        plan: p.plan,
+        count: p._count.plan,
+      })),
+    };
+  }
+
+  // ------------------------------------------------------------------ course checkout
 
   async createCourseCheckoutSession(
     userId: string,
@@ -239,14 +310,7 @@ export class BillingService {
     return { checkoutUrl: session.url, sessionId: session.id };
   }
 
-  async getCurrentSubscription(tenantId: string) {
-    return this.prisma.subscription.findUnique({
-      where: { tenantId },
-      include: {
-        invoices: { orderBy: { issuedAt: 'desc' }, take: 10 },
-      },
-    });
-  }
+  // ------------------------------------------------------------------ Stripe webhooks
 
   async handleStripeWebhook(payload: Buffer, signature: string): Promise<void> {
     const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET', '');
@@ -261,6 +325,9 @@ export class BillingService {
     this.logger.log(`Stripe webhook received: ${event.type}`);
 
     switch (event.type) {
+      case 'checkout.session.completed':
+        await this.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+        break;
       case 'invoice.paid':
         await this.handleInvoicePaid(event.data.object as Stripe.Invoice);
         break;
@@ -276,11 +343,94 @@ export class BillingService {
       case 'customer.subscription.trial_will_end':
         await this.handleTrialWillEnd(event.data.object as Stripe.Subscription);
         break;
-      case 'checkout.session.completed':
-        await this.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
-        break;
       default:
         this.logger.debug(`Unhandled Stripe event: ${event.type}`);
+    }
+  }
+
+  private async handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
+    const { userId, courseId, tenantId, plan } = session.metadata ?? {};
+
+    // --- subscription checkout ---
+    if (session.mode === 'subscription' && tenantId && plan && session.subscription) {
+      const stripeSubscriptionId = session.subscription as string;
+      const stripeSub = await this.stripe.subscriptions.retrieve(stripeSubscriptionId);
+
+      await this.prisma.subscription.upsert({
+        where: { tenantId },
+        update: {
+          plan: plan as SubscriptionPlan,
+          status: SubscriptionStatus.ACTIVE,
+          stripeCustomerId: session.customer as string,
+          stripeSubscriptionId,
+          currentPeriodStart: new Date(stripeSub.current_period_start * 1000),
+          currentPeriodEnd: new Date(stripeSub.current_period_end * 1000),
+          cancelAtPeriodEnd: false,
+        },
+        create: {
+          tenantId,
+          plan: plan as SubscriptionPlan,
+          status: SubscriptionStatus.ACTIVE,
+          stripeCustomerId: session.customer as string,
+          stripeSubscriptionId,
+          currentPeriodStart: new Date(stripeSub.current_period_start * 1000),
+          currentPeriodEnd: new Date(stripeSub.current_period_end * 1000),
+        },
+      });
+
+      await this.prisma.tenant.update({
+        where: { id: tenantId },
+        data: { plan: plan as SubscriptionPlan },
+      });
+      await this.redis.delPattern(`tenant:${tenantId}*`);
+
+      // Notify admin
+      if (userId) {
+        await this.notifications?.notifyUser(userId, 'Subscription activated 🎉',
+          `Your ${plan.replace('_', ' ')} plan is now active.`,
+          { type: 'SUBSCRIPTION_ACTIVATED', plan, href: '/billing' },
+        ).catch(() => {});
+      }
+
+      this.logger.log(`Subscription checkout completed for tenant ${tenantId}, plan ${plan}`);
+      return;
+    }
+
+    // --- lifetime payment checkout ---
+    if (session.mode === 'payment' && tenantId && plan === 'LIFETIME' && session.payment_status === 'paid') {
+      const now = new Date();
+      await this.prisma.subscription.upsert({
+        where: { tenantId },
+        update: { plan: SubscriptionPlan.LIFETIME, status: SubscriptionStatus.ACTIVE, stripeCustomerId: session.customer as string, currentPeriodStart: now, currentPeriodEnd: new Date('2099-12-31') },
+        create: { tenantId, plan: SubscriptionPlan.LIFETIME, status: SubscriptionStatus.ACTIVE, stripeCustomerId: session.customer as string, currentPeriodStart: now, currentPeriodEnd: new Date('2099-12-31') },
+      });
+      await this.prisma.tenant.update({ where: { id: tenantId }, data: { plan: SubscriptionPlan.LIFETIME } });
+      await this.redis.delPattern(`tenant:${tenantId}*`);
+      return;
+    }
+
+    // --- course purchase ---
+    if (userId && courseId && session.payment_status === 'paid') {
+      const student = await this.prisma.student.findFirst({ where: { userId } });
+      if (!student) return;
+
+      const existing = await this.prisma.courseProgress.findUnique({
+        where: { studentId_courseId: { studentId: student.id, courseId } },
+      });
+      if (existing) return;
+
+      await this.prisma.$transaction([
+        this.prisma.courseProgress.create({ data: { studentId: student.id, courseId } }),
+        this.prisma.course.update({ where: { id: courseId }, data: { enrollCount: { increment: 1 } } }),
+      ]);
+
+      this.prisma.course
+        .findUnique({ where: { id: courseId }, select: { tenantId: true } })
+        .then(course => {
+          if (course?.tenantId) {
+            this.apiEcosystem.deliverWebhook(course.tenantId, 'payment.completed', { sessionId: session.id, courseId, userId }).catch(() => {});
+          }
+        }).catch(() => {});
     }
   }
 
@@ -291,16 +441,15 @@ export class BillingService {
     });
     if (!subscription) return;
 
-    const amountValue = invoice.amount_paid / 100;
     await this.prisma.invoice.create({
       data: {
         subscriptionId: subscription.id,
-        amount: new Decimal(amountValue),
+        amount: new Decimal(invoice.amount_paid / 100),
         currency: invoice.currency.toUpperCase(),
         status: 'COMPLETED',
         stripeInvoiceId: invoice.id,
         pdf: invoice.invoice_pdf || undefined,
-        paidAt: new Date(invoice.status_transitions.paid_at! * 1000),
+        paidAt: new Date((invoice.status_transitions.paid_at ?? Math.floor(Date.now() / 1000)) * 1000),
       },
     });
 
@@ -308,14 +457,13 @@ export class BillingService {
       where: { id: subscription.id },
       data: { status: SubscriptionStatus.ACTIVE },
     });
-
-    this.logger.log(`Invoice paid for subscription ${subscription.id}`);
   }
 
   private async handlePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
     if (!invoice.subscription) return;
     const subscription = await this.prisma.subscription.findFirst({
       where: { stripeSubscriptionId: invoice.subscription as string },
+      include: { tenant: { include: { users: { where: { role: 'ADMIN' }, take: 1 } } } },
     });
     if (!subscription) return;
 
@@ -323,6 +471,17 @@ export class BillingService {
       where: { id: subscription.id },
       data: { status: SubscriptionStatus.PAST_DUE },
     });
+
+    // Notify tenant admin
+    const adminId = (subscription as any).tenant?.users?.[0]?.id;
+    if (adminId) {
+      await this.notifications?.notifyUser(
+        adminId,
+        'Payment failed ⚠️',
+        'Your last payment could not be processed. Please update your payment method to avoid service interruption.',
+        { type: 'PAYMENT_FAILED', href: '/billing' },
+      ).catch(() => {});
+    }
 
     this.logger.warn(`Payment failed for subscription ${subscription.id}`);
   }
@@ -344,7 +503,7 @@ export class BillingService {
     await this.prisma.subscription.update({
       where: { id: subscription.id },
       data: {
-        status: statusMap[stripeSubscription.status] || SubscriptionStatus.INACTIVE,
+        status: statusMap[stripeSubscription.status] ?? SubscriptionStatus.INACTIVE,
         currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
         cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
       },
@@ -363,12 +522,10 @@ export class BillingService {
       where: { id: subscription.id },
       data: { status: SubscriptionStatus.CANCELLED },
     });
-
     await this.prisma.tenant.update({
       where: { id: subscription.tenantId },
       data: { plan: SubscriptionPlan.FREE_TRIAL },
     });
-
     await this.redis.delPattern(`tenant:${subscription.tenantId}*`);
     this.logger.log(`Subscription cancelled for tenant ${subscription.tenantId}`);
   }
@@ -376,55 +533,30 @@ export class BillingService {
   private async handleTrialWillEnd(stripeSubscription: Stripe.Subscription): Promise<void> {
     const subscription = await this.prisma.subscription.findFirst({
       where: { stripeSubscriptionId: stripeSubscription.id },
+      include: { tenant: { include: { users: { where: { role: 'ADMIN' }, take: 1 } } } },
     });
-    if (!subscription) {
-      return;
-    }
-    // In production: send notification email to tenant admin
-    this.logger.log(`Trial ending soon for tenant ${subscription.tenantId}`);
-  }
+    if (!subscription) return;
 
-  private async handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<void> {
-    const { userId, courseId } = session.metadata ?? {};
-    if (!userId || !courseId) return;
-    if (session.payment_status !== 'paid') return;
+    const trialEnd = new Date(stripeSubscription.trial_end! * 1000);
+    const daysLeft = Math.ceil((trialEnd.getTime() - Date.now()) / 86_400_000);
 
-    const student = await this.prisma.student.findFirst({ where: { userId } });
-    if (!student) {
-      this.logger.warn(`checkout.session.completed: no student profile for user ${userId}`);
-      return;
+    const adminId = (subscription as any).tenant?.users?.[0]?.id;
+    if (adminId) {
+      await this.notifications?.notifyUser(
+        adminId,
+        `Your trial ends in ${daysLeft} day${daysLeft !== 1 ? 's' : ''} ⏰`,
+        'Add a payment method now to avoid losing access to your courses and data.',
+        { type: 'TRIAL_ENDING', daysLeft, href: '/billing' },
+      ).catch(() => {});
     }
 
-    const existing = await this.prisma.courseProgress.findUnique({
-      where: { studentId_courseId: { studentId: student.id, courseId } },
-    });
-    if (existing) return;
-
-    await this.prisma.$transaction([
-      this.prisma.courseProgress.create({ data: { studentId: student.id, courseId } }),
-      this.prisma.course.update({ where: { id: courseId }, data: { enrollCount: { increment: 1 } } }),
-    ]);
-
-    this.logger.log(`Course enrollment via Stripe checkout: user=${userId}, course=${courseId}`);
-
-    // Fire-and-forget webhook
-    this.prisma.course
-      .findUnique({ where: { id: courseId }, select: { tenantId: true } })
-      .then((course) => {
-        const tenantId = course?.tenantId ?? '';
-        if (tenantId) {
-          this.apiEcosystem
-            .deliverWebhook(tenantId, 'payment.completed', { sessionId: session.id, courseId, userId })
-            .catch(() => {});
-        }
-      })
-      .catch(() => {});
+    this.logger.log(`Trial ending in ${daysLeft} days for tenant ${subscription.tenantId}`);
   }
 
-  // PayPal integration stub
+  // ------------------------------------------------------------------ PayPal stub
+
   async createPayPalOrder(tenantId: string, plan: SubscriptionPlan): Promise<{ orderId: string; approvalUrl: string }> {
     this.logger.log(`PayPal order creation for tenant ${tenantId}, plan ${plan}`);
-    // PayPal SDK integration would go here
     return {
       orderId: 'PAYPAL_ORDER_PLACEHOLDER',
       approvalUrl: 'https://www.paypal.com/checkoutnow?token=PAYPAL_ORDER_PLACEHOLDER',
@@ -432,29 +564,13 @@ export class BillingService {
   }
 
   async capturePayPalOrder(tenantId: string, orderId: string, plan: SubscriptionPlan): Promise<void> {
-    this.logger.log(`PayPal capture for tenant ${tenantId}, order ${orderId}, plan ${plan}`);
     const now = new Date();
     const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-
     await this.prisma.subscription.upsert({
       where: { tenantId },
-      update: {
-        plan,
-        status: SubscriptionStatus.ACTIVE,
-        paypalSubscriptionId: orderId,
-        currentPeriodStart: now,
-        currentPeriodEnd: periodEnd,
-      },
-      create: {
-        tenantId,
-        plan,
-        status: SubscriptionStatus.ACTIVE,
-        paypalSubscriptionId: orderId,
-        currentPeriodStart: now,
-        currentPeriodEnd: periodEnd,
-      },
+      update: { plan, status: SubscriptionStatus.ACTIVE, paypalSubscriptionId: orderId, currentPeriodStart: now, currentPeriodEnd: periodEnd },
+      create: { tenantId, plan, status: SubscriptionStatus.ACTIVE, paypalSubscriptionId: orderId, currentPeriodStart: now, currentPeriodEnd: periodEnd },
     });
-
     await this.prisma.tenant.update({ where: { id: tenantId }, data: { plan } });
     await this.redis.delPattern(`tenant:${tenantId}*`);
   }
