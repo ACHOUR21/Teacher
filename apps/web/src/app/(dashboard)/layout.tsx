@@ -8,6 +8,7 @@ import { Header } from '@/components/layout/Header';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/utils';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export default function DashboardLayout({
   children,
@@ -77,7 +78,7 @@ export default function DashboardLayout({
             transition={{ duration: 0.25 }}
             className="max-w-7xl mx-auto"
           >
-            {children}
+            <ErrorBoundary>{children}</ErrorBoundary>
           </motion.div>
         </main>
       </div>
