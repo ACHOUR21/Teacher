@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { toast } from '@/hooks/useToast';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { WhiteLabelPreview } from '@/components/white-label/WhiteLabelPreview';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,15 +34,8 @@ const DEFAULT_VALUES: WhiteLabelSettings = {
   emailFrom: '',
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function isValidUrl(url: string): boolean {
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
+function isValidUrl(url: string) {
+  try { new URL(url); return true; } catch { return false; }
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -99,6 +93,21 @@ export default function WhiteLabelPage() {
         </h1>
         <p className="text-sm text-gray-500 mt-1">Customize your platform's appearance</p>
       </div>
+
+      {isDirty && (
+        <div className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-sm">
+          <span className="text-amber-700 font-medium">You have unsaved changes</span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => reset({ ...DEFAULT_VALUES, ...existing })}
+              className="text-xs text-amber-600 hover:text-amber-800 underline"
+            >
+              Discard
+            </button>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -221,109 +230,17 @@ export default function WhiteLabelPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-                  {/* Mock top nav */}
-                  <div
-                    className="flex items-center gap-3 px-4 py-3"
-                    style={{ backgroundColor: watchedValues.primaryColor }}
-                  >
-                    {watchedValues.logoUrl && isValidUrl(watchedValues.logoUrl) ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img
-                        src={watchedValues.logoUrl}
-                        alt="Logo"
-                        className="h-6 object-contain"
-                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                      />
-                    ) : (
-                      <div className="h-6 w-6 rounded bg-white/30" />
-                    )}
-                    <span className="text-white font-semibold text-sm">
-                      {watchedValues.brandName || 'Your Brand'}
-                    </span>
-                    <div className="ml-auto flex gap-2">
-                      <div className="h-2 w-10 rounded bg-white/40" />
-                      <div className="h-2 w-10 rounded bg-white/40" />
-                      <div className="h-2 w-10 rounded bg-white/40" />
-                    </div>
-                  </div>
-
-                  {/* Mock sidebar + content */}
-                  <div className="flex" style={{ minHeight: '220px' }}>
-                    {/* Sidebar */}
-                    <div className="w-28 bg-gray-50 border-r border-gray-100 p-3 space-y-2">
-                      {['Dashboard', 'Courses', 'Students', 'Reports'].map((item, i) => (
-                        <div
-                          key={item}
-                          className="rounded px-2 py-1.5 text-xs font-medium"
-                          style={
-                            i === 0
-                              ? { backgroundColor: watchedValues.secondaryColor, color: '#fff' }
-                              : { color: '#6b7280' }
-                          }
-                        >
-                          {item}
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Content area */}
-                    <div className="flex-1 p-4 space-y-3 bg-white">
-                      {/* Stats row */}
-                      <div className="grid grid-cols-3 gap-2">
-                        {['24', '142', '98%'].map((val, i) => (
-                          <div key={i} className="rounded-lg border border-gray-100 p-2 text-center">
-                            <div className="text-sm font-bold" style={{ color: watchedValues.primaryColor }}>{val}</div>
-                            <div className="text-[10px] text-gray-400 mt-0.5">
-                              {i === 0 ? 'Courses' : i === 1 ? 'Students' : 'Pass Rate'}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      {/* Button preview */}
-                      <div className="flex gap-2 mt-2">
-                        <div
-                          className="rounded-md px-3 py-1.5 text-xs font-medium text-white"
-                          style={{ backgroundColor: watchedValues.primaryColor }}
-                        >
-                          Primary
-                        </div>
-                        <div
-                          className="rounded-md px-3 py-1.5 text-xs font-medium text-white"
-                          style={{ backgroundColor: watchedValues.secondaryColor }}
-                        >
-                          Secondary
-                        </div>
-                      </div>
-                      {/* Placeholder bars */}
-                      <div className="space-y-1.5 pt-1">
-                        <div className="h-2 bg-gray-100 rounded w-3/4" />
-                        <div className="h-2 bg-gray-100 rounded w-1/2" />
-                        <div className="h-2 bg-gray-100 rounded w-2/3" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Footer */}
-                  <div
-                    className="px-4 py-2 text-xs text-white/80 text-center"
-                    style={{ backgroundColor: watchedValues.secondaryColor }}
-                  >
-                    {watchedValues.customDomain || 'app.yourschool.com'} &middot; Powered by EduAI
-                  </div>
-                </div>
-
-                {/* Color chips */}
-                <div className="mt-4 flex gap-3">
-                  <div className="flex items-center gap-2">
-                    <div className="h-5 w-5 rounded-full border border-gray-200 shadow-sm" style={{ backgroundColor: watchedValues.primaryColor }} />
-                    <span className="text-xs text-gray-500 font-mono">{watchedValues.primaryColor}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="h-5 w-5 rounded-full border border-gray-200 shadow-sm" style={{ backgroundColor: watchedValues.secondaryColor }} />
-                    <span className="text-xs text-gray-500 font-mono">{watchedValues.secondaryColor}</span>
-                  </div>
-                </div>
+                <WhiteLabelPreview
+                  values={{
+                    brandName:      watchedValues.brandName,
+                    logoUrl:        watchedValues.logoUrl,
+                    faviconUrl:     watchedValues.faviconUrl,
+                    primaryColor:   watchedValues.primaryColor,
+                    secondaryColor: watchedValues.secondaryColor,
+                    customDomain:   watchedValues.customDomain,
+                    customCss:      watchedValues.customCss,
+                  }}
+                />
               </CardContent>
             </Card>
           </div>
