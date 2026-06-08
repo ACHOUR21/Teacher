@@ -113,9 +113,16 @@ export class LiveGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
   }
 
   @SubscribeMessage('whiteboard-draw')
-  handleWhiteboardDraw(@ConnectedSocket() client: LiveClient, @MessageBody() data: unknown) {
+  handleWhiteboardDraw(
+    @ConnectedSocket() client: LiveClient,
+    @MessageBody() data: { type: 'stroke' | 'clear'; [key: string]: unknown },
+  ) {
     if (client.sessionId) {
-      client.to(client.sessionId).emit('whiteboard-update', { userId: client.userId, data });
+      // Broadcast to all room members including sender for clear events
+      const emit = data.type === 'clear'
+        ? this.server.to(client.sessionId)
+        : client.to(client.sessionId);
+      emit.emit('whiteboard-update', { userId: client.userId, data });
     }
   }
 
