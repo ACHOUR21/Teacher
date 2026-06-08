@@ -29,6 +29,8 @@ model Tenant {
   apiKeys         ApiKey[]
   auditLogs       AuditLog[]
   aiConversations AIConversation[]
+  exams           Exam[]
+  flashcardDecks  FlashcardDeck[]
 }
 
 // === USERS & AUTH ===
@@ -62,6 +64,10 @@ model User {
   achievements             UserAchievement[]
   gamificationEvents       GamificationEvent[]
   aiConversations          AIConversation[]
+  createdExams             Exam[]
+  flashcardDecks           FlashcardDeck[]
+  flashcardReviews         FlashcardReview[]
+  examAttempts             ExamAttempt[]
   auditLogs                AuditLog[]
   liveParticipants         LiveParticipant[]
   conversationParticipants ConversationParticipant[]
@@ -922,6 +928,101 @@ enum AuditAction {
   VIEW
   EXPORT
   IMPORT
+}
+
+// === EXAMS ===
+model Exam {
+  id          String        @id @default(cuid())
+  tenantId    String
+  createdBy   String
+  title       String
+  subject     String
+  topic       String?
+  difficulty  String        @default("medium")
+  timeLimit   Int?
+  isPublished Boolean       @default(false)
+  questions   ExamQuestion[]
+  attempts    ExamAttempt[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  tenant      Tenant        @relation(fields: [tenantId], references: [id])
+  creator     User          @relation("createdExams", fields: [createdBy], references: [id])
+
+  @@index([tenantId])
+}
+
+model ExamQuestion {
+  id            String   @id @default(cuid())
+  examId        String
+  order         Int
+  type          String
+  question      String
+  options       Json?
+  correctAnswer String
+  explanation   String?
+  points        Int      @default(1)
+  exam          Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+}
+
+model ExamAttempt {
+  id          String    @id @default(cuid())
+  examId      String
+  userId      String
+  answers     Json      @default("{}")
+  score       Int?
+  maxScore    Int?
+  startedAt   DateTime  @default(now())
+  submittedAt DateTime?
+  exam        Exam      @relation(fields: [examId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@index([examId])
+  @@index([userId])
+}
+
+// === FLASHCARDS ===
+model FlashcardDeck {
+  id        String      @id @default(cuid())
+  tenantId  String
+  createdBy String
+  title     String
+  subject   String?
+  topic     String?
+  isPublic  Boolean     @default(false)
+  cards     Flashcard[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  tenant    Tenant      @relation(fields: [tenantId], references: [id])
+  creator   User        @relation(fields: [createdBy], references: [id])
+
+  @@index([tenantId])
+}
+
+model Flashcard {
+  id      String            @id @default(cuid())
+  deckId  String
+  front   String
+  back    String
+  hint    String?
+  order   Int               @default(0)
+  reviews FlashcardReview[]
+  deck    FlashcardDeck     @relation(fields: [deckId], references: [id], onDelete: Cascade)
+}
+
+model FlashcardReview {
+  id          String    @id @default(cuid())
+  cardId      String
+  userId      String
+  rating      Int
+  interval    Int       @default(1)
+  easeFactor  Float     @default(2.5)
+  nextReview  DateTime
+  reviewedAt  DateTime  @default(now())
+  card        Flashcard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@unique([cardId, userId])
+  @@index([userId, nextReview])
 }
 
 enum AttendanceStatus {

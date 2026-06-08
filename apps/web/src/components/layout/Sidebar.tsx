@@ -33,6 +33,8 @@ import {
   FileText,
   Palette,
   Key,
+  FileQuestion,
+  Layers,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/uiStore';
@@ -69,6 +71,8 @@ const navSections: NavSectionDef[] = [
       { labelKey: 'aiTutor', href: '/ai-tutor', icon: Bot, badge: 'AI' },
       { labelKey: 'aiTools', href: '/ai-tools', icon: Zap, badge: 'AI' },
       { labelKey: 'aiAgents', href: '/ai-agents', icon: Sparkles, badge: 'NEW' },
+      { labelKey: 'exams', href: '/exams', icon: FileQuestion },
+      { labelKey: 'flashcards', href: '/flashcards', icon: Layers },
       { labelKey: 'certificates', href: '/certificates', icon: Award },
     ],
   },

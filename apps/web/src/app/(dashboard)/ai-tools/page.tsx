@@ -617,6 +617,17 @@ function ExamGeneratorTab() {
   const [numQuestions, setNumQuestions] = useState(10);
   const [questionTypes, setQuestionTypes] = useState<string[]>(['multiple_choice', 'short_answer']);
   const [result, setResult] = useState<any>(null);
+  const [savedExamId, setSavedExamId] = useState<string | null>(null);
+
+  const saveMutation = useMutation({
+    mutationFn: () => api.post('/exams', {
+      title: result.title,
+      subject: topic,
+      difficulty: difficulty.toLowerCase(),
+      questions: result.questions,
+    }).then(r => r.data),
+    onSuccess: (data) => setSavedExamId(data.id),
+  });
 
   const QUESTION_TYPES = [
     { value: 'multiple_choice', label: 'Multiple Choice' },
@@ -700,7 +711,16 @@ function ExamGeneratorTab() {
               <h3 className="font-semibold text-foreground">{result.title}</h3>
               <p className="text-xs text-muted-foreground">{result.questions?.length} questions</p>
             </div>
-            <Button variant="outline" size="sm" onClick={copyExam}>Copy Exam</Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={copyExam}>Copy</Button>
+              {savedExamId ? (
+                <Button variant="outline" size="sm" className="text-green-600 border-green-400" disabled>Saved!</Button>
+              ) : (
+                <Button size="sm" onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+                  {saveMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Save to Library'}
+                </Button>
+              )}
+            </div>
           </div>
           <ol className="divide-y divide-border max-h-[480px] overflow-y-auto">
             {result.questions?.map((q: any, i: number) => (
@@ -845,6 +865,7 @@ function FlashcardsTab() {
   const [cards, setCards] = useState<Array<{ front: string; back: string }>>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [flippedIndex, setFlippedIndex] = useState<number | null>(null);
+  const [savedDeckId, setSavedDeckId] = useState<string | null>(null);
 
   const mutation = useMutation({
     mutationFn: () => api.post('/ai/flashcards/generate', { topic, numCards }).then(r => r.data.data),
@@ -853,7 +874,17 @@ function FlashcardsTab() {
       setCards(cardList);
       setCurrentIndex(0);
       setFlippedIndex(null);
+      setSavedDeckId(null);
     },
+  });
+
+  const saveMutation = useMutation({
+    mutationFn: () => api.post('/flashcards/decks', {
+      title: `Flashcards: ${topic}`,
+      topic,
+      cards,
+    }).then(r => r.data),
+    onSuccess: (data) => setSavedDeckId(data.id),
   });
 
   const card = cards[currentIndex];
@@ -884,7 +915,17 @@ function FlashcardsTab() {
         <div className="space-y-4">
           <div className="flex items-center justify-between text-sm text-muted-foreground">
             <span>Card {currentIndex + 1} / {cards.length}</span>
-            <span className="text-xs">{isFlipped ? 'Answer' : 'Question'} — click card to flip</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs">{isFlipped ? 'Answer' : 'Question'} — click card to flip</span>
+              {savedDeckId ? (
+                <span className="text-xs text-green-600 font-medium">Saved to library!</span>
+              ) : (
+                <button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}
+                  className="text-xs text-primary font-medium hover:underline disabled:opacity-50">
+                  {saveMutation.isPending ? 'Saving...' : 'Save Deck'}
+                </button>
+              )}
+            </div>
           </div>
           <button
             onClick={() => setFlippedIndex(isFlipped ? null : currentIndex)}

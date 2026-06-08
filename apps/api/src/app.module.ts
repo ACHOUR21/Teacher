@@ -39,6 +39,8 @@ import { QuizzesModule } from './modules/quizzes/quizzes.module';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 import { AppGraphQLModule } from './modules/graphql/graphql.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { ExamsModule } from './modules/exams/exams.module';
+import { FlashcardsModule } from './modules/flashcards/flashcards.module';
 import { TenantMiddleware } from './modules/tenants/middleware/tenant.middleware';
 
 @Module({
@@ -85,6 +87,8 @@ import { TenantMiddleware } from './modules/tenants/middleware/tenant.middleware
     QuizzesModule,
     SuperAdminModule,
     DashboardModule,
+    ExamsModule,
+    FlashcardsModule,
     AppGraphQLModule,
   ],
   providers: [
