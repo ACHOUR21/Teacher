@@ -4,10 +4,12 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { User, Palette, Bell, Shield, Key, Building, Eye, EyeOff, Check, AlertTriangle, BellRing, BellOff } from 'lucide-react';
 import { api } from '@/lib/api';
+import { toast } from '@/hooks/useToast';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { cn } from '@/lib/utils';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { useAuthStore } from '@/stores/authStore';
 
 type Tab = 'profile' | 'general' | 'security' | 'notifications' | 'branding' | 'api';
 
@@ -122,6 +124,8 @@ export default function SettingsPage() {
     emailCourseUpdates: true, emailAssignments: true, emailLive: true,
     pushAll: true, pushMentions: true,
   });
+  const [language, setLanguage] = useState('en');
+  const [timezone, setTimezone] = useState('UTC');
 
   const { data: me } = useQuery<any>({
     queryKey: ['me'],
@@ -134,6 +138,8 @@ export default function SettingsPage() {
         bio: d.bio ?? '',
         phone: d.phone ?? '',
       });
+      if (d.language) setLanguage(d.language);
+      if (d.timezone) setTimezone(d.timezone);
       return d;
     }),
   });
@@ -161,6 +167,15 @@ export default function SettingsPage() {
   const profileMutation = useMutation({
     mutationFn: (dto: any) => api.patch('/users/me', dto).then(r => r.data.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['me'] }),
+  });
+
+  const prefsMutation = useMutation({
+    mutationFn: (dto: { language: string; timezone: string }) =>
+      api.patch('/users/me', dto).then(r => r.data.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['me'] });
+      toast.success('Preferences saved');
+    },
   });
 
   const brandMutation = useMutation({
@@ -289,7 +304,11 @@ export default function SettingsPage() {
                   <Input placeholder="Your institution name" defaultValue={me?.tenant?.name ?? ''} />
                 </Field>
                 <Field label="Default Language">
-                  <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <select
+                    value={language}
+                    onChange={e => setLanguage(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
                     <option value="en">English</option>
                     <option value="fr">French</option>
                     <option value="ar">Arabic</option>
@@ -299,15 +318,19 @@ export default function SettingsPage() {
                   </select>
                 </Field>
                 <Field label="Timezone">
-                  <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <option>UTC</option>
-                    <option>America/New_York</option>
-                    <option>America/Los_Angeles</option>
-                    <option>Europe/London</option>
-                    <option>Europe/Paris</option>
-                    <option>Asia/Dubai</option>
-                    <option>Asia/Karachi</option>
-                    <option>Africa/Algiers</option>
+                  <select
+                    value={timezone}
+                    onChange={e => setTimezone(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="UTC">UTC</option>
+                    <option value="America/New_York">America/New_York</option>
+                    <option value="America/Los_Angeles">America/Los_Angeles</option>
+                    <option value="Europe/London">Europe/London</option>
+                    <option value="Europe/Paris">Europe/Paris</option>
+                    <option value="Asia/Dubai">Asia/Dubai</option>
+                    <option value="Asia/Karachi">Asia/Karachi</option>
+                    <option value="Africa/Algiers">Africa/Algiers</option>
                   </select>
                 </Field>
                 <Field label="Academic Year Format">
@@ -317,7 +340,12 @@ export default function SettingsPage() {
                     <option>Mar – Feb (Southern Hemisphere)</option>
                   </select>
                 </Field>
-                <Button>Save Changes</Button>
+                <Button
+                  onClick={() => prefsMutation.mutate({ language, timezone })}
+                  loading={prefsMutation.isPending}
+                >
+                  Save Changes
+                </Button>
               </CardContent>
             </Card>
           )}

@@ -89,8 +89,12 @@ export default function AuditLogsPage() {
   async function handleExportCsv() {
     try {
       setExporting(true);
-      const response = await api.get('/audit/logs/export', { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const params = new URLSearchParams();
+      if (action !== 'ALL') params.set('action', action);
+      if (dateFrom) params.set('startDate', dateFrom);
+      if (dateTo) params.set('endDate', dateTo);
+      const response = await api.get(`/audit/export/csv?${params.toString()}`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'text/csv' }));
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `audit-logs-${new Date().toISOString().slice(0, 10)}.csv`);

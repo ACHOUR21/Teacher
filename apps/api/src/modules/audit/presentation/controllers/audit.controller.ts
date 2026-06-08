@@ -1,10 +1,12 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Header, Res } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import { Response } from 'express';
 import { AuditService } from '../../audit.service';
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../core/guards/roles.guard';
 import { Roles } from '../../../core/decorators/roles.decorator';
 import { TenantId } from '../../../core/decorators/tenant.decorator';
+import { CurrentUser, CurrentUserPayload } from '../../../core/decorators/current-user.decorator';
 import { UserRole, AuditAction } from '@prisma/client';
 
 @ApiTags('Audit')
@@ -70,5 +72,45 @@ export class AuditController {
       page: 1,
       limit: 1000,
     });
+  }
+
+  @Get('export/csv')
+  @Roles(UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Export audit logs as CSV' })
+  @ApiQuery({ name: 'startDate', required: false, description: 'ISO date string' })
+  @ApiQuery({ name: 'endDate', required: false, description: 'ISO date string' })
+  @ApiQuery({ name: 'action', required: false, enum: AuditAction })
+  @Header('Content-Type', 'text/csv')
+  @Header('Content-Disposition', 'attachment; filename="audit-logs.csv"')
+  async exportCsv(
+    @CurrentUser() user: CurrentUserPayload,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('action') action?: AuditAction,
+    @Res() res: Response,
+  ) {
+    const result = await this.auditService.query(user.tenantId, {
+      from: startDate ? new Date(startDate) : undefined,
+      to: endDate ? new Date(endDate) : undefined,
+      action,
+      limit: 10000,
+    });
+
+    const header = 'Timestamp,User,Action,Resource,Resource ID,IP Address,Details\n';
+    const rows = result.data.map((log: any) =>
+      [
+        new Date(log.createdAt).toISOString(),
+        log.userId || '',
+        log.action || '',
+        log.resource || '',
+        log.resourceId || '',
+        log.ipAddress || '',
+        JSON.stringify(log.details || {}).replace(/"/g, '""'),
+      ]
+        .map((v) => `"${v}"`)
+        .join(',')
+    );
+
+    res.send(header + rows.join('\n'));
   }
 }

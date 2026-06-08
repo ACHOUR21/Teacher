@@ -292,4 +292,36 @@ export class UsersService {
       achievements,
     };
   }
+
+  async exportUserData(userId: string, tenantId: string): Promise<Record<string, unknown>> {
+    const [user, profile, sessions, devices, submissions, progress, certificates, notifications, messages, achievements] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, email: true, firstName: true, lastName: true, phone: true, role: true, createdAt: true, lastLoginAt: true, emailVerified: true, avatarUrl: true },
+      }),
+      this.prisma.userProfile.findUnique({ where: { userId } }),
+      this.prisma.userSession.findMany({ where: { userId }, select: { createdAt: true, expiresAt: true }, take: 100 }),
+      this.prisma.userDevice.findMany({ where: { userId }, select: { deviceName: true, deviceType: true, lastSeenAt: true, createdAt: true } }),
+      this.prisma.submission.findMany({ where: { student: { userId } }, include: { assignment: { select: { title: true } } }, take: 200 }).catch(() => []),
+      this.prisma.courseProgress.findMany({ where: { student: { userId } }, include: { course: { select: { title: true } } }, take: 200 }).catch(() => []),
+      this.prisma.issuedCertificate.findMany({ where: { student: { userId } }, include: { template: { select: { name: true } } }, take: 50 }).catch(() => []),
+      this.prisma.notification.findMany({ where: { userId }, select: { title: true, body: true, createdAt: true }, take: 200, orderBy: { createdAt: 'desc' } }),
+      this.prisma.message.findMany({ where: { senderId: userId }, select: { content: true, createdAt: true }, take: 200, orderBy: { createdAt: 'desc' } }).catch(() => []),
+      this.prisma.userAchievement.findMany({ where: { userId }, include: { achievement: { select: { name: true, description: true } } } }).catch(() => []),
+    ]);
+
+    return {
+      exportedAt: new Date().toISOString(),
+      account: user,
+      profile,
+      sessions,
+      devices,
+      learningProgress: progress,
+      submissions,
+      certificates,
+      notifications,
+      messages,
+      achievements,
+    };
+  }
 }

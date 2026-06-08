@@ -87,6 +87,12 @@ export class UsersController {
     return this.usersService.findById(user.id, tenantId);
   }
 
+  @Get('me/export')
+  @ApiOperation({ summary: 'Export all personal data (GDPR)' })
+  exportMyData(@CurrentUser() user: CurrentUserPayload, @TenantId() tenantId: string) {
+    return this.usersService.exportUserData(user.id, tenantId);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get user by ID' })
   findById(
