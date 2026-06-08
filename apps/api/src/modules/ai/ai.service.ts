@@ -154,6 +154,7 @@ Return valid JSON: { "title": string, "questions": [{ "id": number, "type": "mul
   }
 
   async generateLesson(userId: string, tenantId: string, topic: string, gradeLevel: string, duration: number) {
+    await this.checkUsageLimit(tenantId);
     const prompt = `Create a complete lesson plan for "${topic}" for grade level "${gradeLevel}" with a ${duration}-minute duration.
 Return JSON: { "title": string, "objectives": string[], "materials": string[], "introduction": string, "mainContent": { "sections": [{ "title": string, "content": string, "activity": string, "duration": number }] }, "assessment": string, "homework": string, "differentiation": { "advanced": string, "support": string } }`;
 
@@ -170,6 +171,7 @@ Return JSON: { "title": string, "objectives": string[], "materials": string[], "
   }
 
   async generateFlashcards(userId: string, tenantId: string, topic: string, numCards: number) {
+    await this.checkUsageLimit(tenantId);
     const prompt = `Create ${numCards} flashcards for studying "${topic}".
 Return JSON: { "cards": [{ "front": string, "back": string, "hint": string|null, "difficulty": "easy"|"medium"|"hard" }] }`;
 
@@ -186,6 +188,7 @@ Return JSON: { "cards": [{ "front": string, "back": string, "hint": string|null,
   }
 
   async generateMindMap(userId: string, tenantId: string, topic: string) {
+    await this.checkUsageLimit(tenantId);
     const prompt = `Create a comprehensive mind map for "${topic}".
 Return JSON: { "central": string, "branches": [{ "label": string, "color": string, "children": [{ "label": string, "children": [{ "label": string }]|null }] }] }`;
 
@@ -202,6 +205,7 @@ Return JSON: { "central": string, "branches": [{ "label": string, "color": strin
   }
 
   async translate(userId: string, tenantId: string, text: string, targetLanguage: string, sourceLanguage = 'auto') {
+    await this.checkUsageLimit(tenantId);
     const response = await this.anthropic.messages.create({
       model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',
       max_tokens: 2000,
@@ -270,6 +274,7 @@ Return JSON: { "central": string, "branches": [{ "label": string, "color": strin
   }
 
   async generateCurriculum(userId: string, tenantId: string, subject: string, gradeLevel: string, weeks: number, objectives: string[]) {
+    await this.checkUsageLimit(tenantId);
     const prompt = `Design a ${weeks}-week curriculum for "${subject}" at ${gradeLevel} level.
 Learning objectives: ${objectives.join('; ')}.
 Return valid JSON: { "title": string, "subject": string, "gradeLevel": string, "totalWeeks": number, "weeks": [{ "week": number, "theme": string, "topics": string[], "activities": string[], "assessment": string, "resources": string[] }] }`;
@@ -288,6 +293,7 @@ Return valid JSON: { "title": string, "subject": string, "gradeLevel": string, "
   }
 
   async researchAssist(userId: string, tenantId: string, topic: string, depth: 'overview' | 'detailed' | 'academic', conversationId?: string) {
+    await this.checkUsageLimit(tenantId);
     const conversation = await this.getOrCreateConversation(userId, tenantId, AIModuleType.RESEARCH_ASSISTANT, conversationId);
     await this.saveMessage(conversation!.id, 'user', topic);
 
