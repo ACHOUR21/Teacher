@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { PrismaService } from '../database/prisma.service';
@@ -10,6 +10,15 @@ export class AiService {
   private readonly anthropic: Anthropic;
   private readonly openai: OpenAI;
 
+  private readonly MONTHLY_TOKEN_LIMITS: Record<string, number> = {
+    FREE_TRIAL: 50_000,
+    STARTER: 200_000,
+    PROFESSIONAL: 1_000_000,
+    BUSINESS: 5_000_000,
+    ENTERPRISE: Infinity,
+    LIFETIME: Infinity,
+  };
+
   constructor(private readonly prisma: PrismaService) {
     this.anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? 'placeholder-key' });
     this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? 'placeholder-key' });
@@ -18,6 +27,64 @@ export class AiService {
   private async trackUsage(tenantId: string, userId: string, module: AIModuleType, tokens: number) {
     const cost = tokens * 0.000003;
     await this.prisma.aIUsage.create({ data: { tenantId, userId, module, tokens, cost } });
+  }
+
+  private async checkUsageLimit(tenantId: string): Promise<void> {
+    const subscription = await this.prisma.subscription.findFirst({
+      where: { tenantId, status: { in: ['ACTIVE', 'TRIALING'] } },
+      select: { plan: true },
+    });
+    const plan = subscription?.plan ?? 'FREE_TRIAL';
+    const limit = this.MONTHLY_TOKEN_LIMITS[plan] ?? 50_000;
+    if (limit === Infinity) return;
+
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const usage = await this.prisma.aIUsage.aggregate({
+      where: { tenantId, createdAt: { gte: startOfMonth } },
+      _sum: { tokens: true },
+    });
+
+    const totalUsed = usage._sum.tokens ?? 0;
+    if (totalUsed >= limit) {
+      throw new ForbiddenException(
+        `Monthly AI token limit of ${limit.toLocaleString()} reached for your ${plan} plan. Upgrade to continue.`
+      );
+    }
+  }
+
+  async getAIUsageByPeriod(tenantId: string, since: Date) {
+    const [total, byModule, subscription] = await Promise.all([
+      this.prisma.aIUsage.aggregate({
+        where: { tenantId, createdAt: { gte: since } },
+        _sum: { tokens: true },
+        _count: true,
+      }),
+      this.prisma.aIUsage.groupBy({
+        by: ['module'],
+        where: { tenantId, createdAt: { gte: since } },
+        _sum: { tokens: true },
+        _count: true,
+      }),
+      this.prisma.subscription.findFirst({
+        where: { tenantId },
+        select: { plan: true },
+      }),
+    ]);
+
+    const plan = subscription?.plan ?? 'FREE_TRIAL';
+    const limit = this.MONTHLY_TOKEN_LIMITS[plan] ?? 50_000;
+
+    return {
+      plan,
+      tokensUsed: total._sum.tokens ?? 0,
+      requestCount: total._count,
+      monthlyLimit: limit === Infinity ? null : limit,
+      percentUsed: limit === Infinity ? 0 : Math.round(((total._sum.tokens ?? 0) / limit) * 100),
+      byModule,
+    };
   }
 
   private async saveMessage(conversationId: string, role: 'user' | 'assistant', content: string, tokens = 0) {
@@ -32,6 +99,7 @@ export class AiService {
   }
 
   async tutorChat(userId: string, tenantId: string, message: string, subject: string, conversationId?: string) {
+    await this.checkUsageLimit(tenantId);
     const conversation = await this.getOrCreateConversation(userId, tenantId, AIModuleType.TUTOR, conversationId);
     await this.saveMessage(conversation!.id, 'user', message);
 
@@ -53,6 +121,7 @@ export class AiService {
   }
 
   async solveHomework(userId: string, tenantId: string, problem: string, subject: string) {
+    await this.checkUsageLimit(tenantId);
     const response = await this.anthropic.messages.create({
       model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',
       max_tokens: 2048,
@@ -67,6 +136,7 @@ export class AiService {
   }
 
   async generateExam(userId: string, tenantId: string, topic: string, numQuestions: number, difficulty: string, questionTypes: string[]) {
+    await this.checkUsageLimit(tenantId);
     const prompt = `Generate a ${difficulty} level exam on "${topic}" with exactly ${numQuestions} questions.
 Include question types: ${questionTypes.join(', ')}.
 Return valid JSON: { "title": string, "questions": [{ "id": number, "type": "multiple_choice"|"short_answer"|"essay"|"true_false", "question": string, "options": string[]|null, "answer": string, "explanation": string, "points": number }] }`;

@@ -450,6 +450,44 @@ export default function SettingsPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardHeader><CardTitle>Privacy &amp; Data</CardTitle></CardHeader>
+                <CardContent>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">Download My Data</p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Export a copy of all personal data we hold about you (GDPR Article 20 — right to data portability).
+                        The download will be a JSON file.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-shrink-0"
+                      onClick={() => {
+                        const token = useAuthStore.getState().accessToken;
+                        fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me/export`, {
+                          headers: { Authorization: `Bearer ${token}` },
+                        })
+                          .then(r => r.json())
+                          .then(data => {
+                            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'my-eduai-data.json';
+                            a.click();
+                            URL.revokeObjectURL(url);
+                          });
+                      }}
+                    >
+                      Download My Data
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           )}
 
