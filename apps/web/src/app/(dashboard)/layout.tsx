@@ -10,6 +10,7 @@ import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/utils';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { useNotificationSocket } from '@/hooks/useNotificationSocket';
+import { CommandPalette } from '@/components/search/CommandPalette';
 
 export default function DashboardLayout({
   children,
@@ -41,6 +42,7 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      <CommandPalette />
       {/* Desktop sidebar */}
       <div className="hidden lg:block relative">
         <Sidebar />

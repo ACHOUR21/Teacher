@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
 import { CertificatesService } from '../certificates/certificates.service';
+import { SearchService } from '../search/search.service';
 
 export interface GeneratedQuestion {
   type: 'multiple_choice' | 'true_false' | 'short_answer' | 'essay';
@@ -25,10 +26,11 @@ export class ExamsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly certificates: CertificatesService,
+    private readonly search: SearchService,
   ) {}
 
   async saveExam(tenantId: string, userId: string, dto: SaveExamDto) {
-    return this.prisma.exam.create({
+    const exam = await this.prisma.exam.create({
       data: {
         tenantId,
         createdBy: userId,
@@ -51,6 +53,8 @@ export class ExamsService {
       },
       include: { questions: { orderBy: { order: 'asc' } } },
     });
+    this.search.indexExam({ id: exam.id, title: exam.title, subject: exam.subject, topic: exam.topic, difficulty: exam.difficulty, tenantId });
+    return exam;
   }
 
   async listExams(tenantId: string, options: { published?: boolean; createdBy?: string } = {}) {
@@ -92,7 +96,9 @@ export class ExamsService {
     const exam = await this.prisma.exam.findUnique({ where: { id: examId } });
     if (!exam) throw new NotFoundException('Exam not found');
     if (exam.createdBy !== userId) throw new ForbiddenException('Only the creator can publish this exam');
-    return this.prisma.exam.update({ where: { id: examId }, data: { isPublished: true } });
+    const updated = await this.prisma.exam.update({ where: { id: examId }, data: { isPublished: true } });
+    this.search.indexExam({ id: updated.id, title: updated.title, subject: updated.subject, topic: updated.topic, difficulty: updated.difficulty, tenantId: updated.tenantId, isPublished: true });
+    return updated;
   }
 
   async deleteExam(examId: string, userId: string) {
@@ -100,6 +106,7 @@ export class ExamsService {
     if (!exam) throw new NotFoundException('Exam not found');
     if (exam.createdBy !== userId) throw new ForbiddenException('Only the creator can delete this exam');
     await this.prisma.exam.delete({ where: { id: examId } });
+    this.search.deleteDocument('exams', examId);
   }
 
   // ------------------------------------------------------------------ attempts

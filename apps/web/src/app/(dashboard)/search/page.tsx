@@ -4,7 +4,7 @@ import { Suspense, useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { Search, BookOpen, Users, X, Filter } from 'lucide-react';
+import { Search, BookOpen, Users, X, Filter, FileQuestion } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -42,6 +42,21 @@ interface UserHit {
 
 interface UserSearchResponse {
   hits: UserHit[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+interface ExamHit {
+  id: string;
+  title: string;
+  subject: string;
+  topic?: string;
+  difficulty: string;
+}
+
+interface ExamSearchResponse {
+  hits: ExamHit[];
   total: number;
   page: number;
   limit: number;
@@ -195,10 +210,11 @@ function SearchInner() {
   const initialQ = searchParams.get('q') ?? '';
   const [inputValue, setInputValue] = useState(initialQ);
   const [debouncedQ, setDebouncedQ] = useState(initialQ);
-  const [activeTab, setActiveTab] = useState<'courses' | 'people'>('courses');
+  const [activeTab, setActiveTab] = useState<'courses' | 'people' | 'exams'>('courses');
   const [category, setCategory] = useState('All');
   const [level, setLevel] = useState('All');
   const [role, setRole] = useState('All');
+  const [difficulty, setDifficulty] = useState('All');
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -272,8 +288,25 @@ function SearchInner() {
     staleTime: 30_000,
   });
 
+  // Exam search
+  const {
+    data: examData,
+    isLoading: examsLoading,
+  } = useQuery({
+    queryKey: ['search-exams', q, difficulty],
+    queryFn: async () => {
+      const params: Record<string, string> = { q, page: '1', limit: '20' };
+      if (difficulty !== 'All') params.difficulty = difficulty.toLowerCase();
+      const res = await api.get<ExamSearchResponse>('/search/exams', { params });
+      return res.data;
+    },
+    enabled: queryEnabled && activeTab === 'exams',
+    staleTime: 30_000,
+  });
+
   const courseCount = courseData?.total ?? 0;
   const peopleCount = userData?.total ?? 0;
+  const examCount = examData?.total ?? 0;
 
   // ---------------------------------------------------------------------------
   // Empty state (no query)
@@ -332,6 +365,14 @@ function SearchInner() {
           label="Courses"
           count={queryEnabled ? courseCount : undefined}
           loading={coursesLoading || coursesFetching}
+        />
+        <TabButton
+          active={activeTab === 'exams'}
+          onClick={() => setActiveTab('exams')}
+          icon={<FileQuestion className="h-4 w-4" />}
+          label="Exams"
+          count={queryEnabled && activeTab === 'exams' ? examCount : undefined}
+          loading={examsLoading}
         />
         {canSeePeople && (
           <TabButton
@@ -463,7 +504,60 @@ function SearchInner() {
           )}
         </div>
       )}
+
+      {/* Exams tab */}
+      {activeTab === 'exams' && (
+        <div className="space-y-5">
+          <div className="flex flex-wrap gap-3 items-center">
+            <Filter className="h-4 w-4 text-gray-400 shrink-0" />
+            <div className="flex gap-2">
+              {['All', 'Easy', 'Medium', 'Hard'].map((d) => (
+                <button key={d} onClick={() => setDifficulty(d)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                    difficulty === d ? 'border-blue-500 bg-blue-50 text-blue-700' : 'border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50'
+                  }`}>
+                  {d}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {examsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              <SkeletonCard /><SkeletonCard /><SkeletonCard />
+            </div>
+          ) : examData?.hits?.length ? (
+            <>
+              <p className="text-sm text-gray-500">{examCount} {examCount === 1 ? 'exam' : 'exams'} found</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {examData.hits.map((hit) => (
+                  <ExamCard key={hit.id} hit={hit} />
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <FileQuestion className="h-10 w-10 text-gray-300 mb-3" />
+              <p className="font-medium text-gray-700">No exams found for &ldquo;{q}&rdquo;</p>
+              <p className="text-sm text-gray-400 mt-1">Try different keywords or adjust the difficulty filter</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
+  );
+}
+
+function ExamCard({ hit }: { hit: ExamHit }) {
+  const DIFF_COLOR: Record<string, string> = { easy: 'bg-green-100 text-green-700', medium: 'bg-yellow-100 text-yellow-700', hard: 'bg-red-100 text-red-700' };
+  return (
+    <Link href={`/exams/${hit.id}`} className="bg-white border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow block">
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <h3 className="font-semibold text-gray-900 text-sm">{hit.title}</h3>
+        <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 capitalize ${DIFF_COLOR[hit.difficulty] ?? 'bg-gray-100 text-gray-600'}`}>{hit.difficulty}</span>
+      </div>
+      <p className="text-xs text-gray-500">{hit.subject}{hit.topic ? ` · ${hit.topic}` : ''}</p>
+    </Link>
   );
 }
 
