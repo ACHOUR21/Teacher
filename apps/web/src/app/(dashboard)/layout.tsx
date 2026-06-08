@@ -9,6 +9,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 import { cn } from '@/lib/utils';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { useNotificationSocket } from '@/hooks/useNotificationSocket';
 
 export default function DashboardLayout({
   children,
@@ -18,6 +19,8 @@ export default function DashboardLayout({
   const router = useRouter();
   const { isAuthenticated, _hasHydrated } = useAuthStore();
   const { sidebarOpen, setSidebarOpen } = useUIStore();
+
+  useNotificationSocket();
 
   useEffect(() => {
     if (_hasHydrated && !isAuthenticated) {
