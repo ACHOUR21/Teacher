@@ -1,9 +1,13 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { PluginSandboxService } from './application/plugin-sandbox.service';
 
 @Injectable()
 export class PluginsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly sandbox: PluginSandboxService,
+  ) {}
 
   async listMarketplace(tenantId: string, query: { search?: string; category?: string; page?: number; limit?: number }) {
     const { search, category, page = 1, limit = 20 } = query;
@@ -38,6 +42,9 @@ export class PluginsService {
   async installPlugin(tenantId: string, pluginId: string, config: Record<string, any> = {}) {
     const plugin = await this.prisma.plugin.findUnique({ where: { id: pluginId } });
     if (!plugin) throw new NotFoundException('Plugin not found');
+
+    // Validate manifest before allowing installation
+    this.sandbox.validateManifest(plugin.manifest);
 
     const existing = await this.prisma.installedPlugin.findUnique({
       where: { tenantId_pluginId: { tenantId, pluginId } },
@@ -96,6 +103,18 @@ export class PluginsService {
       data: { config },
       include: { plugin: true },
     });
+  }
+
+  async getPluginSandboxMeta(pluginId: string) {
+    const plugin = await this.prisma.plugin.findUnique({ where: { id: pluginId } });
+    if (!plugin) throw new NotFoundException('Plugin not found');
+    const manifest = this.sandbox.validateManifest(plugin.manifest);
+    return {
+      sandbox: this.sandbox.buildSandboxAttribute(manifest),
+      csp: this.sandbox.buildCsp(manifest),
+      permissions: manifest.permissions,
+      entrypoint: manifest.entrypoint,
+    };
   }
 
   async getPluginCategories() {

@@ -85,4 +85,10 @@ export class PluginsController {
   ) {
     return this.pluginsService.updatePluginConfig(req.tenantId, pluginId, body.config);
   }
+
+  @Get(':pluginId/sandbox-meta')
+  @ApiOperation({ summary: 'Get sandbox metadata (CSP, sandbox flags, permissions) for a plugin' })
+  getSandboxMeta(@Param('pluginId') pluginId: string) {
+    return this.pluginsService.getPluginSandboxMeta(pluginId);
+  }
 }

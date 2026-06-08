@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Puzzle, Download, Trash2, ToggleLeft, ToggleRight, Search, Star, Package } from 'lucide-react';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { PluginPermissionList, type PluginPermission } from '@/components/plugins/PluginPermissionBadge';
 
 export default function PluginsPage() {
   const [tab, setTab] = useState<'marketplace' | 'installed'>('marketplace');
@@ -126,7 +127,15 @@ export default function PluginsPage() {
                       {plugin.rating?.toFixed(1) ?? '—'}
                     </div>
                   </div>
-                  <p className="text-xs text-gray-500 leading-relaxed mb-4 line-clamp-2">{plugin.description}</p>
+                  <p className="text-xs text-gray-500 leading-relaxed mb-3 line-clamp-2">{plugin.description}</p>
+                  {Array.isArray((plugin.manifest as any)?.permissions) && (plugin.manifest as any).permissions.length > 0 && (
+                    <div className="mb-3">
+                      <PluginPermissionList
+                        permissions={(plugin.manifest as any).permissions as PluginPermission[]}
+                        maxVisible={2}
+                      />
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1 text-xs text-gray-400">
                       <Download className="h-3.5 w-3.5" />
