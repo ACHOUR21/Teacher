@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../database/prisma.service';
+import { CertificatesService } from '../certificates/certificates.service';
 
 export interface GeneratedQuestion {
   type: 'multiple_choice' | 'true_false' | 'short_answer' | 'essay';
@@ -21,7 +22,10 @@ export interface SaveExamDto {
 
 @Injectable()
 export class ExamsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly certificates: CertificatesService,
+  ) {}
 
   async saveExam(tenantId: string, userId: string, dto: SaveExamDto) {
     return this.prisma.exam.create({
@@ -144,10 +148,27 @@ export class ExamsService {
       }
     }
 
-    return this.prisma.examAttempt.update({
+    const result = await this.prisma.examAttempt.update({
       where: { id: attemptId },
       data: { answers, score, maxScore, submittedAt: new Date() },
     });
+
+    // Auto-issue certificate if score >= 70% and a template exists for this exam's subject
+    if (maxScore > 0 && score / maxScore >= 0.7) {
+      const template = await this.prisma.certificateTemplate.findFirst({
+        where: { course: { title: attempt.exam.subject } },
+      });
+      if (template) {
+        this.certificates.issueToUser(userId, template.id, {
+          source: 'exam',
+          examId: attempt.examId,
+          score,
+          maxScore,
+        }).catch(() => { /* non-blocking */ });
+      }
+    }
+
+    return result;
   }
 
   async getAttemptResult(attemptId: string, userId: string) {

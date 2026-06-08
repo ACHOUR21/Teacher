@@ -93,7 +93,7 @@ function IssuedCertificatesSection() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['certificates'],
-    queryFn: () => api.get('/certificates/my').then(r => r.data.data),
+    queryFn: () => api.get('/certificates/my').then(r => r.data.data ?? r.data),
   });
 
   const certificates: IssuedCertificate[] = ((data as IssuedCertificate[]) ?? []).filter(c => {
@@ -194,14 +194,14 @@ function IssuedCertificateRow({ cert }: { cert: IssuedCertificate }) {
           >
             <Download className="h-3.5 w-3.5" /> Download
           </a>
-          {cert.verifyUrl && (
+          {cert.verifyCode && (
             <a
-              href={cert.verifyUrl}
+              href={`/verify/${cert.verifyCode}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 text-xs text-green-600 hover:text-green-700 font-medium"
             >
-              <ExternalLink className="h-3.5 w-3.5" /> Verify
+              <Shield className="h-3.5 w-3.5" /> Verify
             </a>
           )}
         </div>
@@ -218,7 +218,7 @@ function TemplatesSection() {
 
   const { data, isLoading } = useQuery({
     queryKey: ['certificate-templates'],
-    queryFn: () => api.get('/certificates/templates').then(r => r.data.data),
+    queryFn: () => api.get('/certificates/templates').then(r => r.data.data ?? r.data),
   });
 
   const templates: CertificateTemplate[] = (data as CertificateTemplate[]) ?? [];
@@ -727,14 +727,14 @@ function CertificateCard({ cert }: { cert: IssuedCertificate }) {
           >
             <Download className="h-3.5 w-3.5" /> Download
           </a>
-          {cert.verifyUrl && (
+          {cert.verifyCode && (
             <a
-              href={cert.verifyUrl}
+              href={`/verify/${cert.verifyCode}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-blue-600 rounded-lg text-xs font-medium text-white hover:bg-blue-700 transition-colors"
             >
-              <ExternalLink className="h-3.5 w-3.5" /> Verify
+              <Shield className="h-3.5 w-3.5" /> Verify
             </a>
           )}
         </div>

@@ -31,6 +31,7 @@ model Tenant {
   aiConversations AIConversation[]
   exams           Exam[]
   flashcardDecks  FlashcardDeck[]
+  certTemplates   CertificateTemplate[]
 }
 
 // === USERS & AUTH ===
@@ -64,10 +65,11 @@ model User {
   achievements             UserAchievement[]
   gamificationEvents       GamificationEvent[]
   aiConversations          AIConversation[]
-  createdExams             Exam[]
+  createdExams             Exam[]             @relation("createdExams")
   flashcardDecks           FlashcardDeck[]
   flashcardReviews         FlashcardReview[]
   examAttempts             ExamAttempt[]
+  issuedCertificates       IssuedCertificate[] @relation("issuedCertificates")
   auditLogs                AuditLog[]
   liveParticipants         LiveParticipant[]
   conversationParticipants ConversationParticipant[]
@@ -503,23 +505,29 @@ model LiveParticipant {
 // === CERTIFICATES ===
 model CertificateTemplate {
   id          String             @id @default(cuid())
+  tenantId    String?
   courseId    String?
   name        String
   design      Json
   fields      Json
   course      Course?            @relation(fields: [courseId], references: [id])
+  tenant      Tenant?            @relation(fields: [tenantId], references: [id])
   issued      IssuedCertificate[]
+  @@index([tenantId])
 }
 
 model IssuedCertificate {
   id           String              @id @default(cuid())
   templateId   String
   studentId    String
+  userId       String?
   verifyCode   String              @unique @default(cuid())
   metadata     Json                @default("{}")
   issuedAt     DateTime            @default(now())
   template     CertificateTemplate @relation(fields: [templateId], references: [id])
   student      Student             @relation(fields: [studentId], references: [id])
+  user         User?               @relation("issuedCertificates", fields: [userId], references: [id])
+  @@index([userId])
 }
 
 // === NOTIFICATIONS ===
