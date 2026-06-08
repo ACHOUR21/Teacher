@@ -7,6 +7,17 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/useToast';
 import { parseErrorMessage } from '@/lib/utils';
 
+// Stable device fingerprint stored in sessionStorage
+function getDeviceId(): string {
+  const key = 'eduai_device_id';
+  let id = sessionStorage.getItem(key);
+  if (!id) {
+    id = crypto.randomUUID();
+    sessionStorage.setItem(key, id);
+  }
+  return id;
+}
+
 export default function TwoFactorPage() {
   const { verifyMfa, isLoading } = useAuth();
   const [code, setCode] = useState(['', '', '', '', '', '']);
@@ -14,20 +25,19 @@ export default function TwoFactorPage() {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const [recoveryMode, setRecoveryMode] = useState(false);
   const [recoveryCode, setRecoveryCode] = useState('');
+  const [trustDevice, setTrustDevice] = useState(false);
 
   useEffect(() => {
     inputRefs.current[0]?.focus();
   }, []);
 
   const handleChange = (index: number, value: string) => {
-    // Only allow digits
     const sanitized = value.replace(/\D/g, '').slice(-1);
     const newCode = [...code];
     newCode[index] = sanitized;
     setCode(newCode);
     setError('');
 
-    // Auto-advance to next input
     if (sanitized && index < 5) {
       inputRefs.current[index + 1]?.focus();
     }
@@ -46,35 +56,32 @@ export default function TwoFactorPage() {
         setCode(newCode);
       }
     }
-    if (e.key === 'ArrowLeft' && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-    if (e.key === 'ArrowRight' && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
+    if (e.key === 'ArrowLeft' && index > 0) inputRefs.current[index - 1]?.focus();
+    if (e.key === 'ArrowRight' && index < 5) inputRefs.current[index + 1]?.focus();
   };
 
   const handlePaste = (e: React.ClipboardEvent) => {
     e.preventDefault();
-    const pasted = e.clipboardData
-      .getData('text')
-      .replace(/\D/g, '')
-      .slice(0, 6);
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
     if (pasted.length === 6) {
-      const digits = pasted.split('');
-      setCode(digits);
+      setCode(pasted.split(''));
       inputRefs.current[5]?.focus();
     }
   };
 
+  const deviceOpts = trustDevice
+    ? { trustDevice: true, deviceId: getDeviceId(), deviceName: navigator.userAgent.slice(0, 100) }
+    : undefined;
+
   const handleRecoverySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!recoveryCode.trim()) return;
+    const trimmed = recoveryCode.trim().toUpperCase();
+    if (!trimmed) return;
     try {
-      await verifyMfa(recoveryCode.trim());
+      await verifyMfa(trimmed, deviceOpts);
     } catch (err) {
       const message = parseErrorMessage(err);
-      setError(message || 'Invalid recovery code.');
+      setError(message || 'Invalid backup code.');
       toast.error('Verification failed', message);
     }
   };
@@ -87,7 +94,7 @@ export default function TwoFactorPage() {
       return;
     }
     try {
-      await verifyMfa(fullCode);
+      await verifyMfa(fullCode, deviceOpts);
     } catch (err) {
       const message = parseErrorMessage(err);
       setError(message || 'Invalid code. Please try again.');
@@ -120,30 +127,45 @@ export default function TwoFactorPage() {
           Two-factor authentication
         </h1>
         <p className="text-muted-foreground mt-2 text-sm text-center leading-relaxed">
-          Enter the 6-digit code from your authenticator app to complete sign in.
+          {recoveryMode
+            ? 'Enter one of your backup codes to access your account.'
+            : 'Enter the 6-digit code from your authenticator app.'}
         </p>
       </div>
 
       {recoveryMode ? (
         <form onSubmit={handleRecoverySubmit} noValidate>
           <div className="mb-6">
-            <label className="block text-sm font-medium text-foreground mb-2">Recovery Code</label>
+            <label className="block text-sm font-medium text-foreground mb-2">Backup Code</label>
             <input
               type="text"
-              placeholder="XXXX-XXXX-XXXX"
+              placeholder="e.g. A3BX9QZP"
               value={recoveryCode}
               onChange={(e) => { setRecoveryCode(e.target.value); setError(''); }}
-              className="w-full h-10 px-3 rounded-md border-2 border-input bg-background text-sm font-mono focus:outline-none focus:border-primary"
+              className="w-full h-10 px-3 rounded-md border-2 border-input bg-background text-sm font-mono uppercase tracking-widest focus:outline-none focus:border-primary"
               autoFocus
             />
+            <p className="mt-1.5 text-xs text-muted-foreground">Each backup code can only be used once.</p>
           </div>
           {error && <p className="text-xs text-destructive text-center mb-4">{error}</p>}
+
+          {/* Trust device */}
+          <label className="flex items-center gap-2 mb-5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={trustDevice}
+              onChange={e => setTrustDevice(e.target.checked)}
+              className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
+            />
+            <span className="text-sm text-muted-foreground">Trust this device for 30 days</span>
+          </label>
+
           <button
             type="submit"
             disabled={isLoading || !recoveryCode.trim()}
             className="w-full flex items-center justify-center gap-2 h-10 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50 transition-colors"
           >
-            {isLoading ? 'Verifying...' : <>Verify recovery code <ArrowRight className="h-4 w-4" /></>}
+            {isLoading ? 'Verifying...' : <>Verify backup code <ArrowRight className="h-4 w-4" /></>}
           </button>
         </form>
       ) : (
@@ -175,6 +197,17 @@ export default function TwoFactorPage() {
             <p className="text-xs text-destructive text-center mb-4">{error}</p>
           )}
 
+          {/* Trust device */}
+          <label className="flex items-center gap-2 mb-5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={trustDevice}
+              onChange={e => setTrustDevice(e.target.checked)}
+              className="h-4 w-4 rounded border-input text-primary focus:ring-primary"
+            />
+            <span className="text-sm text-muted-foreground">Trust this device for 30 days</span>
+          </label>
+
           <button
             type="submit"
             disabled={isLoading || !isComplete}
@@ -190,7 +223,7 @@ export default function TwoFactorPage() {
               </>
             ) : (
               <>
-                Verify & sign in
+                Verify &amp; sign in
                 <ArrowRight className="h-4 w-4" />
               </>
             )}
@@ -210,7 +243,7 @@ export default function TwoFactorPage() {
           <>
             <p className="text-xs text-muted-foreground">Lost access to your authenticator?</p>
             <button onClick={() => { setRecoveryMode(true); setError(''); }} className="text-xs text-primary hover:underline">
-              Use a recovery code
+              Use a backup code
             </button>
           </>
         )}

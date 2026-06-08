@@ -31,6 +31,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   _hasHydrated: boolean;
+  mfaChallengeToken: string | null;
 }
 
 interface AuthActions {
@@ -40,6 +41,7 @@ interface AuthActions {
   setAccessToken: (token: string) => void;
   setLoading: (loading: boolean) => void;
   setHasHydrated: (v: boolean) => void;
+  setMfaChallengeToken: (token: string | null) => void;
 }
 
 export const useAuthStore = create<AuthState & AuthActions>()(
@@ -50,11 +52,13 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       isAuthenticated: false,
       isLoading: false,
       _hasHydrated: false,
+      mfaChallengeToken: null,
 
       setHasHydrated: (v) => set({ _hasHydrated: v }),
+      setMfaChallengeToken: (token) => set({ mfaChallengeToken: token }),
 
       login: (user, accessToken) => {
-        set({ user, accessToken, isAuthenticated: true, isLoading: false });
+        set({ user, accessToken, isAuthenticated: true, isLoading: false, mfaChallengeToken: null });
       },
 
       logout: () => {
@@ -63,6 +67,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
           accessToken: null,
           isAuthenticated: false,
           isLoading: false,
+          mfaChallengeToken: null,
         });
       },
 

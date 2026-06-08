@@ -2,7 +2,9 @@ import {
   Controller,
   Post,
   Get,
+  Delete,
   Body,
+  Param,
   Request,
   HttpCode,
   HttpStatus,
@@ -141,10 +143,12 @@ export class AuthController {
     return user;
   }
 
+  // ── MFA ────────────────────────────────────────────────────────────────────
+
   @UseGuards(JwtAuthGuard)
   @Post('mfa/setup')
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Initialize MFA setup, returns QR code' })
+  @ApiOperation({ summary: 'Initialize MFA setup, returns QR code and backup codes' })
   async setupMfa(@CurrentUser('id') userId: string) {
     return this.authService.setupMfa(userId);
   }
@@ -153,13 +157,12 @@ export class AuthController {
   @Post('mfa/verify')
   @HttpCode(HttpStatus.OK)
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Verify TOTP token to enable MFA' })
+  @ApiOperation({ summary: 'Verify TOTP token to enable MFA; returns final backup codes' })
   async verifyMfa(
     @CurrentUser('id') userId: string,
     @Body() dto: VerifyMfaDto,
   ) {
-    await this.authService.verifyAndEnableMfa(userId, dto.token);
-    return { message: 'MFA enabled successfully' };
+    return this.authService.verifyAndEnableMfa(userId, dto.token);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -178,10 +181,53 @@ export class AuthController {
   @Public()
   @Post('mfa/challenge')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Complete MFA challenge after login' })
-  async mfaChallenge(@Body() body: { challengeToken: string; token: string }) {
-    return this.authService.verifyMfaLogin(body.challengeToken, body.token);
+  @ApiOperation({ summary: 'Complete MFA challenge after login (TOTP or backup code)' })
+  async mfaChallenge(
+    @Body() body: { challengeToken: string; code: string; trustDevice?: boolean; deviceId?: string; deviceName?: string },
+  ) {
+    return this.authService.verifyMfaLogin(body.challengeToken, body.code, {
+      trustDevice: body.trustDevice,
+      deviceId: body.deviceId,
+      deviceName: body.deviceName,
+    });
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('mfa/backup-codes/regenerate')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Regenerate MFA backup codes (invalidates old codes)' })
+  async regenerateBackupCodes(
+    @CurrentUser('id') userId: string,
+    @Body() body: { password: string },
+  ) {
+    return this.authService.regenerateBackupCodes(userId, body.password);
+  }
+
+  // ── Devices ────────────────────────────────────────────────────────────────
+
+  @UseGuards(JwtAuthGuard)
+  @Get('devices')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'List all devices for the current user' })
+  async listDevices(@CurrentUser('id') userId: string) {
+    return this.authService.getUserDevices(userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('devices/:deviceId/trust')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Revoke MFA trust for a device' })
+  async revokeTrust(
+    @CurrentUser('id') userId: string,
+    @Param('deviceId') deviceId: string,
+  ) {
+    await this.authService.revokeTrustedDevice(userId, deviceId);
+    return { message: 'Device trust revoked' };
+  }
+
+  // ── Password & Email ───────────────────────────────────────────────────────
 
   @Public()
   @Post('forgot-password')

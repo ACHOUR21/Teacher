@@ -182,8 +182,9 @@ export class AuthService {
       data: { lastLoginAt: new Date() },
     });
 
+    let deviceTrusted = false;
     if (cmd.deviceId) {
-      await this.prisma.userDevice.upsert({
+      const device = await this.prisma.userDevice.upsert({
         where: { deviceId: cmd.deviceId },
         update: { lastSeenAt: new Date(), isActive: true },
         create: {
@@ -193,9 +194,11 @@ export class AuthService {
           lastSeenAt: new Date(),
         },
       });
+      deviceTrusted =
+        device.mfaTrusted && device.mfaTrustedUntil != null && device.mfaTrustedUntil > new Date();
     }
 
-    if (user.mfaEnabled) {
+    if (user.mfaEnabled && !deviceTrusted) {
       const mfaChallengeToken = uuidv4();
       await this.redis.set(`mfa:challenge:${mfaChallengeToken}`, user.id, 300);
       return {
@@ -225,7 +228,7 @@ export class AuthService {
         tenantId: user.tenantId,
         tenantName: user.tenant?.name ?? '',
         tenantSlug: user.tenant?.slug ?? '',
-        mfaEnabled: false,
+        mfaEnabled: user.mfaEnabled,
         avatarUrl: user.avatarUrl ?? undefined,
       }),
       tokens,
@@ -289,20 +292,15 @@ export class AuthService {
     await this.redis.set(tempKey, secret.base32, 600);
 
     const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url || '');
-    const backupCodes = Array.from({ length: 8 }, () =>
-      Math.random().toString(36).substring(2, 10).toUpperCase(),
-    );
+    const backupCodes = this.generatePlainBackupCodes();
 
+    // Store plain backup codes temporarily; they're hashed and persisted in verifyAndEnableMfa
     await this.redis.set(`mfa:backup:${userId}`, JSON.stringify(backupCodes), 600);
 
-    return {
-      secret: secret.base32,
-      qrCodeUrl,
-      backupCodes,
-    };
+    return { secret: secret.base32, qrCodeUrl, backupCodes };
   }
 
-  async verifyAndEnableMfa(userId: string, token: string): Promise<void> {
+  async verifyAndEnableMfa(userId: string, token: string): Promise<{ backupCodes: string[] }> {
     const secret = await this.redis.get(`mfa:setup:${userId}`);
     if (!secret) throw new BadRequestException('MFA setup session expired. Please restart setup.');
 
@@ -315,33 +313,60 @@ export class AuthService {
 
     if (!isValid) throw new BadRequestException('Invalid MFA token');
 
+    // Retrieve the plain backup codes that were generated in setupMfa
+    const storedRaw = await this.redis.get(`mfa:backup:${userId}`);
+    const plainCodes: string[] = storedRaw ? JSON.parse(storedRaw) : this.generatePlainBackupCodes();
+
+    // Hash backup codes before persisting
+    const hashedCodes = await Promise.all(plainCodes.map((c) => bcrypt.hash(c, this.BCRYPT_ROUNDS)));
+
     await this.prisma.user.update({
       where: { id: userId },
-      data: { mfaEnabled: true, mfaSecret: secret },
+      data: { mfaEnabled: true, mfaSecret: secret, mfaBackupCodes: hashedCodes },
     });
 
     await this.redis.del(`mfa:setup:${userId}`);
+    await this.redis.del(`mfa:backup:${userId}`);
     this.logger.log(`MFA enabled for user ${userId}`);
+
+    // Return plain codes once so the user can write them down
+    return { backupCodes: plainCodes };
   }
 
-  async verifyMfaLogin(challengeToken: string, totpToken: string): Promise<AuthTokens> {
+  async verifyMfaLogin(
+    challengeToken: string,
+    code: string,
+    opts?: { trustDevice?: boolean; deviceId?: string; deviceName?: string },
+  ): Promise<AuthTokens & { deviceTrusted?: boolean }> {
     const userId = await this.redis.get(`mfa:challenge:${challengeToken}`);
     if (!userId) throw new UnauthorizedException('MFA challenge expired');
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user || !user.mfaSecret) throw new UnauthorizedException('MFA not configured');
 
-    const isValid = speakeasy.totp.verify({
+    // Try TOTP first
+    const totpValid = speakeasy.totp.verify({
       secret: user.mfaSecret,
       encoding: 'base32',
-      token: totpToken,
+      token: code,
       window: 2,
     });
 
-    if (!isValid) throw new UnauthorizedException('Invalid MFA token');
+    if (!totpValid) {
+      // Fall back to backup code redemption
+      const matched = await this.redeemBackupCode(user.id, code, user.mfaBackupCodes);
+      if (!matched) throw new UnauthorizedException('Invalid MFA code');
+    }
 
     await this.redis.del(`mfa:challenge:${challengeToken}`);
-    return this.generateTokens(user);
+
+    // Optionally trust the device for 30 days
+    if (opts?.trustDevice && opts.deviceId) {
+      await this.trustDevice(userId, opts.deviceId, opts.deviceName, 30);
+    }
+
+    const tokens = await this.generateTokens(user);
+    return { ...tokens, deviceTrusted: opts?.trustDevice ?? false };
   }
 
   async disableMfa(userId: string, token: string, password: string): Promise<void> {
@@ -363,7 +388,75 @@ export class AuthService {
 
     await this.prisma.user.update({
       where: { id: userId },
-      data: { mfaEnabled: false, mfaSecret: null },
+      data: { mfaEnabled: false, mfaSecret: null, mfaBackupCodes: [] },
+    });
+
+    // Revoke trust on all devices
+    await this.prisma.userDevice.updateMany({
+      where: { userId },
+      data: { mfaTrusted: false, mfaTrustedUntil: null },
+    });
+  }
+
+  async regenerateBackupCodes(userId: string, password: string): Promise<{ backupCodes: string[] }> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+    if (!user.mfaEnabled) throw new BadRequestException('MFA is not enabled');
+
+    const passwordValid = await bcrypt.compare(password, user.passwordHash);
+    if (!passwordValid) throw new UnauthorizedException('Invalid password');
+
+    const plainCodes = this.generatePlainBackupCodes();
+    const hashedCodes = await Promise.all(plainCodes.map((c) => bcrypt.hash(c, this.BCRYPT_ROUNDS)));
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { mfaBackupCodes: hashedCodes },
+    });
+
+    this.logger.log(`Backup codes regenerated for user ${userId}`);
+    return { backupCodes: plainCodes };
+  }
+
+  async trustDevice(userId: string, deviceId: string, deviceName?: string, days = 30): Promise<void> {
+    const trustedUntil = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+    await this.prisma.userDevice.upsert({
+      where: { deviceId },
+      update: { mfaTrusted: true, mfaTrustedUntil: trustedUntil, lastSeenAt: new Date() },
+      create: {
+        userId,
+        deviceId,
+        deviceName: deviceName ?? 'Unknown Device',
+        mfaTrusted: true,
+        mfaTrustedUntil: trustedUntil,
+        lastSeenAt: new Date(),
+      },
+    });
+    this.logger.log(`Device ${deviceId} trusted for user ${userId} until ${trustedUntil.toISOString()}`);
+  }
+
+  async revokeTrustedDevice(userId: string, deviceId: string): Promise<void> {
+    const device = await this.prisma.userDevice.findUnique({ where: { deviceId } });
+    if (!device || device.userId !== userId) throw new NotFoundException('Device not found');
+    await this.prisma.userDevice.update({
+      where: { deviceId },
+      data: { mfaTrusted: false, mfaTrustedUntil: null },
+    });
+  }
+
+  async getUserDevices(userId: string) {
+    return this.prisma.userDevice.findMany({
+      where: { userId, isActive: true },
+      select: {
+        id: true,
+        deviceId: true,
+        deviceName: true,
+        lastSeenAt: true,
+        mfaTrusted: true,
+        mfaTrustedUntil: true,
+        createdAt: true,
+      },
+      orderBy: { lastSeenAt: 'desc' },
     });
   }
 
@@ -429,6 +522,30 @@ export class AuthService {
     // Invalidate all sessions
     await this.prisma.userSession.deleteMany({ where: { userId } });
     this.logger.log(`Password reset for user ${userId}`);
+  }
+
+  private generatePlainBackupCodes(): string[] {
+    return Array.from({ length: 8 }, () =>
+      Math.random().toString(36).substring(2, 10).toUpperCase(),
+    );
+  }
+
+  private async redeemBackupCode(userId: string, plainCode: string, hashedCodes: string[]): Promise<boolean> {
+    for (let i = 0; i < hashedCodes.length; i++) {
+      const match = await bcrypt.compare(plainCode.toUpperCase(), hashedCodes[i]);
+      if (match) {
+        // Remove the used code
+        const remaining = [...hashedCodes];
+        remaining.splice(i, 1);
+        await this.prisma.user.update({
+          where: { id: userId },
+          data: { mfaBackupCodes: remaining },
+        });
+        this.logger.warn(`Backup code used for user ${userId}, ${remaining.length} remaining`);
+        return true;
+      }
+    }
+    return false;
   }
 
   private async generateTokens(user: {

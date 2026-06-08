@@ -2,7 +2,10 @@
 
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { User, Palette, Bell, Shield, Key, Building, Eye, EyeOff, Check, AlertTriangle, BellRing, BellOff } from 'lucide-react';
+import {
+  User, Palette, Bell, Shield, Key, Building, Eye, EyeOff, Check,
+  AlertTriangle, BellRing, BellOff, Smartphone, Copy, Download, RefreshCw, Trash2, Lock,
+} from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from '@/hooks/useToast';
 import { Button } from '@/components/ui/Button';
@@ -112,6 +115,328 @@ function PushNotificationToggle() {
   );
 }
 
+type MfaStep = 'idle' | 'qr' | 'verify' | 'codes';
+
+function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
+  const qc = useQueryClient();
+  const [step, setStep] = useState<MfaStep>('idle');
+  const [qrData, setQrData] = useState<{ qrCodeUrl: string; secret: string } | null>(null);
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [totpInput, setTotpInput] = useState('');
+  const [totpError, setTotpError] = useState('');
+  const [disableToken, setDisableToken] = useState('');
+  const [disablePassword, setDisablePassword] = useState('');
+  const [disableError, setDisableError] = useState('');
+  const [showDisable, setShowDisable] = useState(false);
+  const [regenPassword, setRegenPassword] = useState('');
+  const [showRegen, setShowRegen] = useState(false);
+  const [regenCodes, setRegenCodes] = useState<string[]>([]);
+
+  const setupMutation = useMutation({
+    mutationFn: () => api.post('/auth/mfa/setup').then(r => r.data.data ?? r.data),
+    onSuccess: (data) => {
+      setQrData({ qrCodeUrl: data.qrCodeUrl, secret: data.secret });
+      setStep('qr');
+    },
+  });
+
+  const verifyMutation = useMutation({
+    mutationFn: (token: string) => api.post('/auth/mfa/verify', { token }).then(r => r.data.data ?? r.data),
+    onSuccess: (data) => {
+      setBackupCodes(data.backupCodes ?? []);
+      qc.invalidateQueries({ queryKey: ['me'] });
+      setStep('codes');
+      setTotpInput('');
+    },
+    onError: () => setTotpError('Invalid code — check your authenticator app'),
+  });
+
+  const disableMutation = useMutation({
+    mutationFn: () => api.post('/auth/mfa/disable', { token: disableToken, password: disablePassword }).then(r => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['me'] });
+      setShowDisable(false);
+      setStep('idle');
+      toast.success('Two-factor authentication disabled');
+    },
+    onError: (err: any) => setDisableError(err?.response?.data?.message ?? 'Invalid token or password'),
+  });
+
+  const regenMutation = useMutation({
+    mutationFn: () => api.post('/auth/mfa/backup-codes/regenerate', { password: regenPassword }).then(r => r.data.data ?? r.data),
+    onSuccess: (data) => {
+      setRegenCodes(data.backupCodes ?? []);
+      setShowRegen(false);
+      setRegenPassword('');
+      toast.success('Backup codes regenerated');
+    },
+    onError: (err: any) => toast.error(err?.response?.data?.message ?? 'Invalid password'),
+  });
+
+  function copyCodesText(codes: string[]) {
+    navigator.clipboard.writeText(codes.join('\n'));
+    toast.success('Copied to clipboard');
+  }
+
+  function downloadCodes(codes: string[]) {
+    const blob = new Blob([codes.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'eduai-backup-codes.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // Backup codes display (used after setup and after regen)
+  const displayCodes = regenCodes.length > 0 ? regenCodes : backupCodes;
+
+  if (step === 'qr' && qrData) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-sm text-blue-700 bg-blue-50 px-3 py-2 rounded-lg">
+          <Lock className="h-4 w-4 flex-shrink-0" />
+          Step 1 of 2 — Scan this QR code with Google Authenticator, Authy, or 1Password.
+        </div>
+        <div className="flex flex-col sm:flex-row gap-6 items-start">
+          {/* QR Code */}
+          <div className="bg-white border border-gray-200 rounded-xl p-3 flex-shrink-0">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={qrData.qrCodeUrl} alt="MFA QR code" className="w-48 h-48" />
+          </div>
+          <div className="flex-1 space-y-3">
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Can't scan? Enter this secret manually:</p>
+              <code className="block text-xs bg-gray-100 px-3 py-2 rounded-lg font-mono break-all text-gray-700">
+                {qrData.secret}
+              </code>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Enter the 6-digit code from your app</label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="000000"
+                value={totpInput}
+                onChange={e => { setTotpInput(e.target.value.replace(/\D/g, '')); setTotpError(''); }}
+                className="font-mono tracking-widest text-center text-lg"
+              />
+              {totpError && <p className="text-xs text-red-600 mt-1 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />{totpError}</p>}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => verifyMutation.mutate(totpInput)}
+                loading={verifyMutation.isPending}
+                disabled={totpInput.length < 6}
+              >
+                Verify &amp; Enable
+              </Button>
+              <Button variant="outline" onClick={() => { setStep('idle'); setQrData(null); }}>Cancel</Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'codes') {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 px-3 py-2 rounded-lg">
+          <Check className="h-4 w-4 flex-shrink-0" />
+          Two-factor authentication is now enabled! Save your backup codes in a safe place.
+        </div>
+        <div>
+          <p className="text-sm text-gray-600 mb-3">
+            Backup codes can be used to access your account if you lose your authenticator app.
+            Each code can only be used <strong>once</strong>.
+          </p>
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+              {backupCodes.map((code, i) => (
+                <code key={i} className="text-sm font-mono text-gray-800 tracking-wider">{code}</code>
+              ))}
+            </div>
+          </div>
+          <div className="flex gap-2 mt-3">
+            <Button variant="outline" size="sm" onClick={() => copyCodesText(backupCodes)}>
+              <Copy className="h-4 w-4 mr-1.5" />Copy
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => downloadCodes(backupCodes)}>
+              <Download className="h-4 w-4 mr-1.5" />Download
+            </Button>
+          </div>
+        </div>
+        <Button onClick={() => setStep('idle')}>Done</Button>
+      </div>
+    );
+  }
+
+  // Idle state — MFA enabled or disabled
+  return (
+    <div className="space-y-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <Smartphone className={cn('h-5 w-5 mt-0.5 flex-shrink-0', mfaEnabled ? 'text-green-600' : 'text-gray-400')} />
+          <div>
+            <p className="text-sm font-medium text-gray-900">Authenticator App (TOTP)</p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {mfaEnabled
+                ? 'MFA is active. Your account is protected with a time-based one-time password.'
+                : 'Use Google Authenticator, Authy, or 1Password for time-based codes.'}
+            </p>
+          </div>
+        </div>
+        {mfaEnabled ? (
+          <span className="flex-shrink-0 flex items-center gap-1 text-xs text-green-700 bg-green-100 px-2 py-1 rounded-full font-medium">
+            <Check className="h-3 w-3" /> Enabled
+          </span>
+        ) : (
+          <Button size="sm" onClick={() => setupMutation.mutate()} loading={setupMutation.isPending}>
+            Enable MFA
+          </Button>
+        )}
+      </div>
+
+      {mfaEnabled && (
+        <div className="pl-8 space-y-3 border-l-2 border-gray-100 ml-2">
+          {/* Regen backup codes */}
+          {regenCodes.length > 0 ? (
+            <div>
+              <p className="text-xs text-gray-600 mb-2">New backup codes (save these now):</p>
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+                  {regenCodes.map((code, i) => (
+                    <code key={i} className="text-xs font-mono text-gray-700 tracking-wider">{code}</code>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2 mt-2">
+                <Button variant="outline" size="sm" onClick={() => copyCodesText(regenCodes)}>
+                  <Copy className="h-3.5 w-3.5 mr-1" />Copy
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => downloadCodes(regenCodes)}>
+                  <Download className="h-3.5 w-3.5 mr-1" />Download
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setRegenCodes([])}>Dismiss</Button>
+              </div>
+            </div>
+          ) : showRegen ? (
+            <div className="flex gap-2 items-center">
+              <Input
+                type="password"
+                placeholder="Confirm your password"
+                value={regenPassword}
+                onChange={e => setRegenPassword(e.target.value)}
+                className="flex-1"
+              />
+              <Button size="sm" onClick={() => regenMutation.mutate()} loading={regenMutation.isPending} disabled={!regenPassword}>
+                Regenerate
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => { setShowRegen(false); setRegenPassword(''); }}>Cancel</Button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowRegen(true)}
+              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />Regenerate backup codes
+            </button>
+          )}
+
+          {/* Disable MFA */}
+          {showDisable ? (
+            <div className="space-y-2 bg-red-50 border border-red-100 rounded-lg p-3">
+              <p className="text-xs font-medium text-red-700">Enter your TOTP code and password to disable MFA:</p>
+              <div className="flex gap-2">
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  placeholder="6-digit code"
+                  value={disableToken}
+                  onChange={e => { setDisableToken(e.target.value.replace(/\D/g, '')); setDisableError(''); }}
+                  className="font-mono tracking-widest text-center flex-1"
+                />
+                <Input
+                  type="password"
+                  placeholder="Password"
+                  value={disablePassword}
+                  onChange={e => setDisablePassword(e.target.value)}
+                  className="flex-1"
+                />
+              </div>
+              {disableError && <p className="text-xs text-red-600 flex items-center gap-1"><AlertTriangle className="h-3 w-3" />{disableError}</p>}
+              <div className="flex gap-2">
+                <Button variant="destructive" size="sm" onClick={() => disableMutation.mutate()} loading={disableMutation.isPending}>
+                  Disable MFA
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => { setShowDisable(false); setDisableError(''); }}>Cancel</Button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowDisable(true)}
+              className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-700 transition-colors"
+            >
+              <Trash2 className="h-3.5 w-3.5" />Disable two-factor authentication
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TrustedDevicesSection() {
+  const qc = useQueryClient();
+  const { data: devices = [] } = useQuery<any[]>({
+    queryKey: ['auth-devices'],
+    queryFn: () => api.get('/auth/devices').then(r => r.data.data ?? r.data ?? []),
+  });
+
+  const revokeMutation = useMutation({
+    mutationFn: (deviceId: string) => api.delete(`/auth/devices/${deviceId}/trust`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['auth-devices'] }),
+  });
+
+  const trusted = devices.filter((d) => d.mfaTrusted && d.mfaTrustedUntil && new Date(d.mfaTrustedUntil) > new Date());
+
+  if (trusted.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader><CardTitle>Trusted Devices</CardTitle></CardHeader>
+      <CardContent>
+        <p className="text-xs text-gray-500 mb-3">These devices skip MFA for 30 days after you checked &quot;Trust this device&quot; during login.</p>
+        <div className="divide-y divide-gray-100">
+          {trusted.map((device: any) => (
+            <div key={device.id} className="py-2.5 flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-gray-900">{device.deviceName ?? device.deviceId}</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Trusted until {new Date(device.mfaTrustedUntil).toLocaleDateString()}
+                  {' · '}Last seen {new Date(device.lastSeenAt).toLocaleDateString()}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => revokeMutation.mutate(device.deviceId)}
+                loading={revokeMutation.isPending}
+                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+              >
+                Revoke
+              </Button>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function SettingsPage() {
   const t = useTranslations('settings');
   const qc = useQueryClient();
@@ -178,7 +503,6 @@ export default function SettingsPage() {
       api.patch('/users/me', dto).then(r => r.data.data),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['me'] });
-      // Switch app locale immediately
       if (['en', 'fr', 'ar'].includes(vars.language)) {
         setLocale(vars.language as Locale);
       }
@@ -223,6 +547,9 @@ export default function SettingsPage() {
   }
 
   const SCOPE_OPTIONS = ['read', 'write', 'admin', 'webhooks'];
+
+  // Suppress unused warning — wlSettings is consumed by setBrandForm side-effect inside queryFn
+  void wlSettings;
 
   return (
     <div className="space-y-6">
@@ -419,20 +746,16 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
 
+              {/* Two-Factor Authentication */}
               <Card>
                 <CardHeader><CardTitle>Two-Factor Authentication</CardTitle></CardHeader>
                 <CardContent>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">Authenticator App (TOTP)</p>
-                      <p className="text-xs text-gray-500 mt-1">Use Google Authenticator or Authy to generate time-based codes.</p>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => api.post('/auth/mfa/setup').then(r => window.open(r.data.data?.qrCode))}>
-                      {me?.mfaEnabled ? 'Disable MFA' : 'Enable MFA'}
-                    </Button>
-                  </div>
+                  <MfaSection mfaEnabled={me?.mfaEnabled ?? false} />
                 </CardContent>
               </Card>
+
+              {/* Trusted Devices */}
+              <TrustedDevicesSection />
 
               <Card>
                 <CardHeader><CardTitle>Active Sessions</CardTitle></CardHeader>

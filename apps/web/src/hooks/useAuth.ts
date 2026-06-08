@@ -10,6 +10,8 @@ interface LoginCredentials {
   password: string;
   rememberMe?: boolean;
   tenantId?: string;
+  deviceId?: string;
+  deviceName?: string;
 }
 
 interface RegisterData {
@@ -47,8 +49,10 @@ interface AuthResponse {
 
 export function useAuth() {
   const router = useRouter();
-  const { user, accessToken, isAuthenticated, isLoading, login, logout, updateUser, setLoading } =
-    useAuthStore();
+  const {
+    user, accessToken, isAuthenticated, isLoading, mfaChallengeToken,
+    login, logout, updateUser, setLoading, setMfaChallengeToken,
+  } = useAuthStore();
 
   const signIn = useCallback(
     async (credentials: LoginCredentials) => {
@@ -59,6 +63,8 @@ export function useAuth() {
         const resp = await apiPost<any>('/auth/login', body, { headers });
         const data: AuthResponse = resp?.data ?? resp;
         if (data.requiresMfa) {
+          // Store the challenge token so the /2fa page can complete the flow
+          setMfaChallengeToken(data.tokens.accessToken);
           return { requiresMfa: true };
         }
         login(data.user, data.tokens.accessToken);
@@ -68,7 +74,7 @@ export function useAuth() {
         setLoading(false);
       }
     },
-    [login, router, setLoading]
+    [login, router, setLoading, setMfaChallengeToken]
   );
 
   const signUp = useCallback(
@@ -103,10 +109,18 @@ export function useAuth() {
   }, []);
 
   const verifyMfa = useCallback(
-    async (code: string) => {
+    async (code: string, opts?: { trustDevice?: boolean; deviceId?: string; deviceName?: string }) => {
       setLoading(true);
       try {
-        const data = await apiPost<AuthResponse>('/auth/mfa/verify', { code });
+        const challengeToken = useAuthStore.getState().mfaChallengeToken;
+        const resp = await apiPost<any>('/auth/mfa/challenge', {
+          challengeToken,
+          code,
+          trustDevice: opts?.trustDevice,
+          deviceId: opts?.deviceId,
+          deviceName: opts?.deviceName,
+        });
+        const data: AuthResponse = resp?.data ?? resp;
         login(data.user, data.tokens.accessToken);
         router.push('/');
         return { success: true };
@@ -146,6 +160,7 @@ export function useAuth() {
     isTeacher,
     isStudent,
     isParent,
+    mfaChallengeToken,
     signIn,
     signUp,
     signOut,

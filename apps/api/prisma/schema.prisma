@@ -50,6 +50,7 @@ model User {
   isActive          Boolean   @default(true)
   mfaEnabled        Boolean   @default(false)
   mfaSecret         String?
+  mfaBackupCodes    String[]  @default([])
   lastLoginAt       DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
@@ -108,16 +109,18 @@ model UserSession {
 }
 
 model UserDevice {
-  id          String   @id @default(cuid())
-  userId      String
-  deviceId    String   @unique
-  deviceName  String?
-  deviceType  String?
-  fcmToken    String?
-  isActive    Boolean  @default(true)
-  lastSeenAt  DateTime @default(now())
-  createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String    @id @default(cuid())
+  userId          String
+  deviceId        String    @unique
+  deviceName      String?
+  deviceType      String?
+  fcmToken        String?
+  isActive        Boolean   @default(true)
+  mfaTrusted      Boolean   @default(false)
+  mfaTrustedUntil DateTime?
+  lastSeenAt      DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   @@index([userId])
 }
 
