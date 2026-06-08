@@ -3,13 +3,18 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
-  LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ScatterChart, Scatter, ZAxis,
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
+  ComposedChart, Line,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import { Users, BookOpen, TrendingUp, DollarSign, Zap, Activity, Star, Award } from 'lucide-react';
 import { api } from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { cn } from '@/lib/utils';
+import { ChartTooltip } from '@/components/analytics/ChartTooltip';
+import { ChartSkeleton } from '@/components/analytics/ChartSkeleton';
+import { SparklineCard } from '@/components/analytics/SparklineCard';
+import { ExportButton } from '@/components/analytics/ExportButton';
 
 const COLORS = ['#2563EB', '#7C3AED', '#059669', '#D97706', '#DC2626', '#0891B2', '#DB2777', '#65A30D'];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -33,19 +38,19 @@ export default function AnalyticsPage() {
   const [tab, setTab] = useState<Tab>('overview');
   const [range, setRange] = useState(30);
 
-  const { data: overview } = useQuery({
+  const { data: overview, isLoading: overviewLoading } = useQuery({
     queryKey: ['analytics', 'overview'],
     queryFn: () => api.get('/analytics/overview').then(r => r.data.data),
   });
-  const { data: userGrowth } = useQuery({
+  const { data: userGrowth, isLoading: growthLoading } = useQuery({
     queryKey: ['analytics', 'user-growth', range],
     queryFn: () => api.get(`/analytics/user-growth?days=${range}`).then(r => r.data.data),
   });
-  const { data: revenue } = useQuery({
+  const { data: revenue, isLoading: revenueLoading } = useQuery({
     queryKey: ['analytics', 'revenue'],
     queryFn: () => api.get('/analytics/revenue?months=12').then(r => r.data.data),
   });
-  const { data: aiUsage } = useQuery({
+  const { data: aiUsage, isLoading: aiLoading } = useQuery({
     queryKey: ['analytics', 'ai-usage'],
     queryFn: () => api.get('/analytics/ai-usage').then(r => r.data.data),
   });
@@ -53,7 +58,7 @@ export default function AnalyticsPage() {
     queryKey: ['analytics', 'student-activity', range],
     queryFn: () => api.get(`/analytics/student-activity?days=${range}`).then(r => r.data.data),
   });
-  const { data: topCourses } = useQuery({
+  const { data: topCourses, isLoading: coursesLoading } = useQuery({
     queryKey: ['analytics', 'top-courses'],
     queryFn: () => api.get('/analytics/top-courses').then(r => r.data.data),
   });
@@ -91,33 +96,50 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      {/* KPI Strip */}
+      {/* KPI Strip — SparklineCards with inline mini charts */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Users', value: overview?.totalUsers ?? 0, icon: Users, color: 'blue', change: '+12%' },
-          { label: 'Published Courses', value: overview?.totalCourses ?? 0, icon: BookOpen, color: 'purple', change: '+4%' },
-          { label: 'Total Revenue', value: `$${Number(overview?.totalRevenue ?? 0).toFixed(0)}`, icon: DollarSign, color: 'green', change: '+8%' },
-          { label: 'AI Requests', value: totalAiRequests.toLocaleString(), icon: Zap, color: 'orange', change: '+23%' },
-        ].map(({ label, value, icon: Icon, color, change }) => (
-          <Card key={label}>
-            <CardContent className="pt-5 pb-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{typeof value === 'number' ? value.toLocaleString() : value}</p>
-                  <p className="text-xs text-gray-500 mt-1">{label}</p>
-                </div>
-                <div className={cn('h-10 w-10 rounded-xl flex items-center justify-center flex-shrink-0',
-                  color === 'blue' ? 'bg-blue-100' : color === 'purple' ? 'bg-purple-100' :
-                  color === 'green' ? 'bg-green-100' : 'bg-orange-100'
-                )}>
-                  <Icon className={cn('h-5 w-5', color === 'blue' ? 'text-blue-600' : color === 'purple' ? 'text-purple-600' :
-                    color === 'green' ? 'text-green-600' : 'text-orange-600')} />
-                </div>
-              </div>
-              <p className="text-xs text-green-600 font-medium mt-2">{change} vs last period</p>
-            </CardContent>
-          </Card>
-        ))}
+        <SparklineCard
+          title="Total Users"
+          value={overview?.totalUsers ?? 0}
+          change="+12% vs last period"
+          trend="up"
+          sparkData={(userGrowth ?? []).map((d: any) => ({ value: d.count ?? 0 }))}
+          sparkColor="#2563EB"
+          icon={<Users className="h-5 w-5 text-blue-600" />}
+          iconBg="bg-blue-100"
+          loading={overviewLoading}
+        />
+        <SparklineCard
+          title="Published Courses"
+          value={overview?.totalCourses ?? 0}
+          change="+4% vs last period"
+          trend="up"
+          sparkColor="#7C3AED"
+          icon={<BookOpen className="h-5 w-5 text-purple-600" />}
+          iconBg="bg-purple-100"
+          loading={overviewLoading}
+        />
+        <SparklineCard
+          title="Total Revenue"
+          value={`$${Number(overview?.totalRevenue ?? 0).toFixed(0)}`}
+          change="+8% vs last period"
+          trend="up"
+          sparkData={(revenue ?? []).map((d: any) => ({ value: d.revenue ?? 0 }))}
+          sparkColor="#059669"
+          icon={<DollarSign className="h-5 w-5 text-green-600" />}
+          iconBg="bg-green-100"
+          loading={overviewLoading || revenueLoading}
+        />
+        <SparklineCard
+          title="AI Requests"
+          value={totalAiRequests}
+          change="+23% vs last period"
+          trend="up"
+          sparkColor="#D97706"
+          icon={<Zap className="h-5 w-5 text-orange-600" />}
+          iconBg="bg-orange-100"
+          loading={aiLoading}
+        />
       </div>
 
       {/* Tabs */}
@@ -142,23 +164,34 @@ export default function AnalyticsPage() {
       {tab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <Card>
-            <CardHeader><CardTitle>User Growth</CardTitle></CardHeader>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>User Growth</CardTitle>
+                <ExportButton
+                  data={userGrowth ?? []}
+                  filename="user-growth"
+                  label="Export"
+                />
+              </div>
+            </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={220}>
-                <AreaChart data={userGrowth ?? []}>
-                  <defs>
-                    <linearGradient id="ugGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#2563EB" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={d => d?.slice(5) ?? d} />
-                  <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="count" stroke="#2563EB" fill="url(#ugGrad)" strokeWidth={2} />
-                </AreaChart>
-              </ResponsiveContainer>
+              {growthLoading ? <ChartSkeleton height={220} /> : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <AreaChart data={userGrowth ?? []}>
+                    <defs>
+                      <linearGradient id="ugGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#2563EB" stopOpacity={0.2} />
+                        <stop offset="95%" stopColor="#2563EB" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={d => d?.slice(5) ?? d} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <Tooltip content={<ChartTooltip labelFormatter={d => `Date: ${d}`} valueFormatter={v => String(v)} />} />
+                    <Area type="monotone" dataKey="count" name="New Users" stroke="#2563EB" fill="url(#ugGrad)" strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
 
@@ -181,38 +214,60 @@ export default function AnalyticsPage() {
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>Revenue Trend</CardTitle></CardHeader>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Revenue Trend</CardTitle>
+                <ExportButton data={revenue ?? []} filename="revenue" label="Export" />
+              </div>
+            </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={220}>
-                <AreaChart data={revenue ?? []}>
-                  <defs>
-                    <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#7C3AED" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#7C3AED" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(v: number) => [`$${v.toFixed(0)}`, 'Revenue']} />
-                  <Area type="monotone" dataKey="revenue" stroke="#7C3AED" fill="url(#revGrad)" strokeWidth={2} />
-                </AreaChart>
-              </ResponsiveContainer>
+              {revenueLoading ? <ChartSkeleton height={220} /> : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <AreaChart data={revenue ?? []}>
+                    <defs>
+                      <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#7C3AED" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#7C3AED" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                    <YAxis tick={{ fontSize: 10 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip
+                      content={<ChartTooltip
+                        valueFormatter={v => `$${Number(v).toLocaleString()}`}
+                      />}
+                    />
+                    <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#7C3AED" fill="url(#revGrad)" strokeWidth={2} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader><CardTitle>AI Feature Distribution</CardTitle></CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={220}>
-                <PieChart>
-                  <Pie data={aiUsage ?? []} cx="50%" cy="50%" outerRadius={75} innerRadius={40}
-                    dataKey="_count.id" nameKey="module" label={({ module }: any) => module?.replace('_', ' ')?.slice(0, 8)}>
-                    {(aiUsage ?? []).map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip formatter={(v: number) => [v, 'Requests']} />
-                </PieChart>
-              </ResponsiveContainer>
+              {aiLoading ? <ChartSkeleton height={220} /> : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie
+                      data={aiUsage ?? []}
+                      cx="50%" cy="50%"
+                      outerRadius={75}
+                      innerRadius={40}
+                      dataKey="_count.id"
+                      nameKey="module"
+                      label={({ module }: any) => module?.replace(/_/g, ' ')?.slice(0, 8)}
+                    >
+                      {(aiUsage ?? []).map((_: any, i: number) => (
+                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<ChartTooltip valueFormatter={v => `${v} requests`} />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -221,8 +276,63 @@ export default function AnalyticsPage() {
       {/* Courses Tab */}
       {tab === 'courses' && (
         <div className="space-y-5">
+          {/* ComposedChart: enrollments (bar) + completion rate (line) */}
           <Card>
-            <CardHeader><CardTitle>Top Courses by Enrollment</CardTitle></CardHeader>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Enrollment vs Completion Rate</CardTitle>
+                <ExportButton
+                  data={(topCourses ?? []).map((c: any) => ({
+                    title: c.title,
+                    enrollments: c.enrollCount,
+                    completionRate: c.completionRate,
+                  }))}
+                  filename="enrollment-vs-completion"
+                  label="Export"
+                />
+              </div>
+            </CardHeader>
+            <CardContent>
+              {coursesLoading ? <ChartSkeleton height={260} /> : (
+                <ResponsiveContainer width="100%" height={260}>
+                  <ComposedChart data={(topCourses ?? []).slice(0, 8)}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis
+                      dataKey="title"
+                      tick={{ fontSize: 9 }}
+                      tickFormatter={(t: string) => t.length > 12 ? t.slice(0, 12) + '…' : t}
+                    />
+                    <YAxis yAxisId="left" tick={{ fontSize: 10 }} orientation="left" />
+                    <YAxis
+                      yAxisId="right"
+                      tick={{ fontSize: 10 }}
+                      orientation="right"
+                      tickFormatter={v => `${v}%`}
+                      domain={[0, 100]}
+                    />
+                    <Tooltip
+                      content={<ChartTooltip
+                        valueFormatter={(v, name) =>
+                          name === 'Completion %' ? `${v}%` : String(v)
+                        }
+                      />}
+                    />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                    <Bar yAxisId="left" dataKey="enrollCount" name="Enrollments" fill="#2563EB" radius={[3, 3, 0, 0]} />
+                    <Line yAxisId="right" type="monotone" dataKey="completionRate" name="Completion %" stroke="#059669" strokeWidth={2} dot={{ r: 3 }} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Top Courses by Enrollment</CardTitle>
+                <ExportButton data={topCourses ?? []} filename="top-courses" label="Export" />
+              </div>
+            </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -276,32 +386,36 @@ export default function AnalyticsPage() {
             <Card>
               <CardHeader><CardTitle>Enrollment by Course (Top 8)</CardTitle></CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={(topCourses ?? []).slice(0, 8)} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis type="number" tick={{ fontSize: 10 }} />
-                    <YAxis dataKey="title" type="category" tick={{ fontSize: 9 }} width={130}
-                      tickFormatter={(t: string) => t.length > 18 ? t.slice(0, 18) + '…' : t} />
-                    <Tooltip formatter={(v: number) => [v, 'Enrollments']} />
-                    <Bar dataKey="enrollCount" fill="#2563EB" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {coursesLoading ? <ChartSkeleton height={260} /> : (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={(topCourses ?? []).slice(0, 8)} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis type="number" tick={{ fontSize: 10 }} />
+                      <YAxis dataKey="title" type="category" tick={{ fontSize: 9 }} width={130}
+                        tickFormatter={(t: string) => t.length > 18 ? t.slice(0, 18) + '…' : t} />
+                      <Tooltip content={<ChartTooltip valueFormatter={v => `${v} students`} />} />
+                      <Bar dataKey="enrollCount" name="Enrollments" fill="#2563EB" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader><CardTitle>Completion Rate by Course</CardTitle></CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={(topCourses ?? []).slice(0, 8)} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={v => `${v}%`} domain={[0, 100]} />
-                    <YAxis dataKey="title" type="category" tick={{ fontSize: 9 }} width={130}
-                      tickFormatter={(t: string) => t.length > 18 ? t.slice(0, 18) + '…' : t} />
-                    <Tooltip formatter={(v: number) => [`${v}%`, 'Completion Rate']} />
-                    <Bar dataKey="completionRate" fill="#059669" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {coursesLoading ? <ChartSkeleton height={260} /> : (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={(topCourses ?? []).slice(0, 8)} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={v => `${v}%`} domain={[0, 100]} />
+                      <YAxis dataKey="title" type="category" tick={{ fontSize: 9 }} width={130}
+                        tickFormatter={(t: string) => t.length > 18 ? t.slice(0, 18) + '…' : t} />
+                      <Tooltip content={<ChartTooltip valueFormatter={v => `${v}%`} />} />
+                      <Bar dataKey="completionRate" name="Completion Rate" fill="#059669" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -427,23 +541,32 @@ export default function AnalyticsPage() {
           </div>
 
           <Card>
-            <CardHeader><CardTitle>Monthly Revenue (12 months)</CardTitle></CardHeader>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle>Monthly Revenue (12 months)</CardTitle>
+                <ExportButton data={revenue ?? []} filename="monthly-revenue" label="Export" />
+              </div>
+            </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={revenue ?? []}>
-                  <defs>
-                    <linearGradient id="r2Grad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#059669" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#059669" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
-                  <Tooltip formatter={(v: number) => [`$${v.toLocaleString()}`, 'Revenue']} />
-                  <Area type="monotone" dataKey="revenue" stroke="#059669" fill="url(#r2Grad)" strokeWidth={2.5} />
-                </AreaChart>
-              </ResponsiveContainer>
+              {revenueLoading ? <ChartSkeleton height={300} /> : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={revenue ?? []}>
+                    <defs>
+                      <linearGradient id="r2Grad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#059669" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#059669" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `$${(v / 1000).toFixed(0)}k`} />
+                    <Tooltip
+                      content={<ChartTooltip valueFormatter={v => `$${Number(v).toLocaleString()}`} />}
+                    />
+                    <Area type="monotone" dataKey="revenue" name="Revenue" stroke="#059669" fill="url(#r2Grad)" strokeWidth={2.5} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -469,34 +592,43 @@ export default function AnalyticsPage() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <Card>
-              <CardHeader><CardTitle>Requests by Module</CardTitle></CardHeader>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Requests by Module</CardTitle>
+                  <ExportButton data={aiUsage ?? []} filename="ai-requests" label="Export" />
+                </div>
+              </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={(aiUsage ?? []).slice(0, 8)} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis type="number" tick={{ fontSize: 10 }} />
-                    <YAxis dataKey="module" type="category" tick={{ fontSize: 10 }} width={140}
-                      tickFormatter={(m: string) => m.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} />
-                    <Tooltip formatter={(v: number) => [v.toLocaleString(), 'Requests']} />
-                    <Bar dataKey="_count.id" fill="#7C3AED" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {aiLoading ? <ChartSkeleton height={280} /> : (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={(aiUsage ?? []).slice(0, 8)} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis type="number" tick={{ fontSize: 10 }} />
+                      <YAxis dataKey="module" type="category" tick={{ fontSize: 10 }} width={140}
+                        tickFormatter={(m: string) => m.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} />
+                      <Tooltip content={<ChartTooltip valueFormatter={v => `${Number(v).toLocaleString()} req`} />} />
+                      <Bar dataKey="_count.id" name="Requests" fill="#7C3AED" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader><CardTitle>Token Consumption by Module</CardTitle></CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={(aiUsage ?? []).slice(0, 8)} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-                    <YAxis dataKey="module" type="category" tick={{ fontSize: 10 }} width={140}
-                      tickFormatter={(m: string) => m.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} />
-                    <Tooltip formatter={(v: number) => [v.toLocaleString(), 'Tokens']} />
-                    <Bar dataKey="_sum.tokens" fill="#059669" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                {aiLoading ? <ChartSkeleton height={280} /> : (
+                  <ResponsiveContainer width="100%" height={280}>
+                    <BarChart data={(aiUsage ?? []).slice(0, 8)} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis type="number" tick={{ fontSize: 10 }} tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+                      <YAxis dataKey="module" type="category" tick={{ fontSize: 10 }} width={140}
+                        tickFormatter={(m: string) => m.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())} />
+                      <Tooltip content={<ChartTooltip valueFormatter={v => `${Number(v).toLocaleString()} tokens`} />} />
+                      <Bar dataKey="_sum.tokens" name="Tokens" fill="#059669" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
 
