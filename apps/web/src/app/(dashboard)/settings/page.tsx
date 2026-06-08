@@ -10,16 +10,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { cn } from '@/lib/utils';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { useAuthStore } from '@/stores/authStore';
+import { useTranslations } from 'next-intl';
+import { setLocale } from '@/i18n/provider';
+import type { Locale } from '@/i18n/config';
 
 type Tab = 'profile' | 'general' | 'security' | 'notifications' | 'branding' | 'api';
 
-const TABS: { id: Tab; label: string; icon: React.ComponentType<any> }[] = [
-  { id: 'profile', label: 'My Profile', icon: User },
-  { id: 'general', label: 'General', icon: Building },
-  { id: 'security', label: 'Security', icon: Shield },
-  { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'branding', label: 'White Label', icon: Palette },
-  { id: 'api', label: 'API Keys', icon: Key },
+const TABS: { id: Tab; labelKey: string; icon: React.ComponentType<any> }[] = [
+  { id: 'profile', labelKey: 'profile', icon: User },
+  { id: 'general', labelKey: 'general', icon: Building },
+  { id: 'security', labelKey: 'security', icon: Shield },
+  { id: 'notifications', labelKey: 'notifications', icon: Bell },
+  { id: 'branding', labelKey: 'branding', icon: Palette },
+  { id: 'api', labelKey: 'api', icon: Key },
 ];
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -110,6 +113,7 @@ function PushNotificationToggle() {
 }
 
 export default function SettingsPage() {
+  const t = useTranslations('settings');
   const qc = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>('profile');
   const [showOldPw, setShowOldPw] = useState(false);
@@ -172,8 +176,12 @@ export default function SettingsPage() {
   const prefsMutation = useMutation({
     mutationFn: (dto: { language: string; timezone: string }) =>
       api.patch('/users/me', dto).then(r => r.data.data),
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['me'] });
+      // Switch app locale immediately
+      if (['en', 'fr', 'ar'].includes(vars.language)) {
+        setLocale(vars.language as Locale);
+      }
       toast.success('Preferences saved');
     },
   });
@@ -219,7 +227,7 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('title')}</h1>
         <p className="text-sm text-gray-500 mt-1">Manage your account and platform configuration</p>
       </div>
 
@@ -236,7 +244,7 @@ export default function SettingsPage() {
                 )}
               >
                 <tab.icon className="h-4 w-4 flex-shrink-0" />
-                {tab.label}
+                {t(`tabs.${tab.labelKey}` as any)}
               </button>
             ))}
           </nav>
@@ -303,7 +311,7 @@ export default function SettingsPage() {
                 <Field label="Institution Name">
                   <Input placeholder="Your institution name" defaultValue={me?.tenant?.name ?? ''} />
                 </Field>
-                <Field label="Default Language">
+                <Field label={t('general.language')}>
                   <select
                     value={language}
                     onChange={e => setLanguage(e.target.value)}

@@ -37,76 +37,71 @@ import {
 import { cn } from '@/lib/utils';
 import { useUIStore } from '@/stores/uiStore';
 import { useAuthStore } from '@/stores/authStore';
+import { useTranslations } from 'next-intl';
 
-interface NavItem {
-  label: string;
+type NavItemKey = {
+  labelKey: string;
   href: string;
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
   roles?: string[];
-}
+};
 
-interface NavSection {
-  title: string;
-  items: NavItem[];
-}
+type NavSectionDef = {
+  titleKey: string;
+  items: NavItemKey[];
+};
 
-const navSections: NavSection[] = [
+const navSections: NavSectionDef[] = [
   {
-    title: 'Overview',
+    titleKey: 'overview',
     items: [
-      { label: 'Dashboard', href: '/', icon: LayoutDashboard },
+      { labelKey: 'dashboard', href: '/', icon: LayoutDashboard },
     ],
   },
   {
-    title: 'Learning',
+    titleKey: 'learning',
     items: [
-      { label: 'My Learning', href: '/my-learning', icon: BookMarked, roles: ['STUDENT'] },
-      { label: 'Courses', href: '/courses', icon: BookOpen },
-      { label: 'Assignments', href: '/assignments', icon: ClipboardList },
-      { label: 'Live Classes', href: '/live', icon: Video },
-      { label: 'AI Tutor', href: '/ai-tutor', icon: Bot, badge: 'AI' },
-      { label: 'AI Tools', href: '/ai-tools', icon: Zap, badge: 'AI' },
-      { label: 'AI Agents', href: '/ai-agents', icon: Sparkles, badge: 'NEW' },
-      { label: 'Certificates', href: '/certificates', icon: Award },
+      { labelKey: 'myLearning', href: '/my-learning', icon: BookMarked, roles: ['STUDENT'] },
+      { labelKey: 'courses', href: '/courses', icon: BookOpen },
+      { labelKey: 'assignments', href: '/assignments', icon: ClipboardList },
+      { labelKey: 'liveClasses', href: '/live', icon: Video },
+      { labelKey: 'aiTutor', href: '/ai-tutor', icon: Bot, badge: 'AI' },
+      { labelKey: 'aiTools', href: '/ai-tools', icon: Zap, badge: 'AI' },
+      { labelKey: 'aiAgents', href: '/ai-agents', icon: Sparkles, badge: 'NEW' },
+      { labelKey: 'certificates', href: '/certificates', icon: Award },
     ],
   },
   {
-    title: 'Community',
+    titleKey: 'community',
     items: [
-      { label: 'Messages', href: '/messages', icon: MessageSquare },
-      { label: 'Notifications', href: '/notifications', icon: Bell },
-      { label: 'Gamification', href: '/gamification', icon: Trophy },
-      { label: 'Marketplace', href: '/marketplace', icon: ShoppingBag },
+      { labelKey: 'messages', href: '/messages', icon: MessageSquare },
+      { labelKey: 'notifications', href: '/notifications', icon: Bell },
+      { labelKey: 'gamification', href: '/gamification', icon: Trophy },
+      { labelKey: 'marketplace', href: '/marketplace', icon: ShoppingBag },
     ],
   },
   {
-    title: 'People',
+    titleKey: 'management',
     items: [
-      { label: 'Students', href: '/students', icon: GraduationCap, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] },
-      { label: 'Teachers', href: '/teachers', icon: UserCircle, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN'] },
-      { label: 'Parents', href: '/parents', icon: Users, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] },
+      { labelKey: 'students', href: '/students', icon: GraduationCap, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] },
+      { labelKey: 'teachers', href: '/teachers', icon: UserCircle, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN'] },
+      { labelKey: 'parents', href: '/parents', icon: Users, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] },
+      { labelKey: 'schoolErp', href: '/school-erp', icon: Building2, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN'] },
+      { labelKey: 'universityErp', href: '/university-erp', icon: University, roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN'] },
+      { labelKey: 'plugins', href: '/plugins', icon: Puzzle, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
     ],
   },
   {
-    title: 'Institution',
+    titleKey: 'admin',
     items: [
-      { label: 'School ERP', href: '/school-erp', icon: Building2, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN'] },
-      { label: 'University ERP', href: '/university-erp', icon: University, roles: ['SUPER_ADMIN', 'UNIVERSITY_ADMIN'] },
-      { label: 'Plugins', href: '/plugins', icon: Puzzle, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
-    ],
-  },
-  {
-    title: 'Administration',
-    items: [
-      { label: 'Super Admin', href: '/super-admin', icon: Shield, roles: ['SUPER_ADMIN'], badge: 'SA' },
-      { label: 'Analytics', href: '/analytics', icon: BarChart3, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] },
-      { label: 'Audit Logs', href: '/audit-logs', icon: FileText, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN'] },
-      { label: 'White Label', href: '/white-label', icon: Palette, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
-      { label: 'API Keys', href: '/api-keys', icon: Key, roles: ['SUPER_ADMIN', 'ADMIN'] },
-      { label: 'Billing', href: '/billing', icon: CreditCard, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
-      { label: 'Settings', href: '/settings', icon: Settings, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
-      { label: 'Users', href: '/users', icon: Shield, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN'] },
+      { labelKey: 'superAdmin', href: '/super-admin', icon: Shield, roles: ['SUPER_ADMIN'], badge: 'SA' },
+      { labelKey: 'analytics', href: '/analytics', icon: BarChart3, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] },
+      { labelKey: 'auditLogs', href: '/audit-logs', icon: FileText, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN'] },
+      { labelKey: 'whiteLabel', href: '/white-label', icon: Palette, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
+      { labelKey: 'apiKeys', href: '/api-keys', icon: Key, roles: ['SUPER_ADMIN', 'ADMIN'] },
+      { labelKey: 'billing', href: '/billing', icon: CreditCard, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
+      { labelKey: 'settings', href: '/settings', icon: Settings, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
     ],
   },
 ];
@@ -116,6 +111,8 @@ export function Sidebar() {
   const { sidebarCollapsed, toggleSidebarCollapsed, setSidebarOpen } =
     useUIStore();
   const user = useAuthStore((s) => s.user);
+  const tSections = useTranslations('nav.sections');
+  const tItems = useTranslations('nav.items');
 
   const isActive = (href: string) => {
     if (href === '/dashboard') return pathname === '/dashboard';
@@ -198,16 +195,17 @@ export function Sidebar() {
           if (visibleItems.length === 0) return null;
 
           return (
-            <div key={section.title} className="mb-6">
+            <div key={section.titleKey} className="mb-6">
               {!sidebarCollapsed && (
                 <p className="px-3 mb-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  {section.title}
+                  {tSections(section.titleKey as any)}
                 </p>
               )}
               <ul className="space-y-0.5">
                 {visibleItems.map((item) => {
                   const active = isActive(item.href);
                   const Icon = item.icon;
+                  const label = tItems(item.labelKey as any);
                   return (
                     <li key={item.href}>
                       <Link
@@ -222,7 +220,7 @@ export function Sidebar() {
                             ? 'bg-primary text-primary-foreground'
                             : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
                         )}
-                        title={sidebarCollapsed ? item.label : undefined}
+                        title={sidebarCollapsed ? label : undefined}
                       >
                         <Icon className="h-4 w-4 shrink-0" />
                         <AnimatePresence>
@@ -234,7 +232,7 @@ export function Sidebar() {
                               transition={{ duration: 0.2 }}
                               className="overflow-hidden whitespace-nowrap"
                             >
-                              {item.label}
+                              {label}
                             </motion.span>
                           )}
                         </AnimatePresence>
@@ -243,10 +241,9 @@ export function Sidebar() {
                             {item.badge}
                           </span>
                         )}
-                        {/* Tooltip for collapsed state */}
                         {sidebarCollapsed && (
                           <div className="absolute left-full ml-2 px-2 py-1 bg-popover border border-border text-popover-foreground text-xs rounded-md shadow-md whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-50">
-                            {item.label}
+                            {label}
                           </div>
                         )}
                       </Link>

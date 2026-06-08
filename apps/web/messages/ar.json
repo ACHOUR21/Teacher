@@ -1,0 +1,265 @@
+{
+  "common": {
+    "save": "حفظ التغييرات",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "edit": "تعديل",
+    "create": "إنشاء",
+    "update": "تحديث",
+    "confirm": "تأكيد",
+    "close": "إغلاق",
+    "back": "رجوع",
+    "next": "التالي",
+    "submit": "إرسال",
+    "loading": "جاري التحميل...",
+    "search": "بحث",
+    "filter": "تصفية",
+    "export": "تصدير",
+    "import": "استيراد",
+    "view": "عرض",
+    "viewAll": "عرض الكل",
+    "noResults": "لا توجد نتائج",
+    "error": "حدث خطأ",
+    "success": "نجاح",
+    "required": "هذا الحقل مطلوب",
+    "optional": "اختياري",
+    "yes": "نعم",
+    "no": "لا",
+    "or": "أو",
+    "and": "و",
+    "actions": "إجراءات",
+    "status": "الحالة",
+    "date": "التاريخ",
+    "name": "الاسم",
+    "email": "البريد الإلكتروني",
+    "role": "الدور",
+    "active": "نشط",
+    "inactive": "غير نشط"
+  },
+  "nav": {
+    "sections": {
+      "overview": "نظرة عامة",
+      "learning": "التعلم",
+      "community": "المجتمع",
+      "management": "الإدارة",
+      "admin": "المشرف",
+      "account": "الحساب"
+    },
+    "items": {
+      "dashboard": "لوحة التحكم",
+      "myLearning": "تعلمي",
+      "courses": "الدورات",
+      "assignments": "الواجبات",
+      "liveClasses": "الفصول المباشرة",
+      "aiTutor": "المعلم الذكي",
+      "aiTools": "أدوات الذكاء الاصطناعي",
+      "aiAgents": "وكلاء الذكاء الاصطناعي",
+      "certificates": "الشهادات",
+      "messages": "الرسائل",
+      "notifications": "الإشعارات",
+      "gamification": "التلعيب",
+      "marketplace": "السوق",
+      "students": "الطلاب",
+      "teachers": "المعلمون",
+      "parents": "أولياء الأمور",
+      "schoolErp": "نظام المدرسة",
+      "universityErp": "نظام الجامعة",
+      "analytics": "التحليلات",
+      "auditLogs": "سجلات التدقيق",
+      "billing": "الفواتير",
+      "whiteLabel": "العلامة البيضاء",
+      "plugins": "الإضافات",
+      "apiKeys": "مفاتيح API",
+      "superAdmin": "المشرف العام",
+      "settings": "الإعدادات",
+      "profile": "الملف الشخصي",
+      "search": "بحث"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "مرحباً بعودتك",
+      "subtitle": "قم بتسجيل الدخول إلى حسابك",
+      "email": "البريد الإلكتروني",
+      "password": "كلمة المرور",
+      "submit": "تسجيل الدخول",
+      "forgotPassword": "نسيت كلمة المرور؟",
+      "noAccount": "ليس لديك حساب؟",
+      "register": "إنشاء حساب",
+      "error": "بريد إلكتروني أو كلمة مرور غير صحيحة"
+    },
+    "register": {
+      "title": "إنشاء حساب",
+      "subtitle": "ابدأ تجربتك المجانية اليوم",
+      "firstName": "الاسم الأول",
+      "lastName": "اسم العائلة",
+      "email": "البريد الإلكتروني",
+      "password": "كلمة المرور",
+      "confirmPassword": "تأكيد كلمة المرور",
+      "submit": "إنشاء حساب",
+      "hasAccount": "لديك حساب بالفعل؟",
+      "login": "تسجيل الدخول",
+      "terms": "بإنشاء حساب، فإنك توافق على شروط الخدمة وسياسة الخصوصية"
+    },
+    "forgotPassword": {
+      "title": "نسيت كلمة المرور؟",
+      "subtitle": "أدخل بريدك الإلكتروني لاستلام رابط الاستعادة",
+      "email": "البريد الإلكتروني",
+      "submit": "إرسال رابط الاستعادة",
+      "backToLogin": "العودة إلى تسجيل الدخول",
+      "sent": "تحقق من بريدك الإلكتروني للحصول على رابط الاستعادة"
+    },
+    "resetPassword": {
+      "title": "إعادة تعيين كلمة المرور",
+      "newPassword": "كلمة المرور الجديدة",
+      "confirmPassword": "تأكيد كلمة المرور الجديدة",
+      "submit": "إعادة تعيين كلمة المرور",
+      "success": "تم إعادة تعيين كلمة المرور بنجاح"
+    },
+    "mfa": {
+      "title": "المصادقة الثنائية",
+      "subtitle": "أدخل الرمز المكون من 6 أرقام من تطبيق المصادقة",
+      "code": "رمز المصادقة",
+      "submit": "تحقق",
+      "backupCode": "استخدام رمز احتياطي"
+    },
+    "logout": "تسجيل الخروج"
+  },
+  "dashboard": {
+    "title": "لوحة التحكم",
+    "welcome": "مرحباً بعودتك، {name}",
+    "stats": {
+      "totalStudents": "إجمالي الطلاب",
+      "totalCourses": "إجمالي الدورات",
+      "totalTeachers": "إجمالي المعلمين",
+      "activeEnrollments": "التسجيلات النشطة",
+      "completionRate": "معدل الإتمام",
+      "revenue": "الإيرادات"
+    }
+  },
+  "courses": {
+    "title": "الدورات",
+    "create": "دورة جديدة",
+    "search": "البحث في الدورات...",
+    "filter": {
+      "all": "جميع المستويات",
+      "beginner": "مبتدئ",
+      "intermediate": "متوسط",
+      "advanced": "متقدم"
+    },
+    "fields": {
+      "title": "عنوان الدورة",
+      "description": "الوصف",
+      "category": "الفئة",
+      "level": "المستوى",
+      "language": "اللغة",
+      "price": "السعر",
+      "thumbnail": "رابط الصورة المصغرة"
+    },
+    "status": {
+      "published": "منشور",
+      "draft": "مسودة"
+    },
+    "actions": {
+      "enroll": "التسجيل الآن",
+      "continue": "متابعة التعلم",
+      "publish": "نشر",
+      "unpublish": "إلغاء النشر",
+      "edit": "تعديل الدورة",
+      "delete": "حذف الدورة"
+    },
+    "empty": "لا توجد دورات",
+    "students": "{count} طالب",
+    "lessons": "{count} درس"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "tabs": {
+      "profile": "ملفي الشخصي",
+      "general": "عام",
+      "security": "الأمان",
+      "notifications": "الإشعارات",
+      "branding": "العلامة البيضاء",
+      "api": "مفاتيح API"
+    },
+    "profile": {
+      "title": "معلومات الملف الشخصي",
+      "firstName": "الاسم الأول",
+      "lastName": "اسم العائلة",
+      "email": "البريد الإلكتروني",
+      "phone": "رقم الهاتف",
+      "bio": "نبذة",
+      "avatar": "صورة الملف الشخصي",
+      "save": "حفظ الملف الشخصي"
+    },
+    "general": {
+      "title": "التفضيلات العامة",
+      "language": "اللغة",
+      "timezone": "المنطقة الزمنية",
+      "save": "حفظ التفضيلات",
+      "downloadData": "تنزيل بياناتي",
+      "downloadDataDesc": "تصدير جميع بياناتك الشخصية بتنسيق JSON (GDPR)"
+    },
+    "security": {
+      "title": "إعدادات الأمان",
+      "changePassword": "تغيير كلمة المرور",
+      "currentPassword": "كلمة المرور الحالية",
+      "newPassword": "كلمة المرور الجديدة",
+      "confirmPassword": "تأكيد كلمة المرور الجديدة",
+      "mfaTitle": "المصادقة الثنائية",
+      "mfaEnabled": "المصادقة الثنائية مفعّلة",
+      "mfaDisabled": "المصادقة الثنائية معطّلة",
+      "enableMfa": "تفعيل المصادقة الثنائية",
+      "disableMfa": "إلغاء المصادقة الثنائية",
+      "sessions": "الجلسات النشطة",
+      "revokeAll": "إلغاء جميع الجلسات"
+    },
+    "notifications": {
+      "title": "تفضيلات الإشعارات",
+      "email": "إشعارات البريد الإلكتروني",
+      "push": "إشعارات الدفع",
+      "sms": "إشعارات الرسائل القصيرة",
+      "enablePush": "تفعيل إشعارات الدفع",
+      "disablePush": "إلغاء إشعارات الدفع"
+    },
+    "api": {
+      "title": "مفاتيح API",
+      "create": "إنشاء مفتاح API",
+      "name": "اسم المفتاح",
+      "key": "مفتاح API",
+      "created": "تاريخ الإنشاء",
+      "lastUsed": "آخر استخدام",
+      "revoke": "إلغاء"
+    }
+  },
+  "assignments": {
+    "title": "الواجبات",
+    "create": "واجب جديد",
+    "fields": {
+      "title": "العنوان",
+      "description": "الوصف",
+      "dueDate": "تاريخ الاستحقاق",
+      "maxScore": "الدرجة القصوى"
+    },
+    "status": {
+      "pending": "في الانتظار",
+      "submitted": "مُسلَّم",
+      "graded": "مُقيَّم",
+      "late": "متأخر",
+      "overdue": "منتهي الصلاحية"
+    },
+    "actions": {
+      "submit": "تسليم الواجب",
+      "grade": "تقييم",
+      "viewSubmissions": "عرض التسليمات"
+    }
+  },
+  "errors": {
+    "notFound": "الصفحة غير موجودة",
+    "unauthorized": "غير مصرح لك بعرض هذه الصفحة",
+    "serverError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+    "networkError": "خطأ في الشبكة. تحقق من اتصالك.",
+    "rateLimited": "طلبات كثيرة جداً. يرجى التباطؤ.",
+    "sessionExpired": "انتهت صلاحية جلستك. يرجى تسجيل الدخول مرة أخرى."
+  }
+}
