@@ -58,6 +58,18 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build and push Worker image
+        uses: docker/build-push-action@v5
+        with:
+          context: apps/api
+          file: infra/docker/worker.Dockerfile
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/eduai-worker:${{ github.sha }}
+            ${{ env.ECR_REGISTRY }}/eduai-worker:staging-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   deploy-staging:
     name: Deploy to Staging
     runs-on: ubuntu-latest
@@ -96,10 +108,13 @@ jobs:
             --namespace ${{ env.NAMESPACE }} \
             --create-namespace \
             --values infra/helm/eduai/values.yaml \
+            --values infra/helm/eduai/values.staging.yaml \
             --set api.image.tag=${{ needs.build-and-push.outputs.image_tag }} \
             --set web.image.tag=${{ needs.build-and-push.outputs.image_tag }} \
+            --set worker.image.tag=${{ needs.build-and-push.outputs.image_tag }} \
             --set api.image.repository=${{ env.ECR_REGISTRY }}/eduai-api \
             --set web.image.repository=${{ env.ECR_REGISTRY }}/eduai-web \
+            --set worker.image.repository=${{ env.ECR_REGISTRY }}/eduai-worker \
             --wait --timeout=10m
 
       - name: Smoke test

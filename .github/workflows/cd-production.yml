@@ -55,6 +55,16 @@ jobs:
             ${{ env.ECR_REGISTRY }}/eduai-web:${{ github.event.release.tag_name }}
             ${{ env.ECR_REGISTRY }}/eduai-web:latest
 
+      - name: Build and push Worker
+        uses: docker/build-push-action@v5
+        with:
+          context: apps/api
+          file: infra/docker/worker.Dockerfile
+          push: true
+          tags: |
+            ${{ env.ECR_REGISTRY }}/eduai-worker:${{ github.event.release.tag_name }}
+            ${{ env.ECR_REGISTRY }}/eduai-worker:latest
+
   deploy-production:
     name: Deploy to Production
     runs-on: ubuntu-latest
@@ -96,8 +106,10 @@ jobs:
             --values infra/helm/eduai/values.production.yaml \
             --set api.image.tag=${{ needs.build-and-push.outputs.image_tag }} \
             --set web.image.tag=${{ needs.build-and-push.outputs.image_tag }} \
+            --set worker.image.tag=${{ needs.build-and-push.outputs.image_tag }} \
             --set api.image.repository=${{ env.ECR_REGISTRY }}/eduai-api \
             --set web.image.repository=${{ env.ECR_REGISTRY }}/eduai-web \
+            --set worker.image.repository=${{ env.ECR_REGISTRY }}/eduai-worker \
             --atomic --wait --timeout=15m
 
       - name: Notify Slack on success
