@@ -28,6 +28,8 @@ model Tenant {
   whiteLabel      WhiteLabel?
   apiKeys         ApiKey[]
   auditLogs       AuditLog[]
+  userConsents             UserConsent[]
+  deletionRequests         DataDeletionRequest[]
   aiConversations AIConversation[]
   exams           Exam[]
   flashcardDecks  FlashcardDeck[]
@@ -72,6 +74,8 @@ model User {
   examAttempts             ExamAttempt[]
   issuedCertificates       IssuedCertificate[] @relation("issuedCertificates")
   auditLogs                AuditLog[]
+  consents                 UserConsent[]
+  deletionRequest          DataDeletionRequest?
   liveParticipants         LiveParticipant[]
   conversationParticipants ConversationParticipant[]
   reviews                  Review[]
@@ -1041,4 +1045,53 @@ enum AttendanceStatus {
   ABSENT
   LATE
   EXCUSED
+}
+
+model UserConsent {
+  id          String      @id @default(cuid())
+  userId      String
+  tenantId    String
+  type        ConsentType
+  version     String      @default("1.0")
+  granted     Boolean
+  ipAddress   String?
+  userAgent   String?
+  grantedAt   DateTime    @default(now())
+  revokedAt   DateTime?
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@index([tenantId])
+}
+
+model DataDeletionRequest {
+  id           String        @id @default(cuid())
+  userId       String        @unique
+  tenantId     String
+  status       DeletionStatus @default(PENDING)
+  reason       String?
+  requestedAt  DateTime      @default(now())
+  scheduledFor DateTime
+  completedAt  DateTime?
+  user         User          @relation(fields: [userId], references: [id])
+
+  @@index([tenantId])
+  @@index([status, scheduledFor])
+}
+
+enum ConsentType {
+  TERMS_OF_SERVICE
+  PRIVACY_POLICY
+  MARKETING_EMAIL
+  ANALYTICS
+  COOKIES_NECESSARY
+  COOKIES_ANALYTICS
+  COOKIES_MARKETING
+}
+
+enum DeletionStatus {
+  PENDING
+  SCHEDULED
+  COMPLETED
+  CANCELLED
 }

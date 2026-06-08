@@ -42,6 +42,7 @@ import { AppGraphQLModule } from './modules/graphql/graphql.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { ExamsModule } from './modules/exams/exams.module';
 import { FlashcardsModule } from './modules/flashcards/flashcards.module';
+import { GdprModule } from './modules/gdpr/gdpr.module';
 import { TenantMiddleware } from './modules/tenants/middleware/tenant.middleware';
 import { MetricsMiddleware } from './modules/metrics/metrics.middleware';
 
@@ -92,6 +93,7 @@ import { MetricsMiddleware } from './modules/metrics/metrics.middleware';
     DashboardModule,
     ExamsModule,
     FlashcardsModule,
+    GdprModule,
     AppGraphQLModule,
   ],
   providers: [

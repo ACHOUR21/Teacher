@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   User, Palette, Bell, Shield, Key, Building, Eye, EyeOff, Check,
-  AlertTriangle, BellRing, BellOff, Smartphone, Copy, Download, RefreshCw, Trash2, Lock,
+  AlertTriangle, BellRing, BellOff, Smartphone, Copy, Download, RefreshCw,
+  Trash2, Lock, FileText, AlertOctagon,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { toast } from '@/hooks/useToast';
@@ -437,6 +438,205 @@ function TrustedDevicesSection() {
   );
 }
 
+// ── GDPR Privacy & Data Card ──────────────────────────────────────────────────
+
+const CONSENT_LABELS: Record<string, { label: string; desc: string }> = {
+  MARKETING_EMAIL: { label: 'Marketing emails', desc: 'Receive product updates, offers, and newsletters.' },
+  ANALYTICS: { label: 'Usage analytics', desc: 'Help us improve by sharing anonymous usage data.' },
+  COOKIES_ANALYTICS: { label: 'Analytics cookies', desc: 'Track visits and usage patterns within the platform.' },
+  COOKIES_MARKETING: { label: 'Marketing cookies', desc: 'Personalised content and recommendations.' },
+};
+
+function GdprPrivacyCard() {
+  const qc = useQueryClient();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [exporting, setExporting] = useState(false);
+
+  const { data: consents = [] } = useQuery<any[]>({
+    queryKey: ['gdpr-consents'],
+    queryFn: () => api.get('/gdpr/consents').then(r => r.data.data ?? r.data ?? []),
+  });
+
+  const { data: deletionReq, refetch: refetchDeletion } = useQuery<any>({
+    queryKey: ['gdpr-deletion'],
+    queryFn: () => api.get('/gdpr/deletion-request').then(r => r.data.data ?? r.data).catch(() => null),
+  });
+
+  const consentMap = Object.fromEntries((consents).map((c: any) => [c.type, c.granted as boolean]));
+
+  const consentMutation = useMutation({
+    mutationFn: (updates: { type: string; granted: boolean }[]) =>
+      api.put('/gdpr/consents', { consents: updates.map(u => ({ ...u, version: '1.0' })) }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['gdpr-consents'] }); toast.success('Preferences saved'); },
+  });
+
+  const requestDeleteMutation = useMutation({
+    mutationFn: () => api.post('/gdpr/deletion-request', { reason: deleteReason || undefined }),
+    onSuccess: () => { refetchDeletion(); setConfirmDelete(false); toast.success('Deletion scheduled — you have 30 days to cancel'); },
+    onError: (err: any) => toast.error(err?.response?.data?.message ?? 'Request failed'),
+  });
+
+  const cancelDeleteMutation = useMutation({
+    mutationFn: () => api.delete('/gdpr/deletion-request'),
+    onSuccess: () => { refetchDeletion(); toast.success('Account deletion cancelled'); },
+  });
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const res = await api.get('/gdpr/export');
+      const data = res.data.data ?? res.data;
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `eduai-my-data-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('Export failed');
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  const hasPendingDeletion = deletionReq?.status === 'PENDING';
+
+  return (
+    <Card>
+      <CardHeader><CardTitle>Privacy &amp; Data (GDPR)</CardTitle></CardHeader>
+      <CardContent className="space-y-6">
+
+        {/* Data Export */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <FileText className="h-5 w-5 text-gray-400 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-gray-900">Download My Data</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Export a copy of all personal data we hold about you (GDPR Article 15 &amp; 20 — right to access &amp; portability). JSON format.
+              </p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleExport} loading={exporting} className="flex-shrink-0">
+            <Download className="h-3.5 w-3.5 mr-1.5" />Download
+          </Button>
+        </div>
+
+        {/* Consent Preferences */}
+        <div className="border-t border-gray-100 pt-5">
+          <p className="text-sm font-medium text-gray-900 mb-3">Consent Preferences</p>
+          <div className="space-y-3">
+            {Object.entries(CONSENT_LABELS).map(([type, meta]) => {
+              const granted = consentMap[type] ?? false;
+              return (
+                <div key={type} className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm text-gray-700">{meta.label}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{meta.desc}</p>
+                  </div>
+                  <button
+                    onClick={() => consentMutation.mutate([{ type, granted: !granted }])}
+                    className={cn(
+                      'relative flex-shrink-0 mt-0.5 w-9 h-5 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-blue-500',
+                      granted ? 'bg-blue-600' : 'bg-gray-200',
+                    )}
+                    aria-label={`Toggle ${meta.label}`}
+                  >
+                    <span className={cn(
+                      'absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform',
+                      granted ? 'translate-x-4' : 'translate-x-0',
+                    )} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <p className="text-xs text-gray-400 mt-3">
+            Necessary cookies are always active and cannot be disabled. You can withdraw other consents at any time without affecting the lawfulness of past processing.
+          </p>
+        </div>
+
+        {/* Account Deletion */}
+        <div className="border-t border-gray-100 pt-5">
+          {hasPendingDeletion ? (
+            <div className="bg-red-50 border border-red-100 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <AlertOctagon className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-red-700">Account deletion scheduled</p>
+                  <p className="text-xs text-red-600 mt-0.5">
+                    Your account and all personal data will be permanently deleted on{' '}
+                    <strong>{new Date(deletionReq.scheduledFor).toLocaleDateString(undefined, { dateStyle: 'long' })}</strong>.
+                    This action cannot be undone after that date.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => cancelDeleteMutation.mutate()}
+                    loading={cancelDeleteMutation.isPending}
+                    className="mt-3 border-red-200 text-red-600 hover:bg-red-50"
+                  >
+                    Cancel deletion
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : confirmDelete ? (
+            <div className="bg-red-50 border border-red-100 rounded-xl p-4 space-y-3">
+              <p className="text-sm font-semibold text-red-700">Are you sure?</p>
+              <p className="text-xs text-red-600">
+                Requesting deletion will disable your account immediately. After a 30-day grace period, all
+                personal data will be permanently erased. You can cancel any time within those 30 days.
+              </p>
+              <textarea
+                value={deleteReason}
+                onChange={e => setDeleteReason(e.target.value)}
+                placeholder="Optional: tell us why you're leaving..."
+                rows={2}
+                className="w-full px-3 py-2 text-xs border border-red-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-300 resize-none bg-white"
+              />
+              <div className="flex gap-2">
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => requestDeleteMutation.mutate()}
+                  loading={requestDeleteMutation.isPending}
+                >
+                  Yes, delete my account
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <Trash2 className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Delete My Account</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Permanently delete your account and all associated data (GDPR Article 17 — right to erasure).
+                    A 30-day grace period applies.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmDelete(true)}
+                className="flex-shrink-0 border-red-200 text-red-600 hover:bg-red-50"
+              >
+                Delete Account
+              </Button>
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function SettingsPage() {
   const t = useTranslations('settings');
   const qc = useQueryClient();
@@ -782,43 +982,7 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader><CardTitle>Privacy &amp; Data</CardTitle></CardHeader>
-                <CardContent>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">Download My Data</p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        Export a copy of all personal data we hold about you (GDPR Article 20 — right to data portability).
-                        The download will be a JSON file.
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-shrink-0"
-                      onClick={() => {
-                        const token = useAuthStore.getState().accessToken;
-                        fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/me/export`, {
-                          headers: { Authorization: `Bearer ${token}` },
-                        })
-                          .then(r => r.json())
-                          .then(data => {
-                            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = 'my-eduai-data.json';
-                            a.click();
-                            URL.revokeObjectURL(url);
-                          });
-                      }}
-                    >
-                      Download My Data
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <GdprPrivacyCard />
             </div>
           )}
 
