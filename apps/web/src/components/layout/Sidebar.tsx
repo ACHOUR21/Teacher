@@ -123,7 +123,7 @@ export function Sidebar() {
     return pathname.startsWith(href);
   };
 
-  const canSeeItem = (item: NavItem) => {
+  const canSeeItem = (item: NavItemKey) => {
     if (!item.roles) return true;
     if (!user) return false;
     return item.roles.includes(user.role);

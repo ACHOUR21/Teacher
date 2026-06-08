@@ -278,7 +278,9 @@ export class AiAgentsService {
     for (let i = 0; i < MAX_ITERATIONS; i++) {
       yield { type: 'status', phase: 'thinking' };
 
-      const stream = this.anthropic.messages.stream({
+      yield { type: 'status', phase: 'responding' };
+
+      const finalMsg = await (this.anthropic.messages.create as any)({
         model: 'claude-opus-4-8',
         max_tokens: 2048,
         system: config.systemPrompt,
@@ -287,29 +289,23 @@ export class AiAgentsService {
       });
 
       let iterationText = '';
-      yield { type: 'status', phase: 'responding' };
-
-      for await (const event of stream) {
-        if (
-          event.type === 'content_block_delta' &&
-          event.delta.type === 'text_delta'
-        ) {
-          iterationText += event.delta.text;
-          finalText += event.delta.text;
-          yield { type: 'delta', text: event.delta.text };
+      for (const block of (finalMsg.content as any[])) {
+        if (block.type === 'text') {
+          iterationText += block.text;
+          finalText += block.text;
+          yield { type: 'delta', text: block.text };
         }
       }
 
-      const finalMsg = await stream.finalMessage();
-      totalInputTokens += finalMsg.usage.input_tokens;
-      totalOutputTokens += finalMsg.usage.output_tokens;
-      history.push({ role: 'assistant', content: finalMsg.content });
+      totalInputTokens += (finalMsg.usage as any).input_tokens;
+      totalOutputTokens += (finalMsg.usage as any).output_tokens;
+      history.push({ role: 'assistant', content: finalMsg.content } as any);
 
-      if (finalMsg.stop_reason !== 'tool_use') break;
+      if ((finalMsg as any).stop_reason !== 'tool_use') break;
 
       // Execute tools and continue the loop
       yield { type: 'status', phase: 'tool_calling' };
-      const toolResultContent: Anthropic.ToolResultBlockParam[] = [];
+      const toolResultContent: any[] = [];
 
       for (const block of finalMsg.content) {
         if (block.type !== 'tool_use') continue;
@@ -319,7 +315,7 @@ export class AiAgentsService {
         toolResultContent.push({ type: 'tool_result', tool_use_id: block.id, content: output });
       }
 
-      history.push({ role: 'user', content: toolResultContent });
+      history.push({ role: 'user', content: toolResultContent } as any);
     }
 
     // Persist conversation

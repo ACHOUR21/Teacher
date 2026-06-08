@@ -27,17 +27,16 @@ export class GdprService {
         },
         consents: true,
         issuedCertificates: {
-          select: { id: true, verificationCode: true, issuedAt: true },
-          where: { isValid: true },
+          select: { id: true, verifyCode: true, issuedAt: true },
         },
         examAttempts: {
-          select: { id: true, score: true, passed: true, startedAt: true, submittedAt: true },
+          select: { id: true, score: true, startedAt: true, submittedAt: true },
         },
         flashcardReviews: {
           select: { id: true, rating: true, interval: true, reviewedAt: true },
         },
         auditLogs: {
-          select: { id: true, action: true, details: true, createdAt: true },
+          select: { id: true, action: true, createdAt: true },
           orderBy: { createdAt: 'desc' },
           take: 500,
         },

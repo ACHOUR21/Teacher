@@ -43,7 +43,7 @@ export class NotificationsScheduler {
               include: {
                 course: {
                   include: {
-                    progresses: {
+                    progress: {
                       where: { completedAt: null },
                       include: { student: { select: { userId: true } } },
                     },
@@ -57,8 +57,8 @@ export class NotificationsScheduler {
     });
 
     for (const assignment of assignments) {
-      const enrolledUserIds = assignment.lesson?.section?.course?.progresses
-        ?.map(p => p.student?.userId)
+      const enrolledUserIds = assignment.lesson?.section?.course?.progress
+        ?.map((p: any) => p.student?.userId)
         .filter(Boolean) as string[] ?? [];
 
       for (const userId of enrolledUserIds) {

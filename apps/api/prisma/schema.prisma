@@ -477,7 +477,7 @@ model Submission {
   student      Student          @relation(fields: [studentId], references: [id])
   @@unique([assignmentId, studentId])
   @@index([assignmentId, studentId])
-  @@index([studentId, createdAt])
+  @@index([studentId, submittedAt])
 }
 
 // === LIVE CLASSROOM ===
@@ -1059,6 +1059,7 @@ model UserConsent {
   grantedAt   DateTime    @default(now())
   revokedAt   DateTime?
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
 
   @@unique([userId, type])
   @@index([tenantId])
@@ -1074,6 +1075,7 @@ model DataDeletionRequest {
   scheduledFor DateTime
   completedAt  DateTime?
   user         User          @relation(fields: [userId], references: [id])
+  tenant       Tenant        @relation(fields: [tenantId], references: [id])
 
   @@index([tenantId])
   @@index([status, scheduledFor])

@@ -60,7 +60,7 @@ export class GamificationService {
 
     // Record the event
     await this.prisma.gamificationEvent.create({
-      data: { userId, eventType, xpAwarded: rule.xp, metadata },
+      data: { userId, eventType, xpAwarded: rule.xp, metadata: metadata as any },
     });
 
     // --- update level ---

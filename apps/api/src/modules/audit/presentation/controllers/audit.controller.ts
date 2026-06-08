@@ -83,11 +83,11 @@ export class AuditController {
   @Header('Content-Type', 'text/csv')
   @Header('Content-Disposition', 'attachment; filename="audit-logs.csv"')
   async exportCsv(
+    @Res() res: Response,
     @CurrentUser() user: CurrentUserPayload,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('action') action?: AuditAction,
-    @Res() res: Response,
   ) {
     const result = await this.auditService.query(user.tenantId, {
       from: startDate ? new Date(startDate) : undefined,

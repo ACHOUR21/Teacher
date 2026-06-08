@@ -35,12 +35,10 @@ export function useNotificationSocket() {
       createdAt: string;
     }) => {
       addNotification({
-        id: notification.id,
         title: notification.title,
         message: notification.message,
+        type: notification.type as 'info' | 'success' | 'warning' | 'error',
         href: notification.href,
-        read: false,
-        createdAt: notification.createdAt,
       });
     });
 

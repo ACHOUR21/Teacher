@@ -126,7 +126,7 @@ export class ExamsController {
     @Param('examId') examId: string,
     @CurrentUser() user: CurrentUserPayload,
   ) {
-    const includeAnswers = [UserRole.TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN].includes(user.role as UserRole);
+    const includeAnswers = ([UserRole.TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN] as string[]).includes(user.role);
     return this.examsService.getExam(examId, includeAnswers);
   }
 
