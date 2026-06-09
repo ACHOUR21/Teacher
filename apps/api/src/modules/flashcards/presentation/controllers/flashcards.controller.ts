@@ -49,11 +49,12 @@ class CreateDeckBodyDto implements CreateDeckDto {
   @IsBoolean()
   isPublic?: boolean;
 
-  @ApiProperty({ type: [CardDto] })
+  @ApiPropertyOptional({ type: [CardDto] })
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CardDto)
-  cards: CardDto[];
+  cards?: CardDto[];
 }
 
 class ReviewCardBodyDto {
