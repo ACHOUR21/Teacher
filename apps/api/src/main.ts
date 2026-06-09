@@ -71,46 +71,138 @@ async function bootstrap() {
   app.useWebSocketAdapter(new IoAdapter(app));
 
   // Swagger
+  const apiVersion = process.env['npm_package_version'] ?? '1.0.0';
+  const swaggerDescription = `
+## EduAI Ultimate — Enterprise AI-powered Education Platform
+
+A global multi-tenant SaaS platform combining LMS, School ERP, University ERP, AI Education,
+Course Marketplace, Live Classroom, Mobile Ecosystem, White Label SaaS, and a Developer Platform.
+
+### Platform Modules
+
+| # | Module | Description |
+|---|--------|-------------|
+| 1 | **Multi-Tenant SaaS** | Tenant provisioning, isolation, plan management |
+| 2 | **Super Admin** | Platform-level administration and oversight |
+| 3 | **School ERP** | Classes, departments, timetable, attendance |
+| 4 | **University ERP** | Faculties, programs, academic enrollments |
+| 5 | **AI Education Suite** | AI Tutor, Exam Generator, Lesson & Curriculum builder |
+| 6 | **Teacher Ecosystem** | Course authoring, assignments, analytics |
+| 7 | **Student Ecosystem** | Learning progress, submissions, performance |
+| 8 | **Parent Portal** | Child monitoring, attendance, communication |
+| 9 | **Marketplace** | Course discovery, purchase, ratings & reviews |
+| 10 | **Live Classroom** | Real-time sessions, recording, whiteboard |
+| 11 | **Certificate System** | Template designer, issuance, verification |
+| 12 | **Communication Center** | Messaging, announcements, notifications |
+| 13 | **Gamification** | Points, badges, leaderboards, streaks |
+| 14 | **White Label System** | Custom branding, domain, email |
+| 15 | **Billing** | Stripe + PayPal, plans, coupons, invoices |
+| 16 | **Analytics BI** | Reports, dashboards, export |
+| 17 | **Plugin Marketplace** | Third-party plugin install & management |
+| 18 | **API Ecosystem** | API keys, webhooks, rate limiting |
+| 19 | **Mobile Apps** | Flutter push notifications & mobile endpoints |
+| 20 | **AI Agents Platform** | Autonomous AI agents, tool orchestration |
+
+### Authentication
+
+All protected endpoints require a **Bearer JWT** token in the \`Authorization\` header.
+Service-to-service calls may use an **X-API-Key** header instead.
+Multi-tenant requests must include **X-Tenant-ID** to identify the active tenant.
+
+### Versioning
+
+This document describes **v1** of the EduAI API. All routes are prefixed with \`/api/v1\`.
+  `.trim();
+
   const config = new DocumentBuilder()
     .setTitle('EduAI Ultimate API')
-    .setDescription('Enterprise AI-powered Education Platform API')
-    .setVersion('1.0.0')
+    .setDescription(swaggerDescription)
+    .setVersion(apiVersion)
+    .setContact('EduAI Support', 'https://eduai.app', 'support@eduai.app')
+    .setLicense('Proprietary', 'https://eduai.app/terms')
+    .setExternalDoc('Platform Documentation', 'https://docs.eduai.app')
+    .addServer('http://localhost:3001', 'Local Development')
+    .addServer('https://api.eduai.app', 'Production')
     .addBearerAuth(
-      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', name: 'JWT', in: 'header' },
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter your JWT access token. Obtain one via POST /api/v1/auth/login',
+        in: 'header',
+      },
       'JWT-auth',
     )
-    .addApiKey({ type: 'apiKey', name: 'X-API-Key', in: 'header' }, 'API-Key')
-    .addTag('Health', 'Health Checks')
-    .addTag('Auth', 'Authentication & Authorization')
-    .addTag('Tenants', 'Multi-tenant Management')
-    .addTag('Users', 'User Management')
-    .addTag('Courses', 'Course Management')
-    .addTag('Students', 'Student Ecosystem')
-    .addTag('Teachers', 'Teacher Ecosystem')
-    .addTag('Parents', 'Parent Portal')
-    .addTag('AI', 'AI-powered Education Features')
-    .addTag('AI Agents', 'AI Agents Platform')
-    .addTag('Billing', 'Subscription & Payments')
-    .addTag('Live', 'Live Classroom Sessions')
-    .addTag('Marketplace', 'Course Marketplace')
-    .addTag('Gamification', 'Points, Badges & Leaderboard')
-    .addTag('Certificates', 'Certificate Management')
-    .addTag('Notifications', 'Notification System')
-    .addTag('Messaging', 'Real-time Messaging')
-    .addTag('Analytics', 'Analytics & Business Intelligence')
-    .addTag('School ERP', 'School ERP — Classes, Departments, Timetable')
-    .addTag('University ERP', 'University ERP — Faculties, Programs, Enrollments')
-    .addTag('White Label', 'White Label Customization')
-    .addTag('Plugins', 'Plugin Marketplace')
-    .addTag('API Ecosystem', 'API Keys & Webhooks')
-    .addTag('Search', 'Full-text Search')
-    .addTag('Storage', 'File Storage')
-    .addTag('Audit', 'Audit Logs')
+    .addApiKey(
+      {
+        type: 'apiKey',
+        name: 'X-API-Key',
+        description: 'API key for service-to-service calls. Manage keys via the API Ecosystem module.',
+        in: 'header',
+      },
+      'API-Key',
+    )
+    .addGlobalParameters({
+      in: 'header',
+      name: 'X-Tenant-ID',
+      required: false,
+      schema: { type: 'string' },
+      description: 'Tenant identifier (slug or cuid). Required for multi-tenant contexts.',
+    })
+    // Core platform
+    .addTag('Health', 'Liveness and readiness health checks')
+    .addTag('Auth', 'Authentication — login, register, refresh, logout, MFA')
+    .addTag('Tenants', 'Multi-tenant provisioning, settings, and plan management')
+    .addTag('Users', 'User CRUD, profile, roles, device management')
+    // Education
+    .addTag('Courses', 'Course authoring — sections, lessons, publishing, pricing')
+    .addTag('Students', 'Student profiles, progress, performance, submissions')
+    .addTag('Teachers', 'Teacher profiles, verification, subject management')
+    .addTag('Parents', 'Parent portal — child linking, monitoring, communications')
+    // ERP
+    .addTag('School ERP', 'Schools, departments, classes, timetables, attendance')
+    .addTag('University ERP', 'Universities, faculties, programs, academic enrollments')
+    // AI
+    .addTag('AI', 'AI Education Suite — tutor, exam/lesson/curriculum generation, flashcards, mind maps')
+    .addTag('AI Agents', 'AI Agents Platform — autonomous agents, tool orchestration, pipelines')
+    // Commerce & interaction
+    .addTag('Marketplace', 'Course discovery, purchase flow, ratings and reviews')
+    .addTag('Live', 'Live classroom sessions, recordings, participant management')
+    .addTag('Certificates', 'Certificate template design, issuance, public verification')
+    .addTag('Gamification', 'Points, XP, badges, leaderboards, streaks, events')
+    // Communication
+    .addTag('Notifications', 'In-app, email, SMS and push notification delivery')
+    .addTag('Messaging', 'Real-time direct and group messaging via WebSocket')
+    // Platform services
+    .addTag('Billing', 'Subscriptions, plans, Stripe/PayPal, coupons, invoices, revenue analytics')
+    .addTag('Analytics', 'Platform analytics, BI dashboards, reports and data export')
+    .addTag('White Label', 'Custom branding, domain mapping, email themes')
+    .addTag('Plugins', 'Plugin marketplace — discovery, installation, configuration')
+    .addTag('API Ecosystem', 'API key management, webhook endpoints, rate limiting')
+    .addTag('Search', 'Full-text search across courses, users, and content (Elasticsearch)')
+    .addTag('Storage', 'File upload, presigned URLs, S3-compatible object storage')
+    .addTag('Audit', 'Immutable audit log — actions, resources, actors, timestamps')
     .build();
 
-  const document = SwaggerModule.createDocument(app, config);
+  const document = SwaggerModule.createDocument(app, config, {
+    operationIdFactory: (_controllerKey: string, methodKey: string) => methodKey,
+  });
   SwaggerModule.setup('api/docs', app, document, {
-    swaggerOptions: { persistAuthorization: true },
+    swaggerOptions: {
+      persistAuthorization: true,
+      tagsSorter: 'alpha',
+      operationsSorter: 'alpha',
+      docExpansion: 'none',
+      filter: true,
+      showRequestDuration: true,
+    },
+    customSiteTitle: 'EduAI Ultimate API Docs',
+    customCss: `
+      .swagger-ui .topbar { background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%); }
+      .swagger-ui .topbar-wrapper .link { display: none; }
+      .swagger-ui .topbar-wrapper::after { content: 'EduAI Ultimate API'; color: white; font-size: 1.2rem; font-weight: 700; }
+    `,
   });
 
   // Graceful shutdown

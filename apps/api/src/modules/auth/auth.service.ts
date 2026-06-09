@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+
 import {
   Injectable,
   UnauthorizedException,
@@ -12,7 +14,6 @@ import { TenantType, UserRole } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import * as QRCode from 'qrcode';
 import * as speakeasy from 'speakeasy';
-import { v4 as uuidv4 } from 'uuid';
 
 import { RedisService } from '../cache/redis.service';
 import { PrismaService } from '../database/prisma.service';
@@ -202,7 +203,7 @@ export class AuthService {
     }
 
     if (user.mfaEnabled && !deviceTrusted) {
-      const mfaChallengeToken = uuidv4();
+      const mfaChallengeToken = randomUUID();
       await this.redis.set(`mfa:challenge:${mfaChallengeToken}`, user.id, 300);
       return {
         user: new AuthUser({
@@ -483,7 +484,7 @@ export class AuthService {
     // Always return success to prevent email enumeration
     if (!user) {return;}
 
-    const resetToken = uuidv4();
+    const resetToken = randomUUID();
     await this.redis.set(`pwd:reset:${resetToken}`, user.id, 3600);
 
     this.logger.log(`Password reset token generated for ${email}`);
@@ -495,7 +496,7 @@ export class AuthService {
     if (!user) {throw new NotFoundException('User not found');}
     if (user.emailVerified) {return;} // already verified
 
-    const verificationToken = uuidv4();
+    const verificationToken = randomUUID();
     await this.redis.set(`email:verify:${verificationToken}`, userId, 24 * 3600); // 24 hours
     await this.notifications.sendEmailVerification(user.email, user.firstName, verificationToken).catch(() => {});
     this.logger.log(`Email verification token sent to ${user.email}`);

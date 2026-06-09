@@ -77,7 +77,7 @@ export class SubscriptionsResolver {
   })
   @UseGuards(GqlAuthGuard)
   notificationAdded() {
-    return pubSub.asyncIterableIterator(GQL_EVENTS.NOTIFICATION_ADDED);
+    return pubSub.asyncIterator(GQL_EVENTS.NOTIFICATION_ADDED);
   }
 
   @Subscription(() => ChatMessage, {
@@ -92,7 +92,7 @@ export class SubscriptionsResolver {
   messageReceived(
     @Args('conversationId', { type: () => ID }) _conversationId: string,
   ) {
-    return pubSub.asyncIterableIterator(GQL_EVENTS.MESSAGE_RECEIVED);
+    return pubSub.asyncIterator(GQL_EVENTS.MESSAGE_RECEIVED);
   }
 
   @Subscription(() => AssignmentGradedEvent, {
@@ -105,7 +105,7 @@ export class SubscriptionsResolver {
   })
   @UseGuards(GqlAuthGuard)
   assignmentGraded() {
-    return pubSub.asyncIterableIterator(GQL_EVENTS.ASSIGNMENT_GRADED);
+    return pubSub.asyncIterator(GQL_EVENTS.ASSIGNMENT_GRADED);
   }
 
   @Subscription(() => LiveSessionEvent, {
@@ -115,6 +115,6 @@ export class SubscriptionsResolver {
   })
   @UseGuards(GqlAuthGuard)
   liveSessionStarted() {
-    return pubSub.asyncIterableIterator(GQL_EVENTS.LIVE_SESSION_STARTED);
+    return pubSub.asyncIterator(GQL_EVENTS.LIVE_SESSION_STARTED);
   }
 }

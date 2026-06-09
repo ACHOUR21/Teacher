@@ -1,7 +1,8 @@
+import { randomUUID } from 'crypto';
+
 import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Injectable, Logger } from '@nestjs/common';
-import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class StorageService {
@@ -26,7 +27,7 @@ export class StorageService {
 
   private getKey(folder: string, filename: string): string {
     const ext = filename.split('.').pop();
-    return `${folder}/${uuidv4()}.${ext}`;
+    return `${folder}/${randomUUID()}.${ext}`;
   }
 
   async upload(file: Express.Multer.File, folder = 'uploads'): Promise<{ key: string; url: string }> {

@@ -5,6 +5,16 @@ import { PrismaService } from '../../database/prisma.service';
 import { RedisService } from '../../cache/redis.service';
 import { SearchService } from '../../search/search.service';
 import { ApiEcosystemService } from '../../api-ecosystem/api-ecosystem.service';
+import { PaginationDto } from '../../core/pagination/pagination.dto';
+
+// Helper: build a PaginationDto-compatible object with the skip getter
+function makePagination(page = 1, limit = 20, extra: Partial<PaginationDto> = {}): PaginationDto {
+  const dto = new PaginationDto();
+  dto.page = page;
+  dto.limit = limit;
+  Object.assign(dto, extra);
+  return dto;
+}
 
 const mockRedis = {
   get: jest.fn().mockResolvedValue(null),
@@ -109,7 +119,7 @@ describe('CoursesService', () => {
       mockPrisma.course.findMany.mockResolvedValueOnce(mockCourses);
       mockPrisma.course.count.mockResolvedValueOnce(2);
 
-      const result = await service.findAll('tenant-1', { page: 1, limit: 10 });
+      const result = await service.findAll('tenant-1', makePagination(1, 10));
 
       expect(result.items).toHaveLength(2);
       expect(result.total).toBe(2);
@@ -122,7 +132,7 @@ describe('CoursesService', () => {
       mockPrisma.course.findMany.mockResolvedValueOnce([]);
       mockPrisma.course.count.mockResolvedValueOnce(0);
 
-      await service.findAll('tenant-1', { page: 1, limit: 10 }, { level: 'BEGINNER' as any });
+      await service.findAll('tenant-1', makePagination(1, 10), { level: 'BEGINNER' as any });
 
       expect(mockPrisma.course.findMany).toHaveBeenCalledWith(
         expect.objectContaining({

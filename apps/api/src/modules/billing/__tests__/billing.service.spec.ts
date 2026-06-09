@@ -7,15 +7,29 @@ import { RedisService } from '../../cache/redis.service';
 import { ApiEcosystemService } from '../../api-ecosystem/api-ecosystem.service';
 
 const mockPrisma = {
-  subscription: { findFirst: jest.fn(), findUnique: jest.fn(), create: jest.fn(), update: jest.fn(), upsert: jest.fn() },
+  subscription: {
+    findFirst: jest.fn(),
+    findUnique: jest.fn(),
+    create: jest.fn(),
+    update: jest.fn(),
+    upsert: jest.fn(),
+    count: jest.fn(),
+    findMany: jest.fn(),
+    groupBy: jest.fn(),
+  },
   tenant: { findUnique: jest.fn(), update: jest.fn() },
   user: { findUnique: jest.fn() },
-  invoice: { create: jest.fn(), findMany: jest.fn(), count: jest.fn() },
+  invoice: {
+    create: jest.fn(),
+    findMany: jest.fn(),
+    count: jest.fn(),
+    aggregate: jest.fn(),
+  },
   coupon: { findUnique: jest.fn(), update: jest.fn() },
   course: { findUnique: jest.fn() },
   student: { findFirst: jest.fn() },
   courseProgress: { findUnique: jest.fn() },
-  $transaction: jest.fn((cb: any) => cb(mockPrisma)),
+  $transaction: jest.fn((ops: any) => Promise.all(ops)),
 };
 
 const mockConfig = {
@@ -89,8 +103,13 @@ describe('BillingService', () => {
     jest.clearAllMocks();
   });
 
+  // ─── subscribe (creates Stripe Checkout Session) ────────────────────────
+
   describe('subscribe', () => {
-    it('should create a Stripe customer and subscription', async () => {
+    const SUCCESS_URL = 'https://app.example.com/billing/success';
+    const CANCEL_URL = 'https://app.example.com/billing/cancel';
+
+    it('should create a new Stripe customer when none exists and return checkoutUrl', async () => {
       const mockTenant = {
         id: 'tenant-1',
         name: 'Test School',
@@ -101,24 +120,25 @@ describe('BillingService', () => {
 
       mockPrisma.tenant.findUnique.mockResolvedValueOnce(mockTenant);
       mockPrisma.user.findUnique.mockResolvedValueOnce(mockUser);
-      mockPrisma.subscription.upsert.mockResolvedValueOnce({
-        id: 'billing-1',
-        plan: 'PROFESSIONAL',
-        status: 'ACTIVE',
-        tenantId: 'tenant-1',
-      });
-      mockPrisma.tenant.update.mockResolvedValueOnce({ ...mockTenant, plan: 'PROFESSIONAL' });
 
-      const result = await service.subscribe('tenant-1', 'PROFESSIONAL' as any, 'user-1');
+      const result = await service.subscribe(
+        'tenant-1',
+        'PROFESSIONAL' as any,
+        'user-1',
+        SUCCESS_URL,
+        CANCEL_URL,
+      );
 
       expect(mockStripe.customers.create).toHaveBeenCalledWith(
         expect.objectContaining({ metadata: expect.objectContaining({ tenantId: 'tenant-1' }) }),
       );
-      expect(mockStripe.subscriptions.create).toHaveBeenCalled();
-      expect(result).toHaveProperty('subscription');
+      expect(mockStripe.checkout.sessions.create).toHaveBeenCalledWith(
+        expect.objectContaining({ mode: 'subscription' }),
+      );
+      expect(result).toHaveProperty('checkoutUrl');
     });
 
-    it('should use existing Stripe customer if already created', async () => {
+    it('should reuse existing Stripe customer and not call customers.create', async () => {
       const mockTenant = {
         id: 'tenant-1',
         name: 'Test School',
@@ -129,22 +149,42 @@ describe('BillingService', () => {
 
       mockPrisma.tenant.findUnique.mockResolvedValueOnce(mockTenant);
       mockPrisma.user.findUnique.mockResolvedValueOnce(mockUser);
-      mockPrisma.subscription.upsert.mockResolvedValueOnce({
-        id: 'billing-1',
-        plan: 'PROFESSIONAL',
-        status: 'ACTIVE',
-        tenantId: 'tenant-1',
-      });
-      mockPrisma.tenant.update.mockResolvedValueOnce({ ...mockTenant, plan: 'PROFESSIONAL' });
 
-      await service.subscribe('tenant-1', 'PROFESSIONAL' as any, 'user-1');
+      await service.subscribe(
+        'tenant-1',
+        'PROFESSIONAL' as any,
+        'user-1',
+        SUCCESS_URL,
+        CANCEL_URL,
+      );
 
       expect(mockStripe.customers.create).not.toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException when tenant does not exist', async () => {
+      mockPrisma.tenant.findUnique.mockResolvedValueOnce(null);
+      mockPrisma.user.findUnique.mockResolvedValueOnce({ id: 'user-1' });
+
+      await expect(
+        service.subscribe('bad-tenant', 'PROFESSIONAL' as any, 'user-1', SUCCESS_URL, CANCEL_URL),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException for FREE_TRIAL plan (no price ID)', async () => {
+      const mockTenant = { id: 'tenant-1', name: 'Test', plan: 'FREE_TRIAL', subscription: null };
+      const mockUser = { id: 'user-1', email: 'admin@test.com' };
+
+      mockPrisma.tenant.findUnique.mockResolvedValueOnce(mockTenant);
+      mockPrisma.user.findUnique.mockResolvedValueOnce(mockUser);
+
+      await expect(
+        service.subscribe('tenant-1', 'FREE_TRIAL' as any, 'user-1', SUCCESS_URL, CANCEL_URL),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('cancelSubscription', () => {
-    it('should schedule cancellation of active subscription', async () => {
+    it('should schedule cancellation at period end', async () => {
       mockPrisma.subscription.findUnique.mockResolvedValueOnce({
         id: 'billing-1',
         stripeSubscriptionId: 'sub_mock123',
@@ -161,6 +201,18 @@ describe('BillingService', () => {
       expect(mockStripe.subscriptions.update).toHaveBeenCalledWith('sub_mock123', {
         cancel_at_period_end: true,
       });
+      expect(mockPrisma.subscription.update).toHaveBeenCalledWith({
+        where: { tenantId: 'tenant-1' },
+        data: { cancelAtPeriodEnd: true },
+      });
+    });
+
+    it('should throw NotFoundException when no active subscription exists', async () => {
+      mockPrisma.subscription.findUnique.mockResolvedValueOnce(null);
+
+      await expect(service.cancelSubscription('tenant-1')).rejects.toThrow(
+        new NotFoundException('No active subscription found'),
+      );
     });
   });
 
@@ -389,6 +441,103 @@ describe('BillingService', () => {
         },
       });
       expect(result).toEqual(mockSubscription);
+    });
+
+    it('should return null when tenant has no subscription', async () => {
+      mockPrisma.subscription.findUnique.mockResolvedValueOnce(null);
+
+      const result = await service.getCurrentSubscription('tenant-1');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  // ─── getRevenueAnalytics ──────────────────────────────────────────────────
+
+  describe('getRevenueAnalytics', () => {
+    beforeEach(() => {
+      // Provide defaults for all queries used in getRevenueAnalytics
+      mockPrisma.invoice.aggregate.mockResolvedValue({ _sum: { amount: 9900 } });
+      mockPrisma.invoice.findMany.mockResolvedValue([]);
+      mockPrisma.subscription.findMany.mockResolvedValue([
+        { plan: 'PROFESSIONAL' },
+        { plan: 'STARTER' },
+      ]);
+      mockPrisma.subscription.groupBy.mockResolvedValue([
+        { plan: 'PROFESSIONAL', _count: { plan: 1 } },
+        { plan: 'STARTER', _count: { plan: 1 } },
+      ]);
+      mockPrisma.subscription.count.mockResolvedValue(1);
+    });
+
+    it('should return totalRevenue, mrr, arr, churnLast30Days and planDistribution', async () => {
+      const result = await service.getRevenueAnalytics();
+
+      expect(result).toHaveProperty('totalRevenue');
+      expect(result).toHaveProperty('mrr');
+      expect(result).toHaveProperty('arr');
+      expect(result.arr).toBe(result.mrr * 12);
+      expect(result).toHaveProperty('churnLast30Days');
+      expect(result).toHaveProperty('planDistribution');
+      expect(Array.isArray(result.planDistribution)).toBe(true);
+    });
+
+    it('should compute MRR as sum of active subscription plan prices', async () => {
+      // Two active subscriptions: PROFESSIONAL ($79) + STARTER ($29) = $108
+      mockPrisma.subscription.findMany.mockResolvedValueOnce([
+        { plan: 'PROFESSIONAL' },
+        { plan: 'STARTER' },
+      ]);
+
+      const result = await service.getRevenueAnalytics();
+
+      expect(result.mrr).toBe(108);
+    });
+
+    it('should filter by tenantId when provided', async () => {
+      await service.getRevenueAnalytics('tenant-1');
+
+      expect(mockPrisma.invoice.aggregate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ subscription: { tenantId: 'tenant-1' } }),
+        }),
+      );
+    });
+
+    it('should include monthlyRevenue array sorted by month', async () => {
+      const now = new Date();
+      mockPrisma.invoice.findMany.mockResolvedValueOnce([
+        {
+          amount: 79,
+          currency: 'USD',
+          paidAt: new Date(now.getFullYear(), now.getMonth() - 1, 15),
+        },
+        {
+          amount: 29,
+          currency: 'USD',
+          paidAt: new Date(now.getFullYear(), now.getMonth(), 5),
+        },
+      ]);
+
+      const result = await service.getRevenueAnalytics();
+
+      expect(Array.isArray(result.monthlyRevenue)).toBe(true);
+      expect(result.monthlyRevenue.length).toBeGreaterThanOrEqual(1);
+      // Sorted ascending by month string
+      const months = result.monthlyRevenue.map(m => m.month);
+      expect(months).toEqual([...months].sort());
+    });
+  });
+
+  // ─── createPortalSession error case ──────────────────────────────────────
+
+  describe('createPortalSession — error path', () => {
+    it('should throw NotFoundException when no billing account exists', async () => {
+      mockPrisma.subscription.findUnique.mockResolvedValueOnce(null);
+
+      await expect(
+        service.createPortalSession('tenant-1', 'https://app.example.com/billing'),
+      ).rejects.toThrow(new NotFoundException('No billing account found'));
     });
   });
 });
