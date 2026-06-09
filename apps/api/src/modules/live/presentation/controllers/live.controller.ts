@@ -1,9 +1,10 @@
 import { Controller, Get, Post, Param, Body, Patch, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { IsString, IsDateString, IsOptional, IsInt, Min, Max } from 'class-validator';
-import { LiveService } from '../../live.service';
-import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+import { LiveService } from '../../live.service';
 
 class CreateSessionDto {
   @IsString() title: string;

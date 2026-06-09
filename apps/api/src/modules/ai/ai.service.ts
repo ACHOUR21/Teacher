@@ -1,8 +1,10 @@
-import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
 import Anthropic from '@anthropic-ai/sdk';
-import OpenAI from 'openai';
-import { PrismaService } from '../database/prisma.service';
+import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
 import { AIModuleType } from '@prisma/client';
+import OpenAI from 'openai';
+
+import { PrismaService } from '../database/prisma.service';
+
 
 @Injectable()
 export class AiService {
@@ -36,7 +38,7 @@ export class AiService {
     });
     const plan = subscription?.plan ?? 'FREE_TRIAL';
     const limit = this.MONTHLY_TOKEN_LIMITS[plan] ?? 50_000;
-    if (limit === Infinity) return;
+    if (limit === Infinity) {return;}
 
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
@@ -112,7 +114,7 @@ export class AiService {
       messages: [...history, { role: 'user', content: message }],
     });
 
-    const answer = (response.content[0] as Anthropic.TextBlock).text;
+    const answer = (response.content[0]).text;
     const tokens = response.usage.input_tokens + response.usage.output_tokens;
     await this.saveMessage(conversation!.id, 'assistant', answer, tokens);
     await this.trackUsage(tenantId, userId, AIModuleType.TUTOR, tokens);
@@ -129,7 +131,7 @@ export class AiService {
       messages: [{ role: 'user', content: problem }],
     });
 
-    const solution = (response.content[0] as Anthropic.TextBlock).text;
+    const solution = (response.content[0]).text;
     const tokens = response.usage.input_tokens + response.usage.output_tokens;
     await this.trackUsage(tenantId, userId, AIModuleType.HOMEWORK_ASSISTANT, tokens);
     return { solution, tokens };
@@ -213,7 +215,7 @@ Return JSON: { "central": string, "branches": [{ "label": string, "color": strin
       messages: [{ role: 'user', content: `Translate the following from ${sourceLanguage} to ${targetLanguage}:\n\n${text}` }],
     });
 
-    const translation = (response.content[0] as Anthropic.TextBlock).text;
+    const translation = (response.content[0]).text;
     const tokens = response.usage.input_tokens + response.usage.output_tokens;
     await this.trackUsage(tenantId, userId, AIModuleType.TRANSLATOR, tokens);
     return { translation, tokens };
@@ -230,7 +232,7 @@ Return JSON: { "central": string, "branches": [{ "label": string, "color": strin
       }],
     });
 
-    const result = (response.content[0] as Anthropic.TextBlock).text;
+    const result = (response.content[0]).text;
     const tokens = response.usage.input_tokens + response.usage.output_tokens;
     await this.trackUsage(tenantId, userId, AIModuleType.PLAGIARISM_DETECTION, tokens);
     try {
@@ -310,7 +312,7 @@ Return valid JSON: { "title": string, "subject": string, "gradeLevel": string, "
       messages: [{ role: 'user', content: `Research topic: ${topic}` }],
     });
 
-    const result = (response.content[0] as Anthropic.TextBlock).text;
+    const result = (response.content[0]).text;
     const tokens = response.usage.input_tokens + response.usage.output_tokens;
     await this.saveMessage(conversation!.id, 'assistant', result, tokens);
     await this.trackUsage(tenantId, userId, AIModuleType.RESEARCH_ASSISTANT, tokens);
@@ -378,7 +380,7 @@ Return valid JSON: { "careerPaths": [{ "title": string, "match": number, "descri
       },
     });
 
-    if (!student) throw new Error('Student not found');
+    if (!student) {throw new Error('Student not found');}
 
     const submissions = (student.submissions as any[]);
     const avgScore = submissions.length
@@ -399,9 +401,9 @@ Return valid JSON: { "careerPaths": [{ "title": string, "match": number, "descri
       recommendations: [] as string[],
     };
 
-    if (prediction.performanceLevel === 'at-risk') prediction.recommendations.push('Schedule one-on-one tutoring sessions');
-    if (prediction.submissionRate < 80) prediction.recommendations.push('Improve assignment submission consistency');
-    if (prediction.trend === 'declining') prediction.recommendations.push('Review recent material — performance dropping');
+    if (prediction.performanceLevel === 'at-risk') {prediction.recommendations.push('Schedule one-on-one tutoring sessions');}
+    if (prediction.submissionRate < 80) {prediction.recommendations.push('Improve assignment submission consistency');}
+    if (prediction.trend === 'declining') {prediction.recommendations.push('Review recent material — performance dropping');}
 
     return { studentId, prediction };
   }
@@ -415,7 +417,7 @@ Return valid JSON: { "careerPaths": [{ "title": string, "match": number, "descri
       },
     });
 
-    if (!student) throw new Error('Student not found');
+    if (!student) {throw new Error('Student not found');}
 
     const submissions = (student.submissions as any[]);
     const enrollments = (student.enrollments as any[]);
@@ -432,9 +434,9 @@ Return valid JSON: { "careerPaths": [{ "title": string, "match": number, "descri
     const riskLevel = riskScore >= 70 ? 'high' : riskScore >= 40 ? 'medium' : 'low';
 
     const factors: string[] = [];
-    if (missedRate > 0.3) factors.push(`High assignment miss rate (${Math.round(missedRate * 100)}%)`);
-    if (avgScore < 60) factors.push('Low average score');
-    if (enrollments.length === 0) factors.push('No active course enrollments');
+    if (missedRate > 0.3) {factors.push(`High assignment miss rate (${Math.round(missedRate * 100)}%)`);}
+    if (avgScore < 60) {factors.push('Low average score');}
+    if (enrollments.length === 0) {factors.push('No active course enrollments');}
 
     const interventions: string[] = [];
     if (riskLevel === 'high') {
@@ -451,9 +453,9 @@ Return valid JSON: { "careerPaths": [{ "title": string, "match": number, "descri
 
   async getUsageStats(tenantId: string, period: 'day' | 'week' | 'month' = 'month') {
     const from = new Date();
-    if (period === 'day') from.setDate(from.getDate() - 1);
-    else if (period === 'week') from.setDate(from.getDate() - 7);
-    else from.setMonth(from.getMonth() - 1);
+    if (period === 'day') {from.setDate(from.getDate() - 1);}
+    else if (period === 'week') {from.setDate(from.getDate() - 7);}
+    else {from.setMonth(from.getMonth() - 1);}
 
     const usage = await this.prisma.aIUsage.groupBy({
       by: ['module'],

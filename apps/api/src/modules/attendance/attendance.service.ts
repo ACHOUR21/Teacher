@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service';
 import { AttendanceStatus } from '@prisma/client';
+
+import { PrismaService } from '../database/prisma.service';
 
 export class AttendanceRecordDto {
   studentId: string;
@@ -84,14 +85,14 @@ export class AttendanceService {
 
   async getStudentAttendance(studentId: string, from?: string, to?: string) {
     const student = await this.prisma.student.findUnique({ where: { id: studentId } });
-    if (!student) throw new NotFoundException('Student not found');
+    if (!student) {throw new NotFoundException('Student not found');}
 
     const where: Record<string, unknown> = { studentId };
 
     if (from || to) {
       const dateFilter: Record<string, Date> = {};
-      if (from) dateFilter.gte = new Date(from);
-      if (to) dateFilter.lte = new Date(to);
+      if (from) {dateFilter.gte = new Date(from);}
+      if (to) {dateFilter.lte = new Date(to);}
       where.date = dateFilter;
     }
 
@@ -108,7 +109,7 @@ export class AttendanceService {
 
   async getClassSummary(classId: string, from: string, to: string) {
     const schoolClass = await this.prisma.schoolClass.findUnique({ where: { id: classId } });
-    if (!schoolClass) throw new NotFoundException('Class not found');
+    if (!schoolClass) {throw new NotFoundException('Class not found');}
 
     const records = await this.prisma.attendance.findMany({
       where: {
@@ -190,7 +191,7 @@ export class AttendanceService {
 
   async getClassRoster(classId: string) {
     const schoolClass = await this.prisma.schoolClass.findUnique({ where: { id: classId } });
-    if (!schoolClass) throw new NotFoundException('Class not found');
+    if (!schoolClass) {throw new NotFoundException('Class not found');}
 
     return this.prisma.student.findMany({
       where: { classId },

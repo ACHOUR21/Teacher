@@ -1,8 +1,9 @@
 import { Processor, Process } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bull';
-import { QUEUE_NOTIFICATION } from '../queue.module';
+
 import { NotificationsService } from '../../notifications/notifications.service';
+import { QUEUE_NOTIFICATION } from '../queue.module';
 
 export interface NotificationJobData {
   userId: string;

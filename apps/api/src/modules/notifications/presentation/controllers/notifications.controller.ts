@@ -1,9 +1,10 @@
 import { Controller, Get, Post, Delete, Patch, Param, Query, Body, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { IsString, IsOptional } from 'class-validator';
-import { NotificationsService } from '../../notifications.service';
-import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+import { NotificationsService } from '../../notifications.service';
 
 class RegisterFcmTokenDto {
   @IsString() token: string;

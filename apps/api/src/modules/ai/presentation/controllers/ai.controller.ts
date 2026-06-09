@@ -1,9 +1,10 @@
 import { Controller, Post, Get, Param, Body, Query, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { IsString, IsOptional, IsInt, IsArray, Min, Max } from 'class-validator';
-import { AiService } from '../../ai.service';
-import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+import { AiService } from '../../ai.service';
 
 class TutorChatDto {
   @IsString() message: string;
@@ -157,8 +158,8 @@ export class AiController {
   @ApiOperation({ summary: 'Get AI usage stats for this billing period' })
   getUsage(@Request() req: any, @Query('period') period = 'month') {
     const startDate = new Date();
-    if (period === 'month') startDate.setDate(1);
-    else if (period === 'week') startDate.setDate(startDate.getDate() - 7);
+    if (period === 'month') {startDate.setDate(1);}
+    else if (period === 'week') {startDate.setDate(startDate.getDate() - 7);}
     startDate.setHours(0, 0, 0, 0);
     return this.aiService.getAIUsageByPeriod(req.tenant?.id, startDate);
   }

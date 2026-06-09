@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+
+import { BillingService } from '../billing/billing.service';
 import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { BillingService } from '../billing/billing.service';
 
 @Injectable()
 export class MarketplaceService {
@@ -26,10 +27,10 @@ export class MarketplaceService {
     const skip = (page - 1) * limit;
 
     const where: Record<string, unknown> = { isPublished: true };
-    if (query.category) where.category = query.category;
-    if (query.level) where.level = query.level;
-    if (query.maxPrice !== undefined) where.price = { lte: query.maxPrice };
-    if (query.minRating !== undefined) where.rating = { gte: query.minRating };
+    if (query.category) {where.category = query.category;}
+    if (query.level) {where.level = query.level;}
+    if (query.maxPrice !== undefined) {where.price = { lte: query.maxPrice };}
+    if (query.minRating !== undefined) {where.rating = { gte: query.minRating };}
     if (query.search) {
       where.OR = [
         { title: { contains: query.search, mode: 'insensitive' } },
@@ -72,7 +73,7 @@ export class MarketplaceService {
     cancelUrl?: string,
   ) {
     const course = await this.prisma.course.findUnique({ where: { id: courseId } });
-    if (!course) throw new NotFoundException('Course not found');
+    if (!course) {throw new NotFoundException('Course not found');}
 
     // Paid course → Stripe Checkout Session
     if (course.price && Number(course.price) > 0) {
@@ -85,12 +86,12 @@ export class MarketplaceService {
 
     // Free course → direct enrollment
     const student = await this.prisma.student.findFirst({ where: { userId } });
-    if (!student) throw new NotFoundException('Student profile required to enroll');
+    if (!student) {throw new NotFoundException('Student profile required to enroll');}
 
     const alreadyEnrolled = await this.prisma.courseProgress.findUnique({
       where: { studentId_courseId: { studentId: student.id, courseId } },
     });
-    if (alreadyEnrolled) throw new ConflictException('Already enrolled in this course');
+    if (alreadyEnrolled) {throw new ConflictException('Already enrolled in this course');}
 
     const [progress] = await this.prisma.$transaction([
       this.prisma.courseProgress.create({ data: { studentId: student.id, courseId } }),
@@ -109,7 +110,7 @@ export class MarketplaceService {
     const existing = await this.prisma.review.findUnique({
       where: { courseId_userId: { courseId, userId } },
     });
-    if (existing) throw new ConflictException('Already reviewed this course');
+    if (existing) {throw new ConflictException('Already reviewed this course');}
 
     const review = await this.prisma.review.create({ data: { courseId, userId, rating, comment } });
 

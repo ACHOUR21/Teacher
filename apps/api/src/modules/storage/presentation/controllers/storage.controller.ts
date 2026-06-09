@@ -2,8 +2,9 @@ import { Controller, Post, Body, UploadedFile, UseInterceptors, UseGuards, Query
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from '@nestjs/swagger';
 import { IsString, IsOptional } from 'class-validator';
-import { StorageService } from '../../storage.service';
+
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+import { StorageService } from '../../storage.service';
 
 class PresignedUrlDto {
   @IsString() filename: string;

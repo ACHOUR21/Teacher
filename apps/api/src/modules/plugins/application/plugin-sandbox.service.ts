@@ -1,4 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
+
 import {
   PluginManifest,
   PluginPermission,
@@ -26,7 +27,7 @@ export class PluginSandboxService {
       throw new BadRequestException('Manifest must declare an entrypoint');
     }
 
-    this.assertSafeEntrypoint(manifest['entrypoint'] as string);
+    this.assertSafeEntrypoint(manifest['entrypoint']);
 
     if (!Array.isArray(manifest['permissions'])) {
       throw new BadRequestException('Manifest must declare a permissions array');

@@ -1,18 +1,20 @@
 import { Module } from '@nestjs/common';
-import { PassportModule } from '@nestjs/passport';
-import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { AuthService } from './auth.service';
-import { AuthController } from './presentation/controllers/auth.controller';
-import { JwtStrategy } from './infrastructure/strategies/jwt.strategy';
-import { LocalStrategy } from './infrastructure/strategies/local.strategy';
-import { JwtRefreshStrategy } from './infrastructure/strategies/jwt-refresh.strategy';
+import { Reflector , APP_GUARD } from '@nestjs/core';
+import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
+
 import { JwtAuthGuard } from '../core/guards/jwt-auth.guard';
+import { PlanGuard } from '../core/guards/plan.guard';
 import { RolesGuard } from '../core/guards/roles.guard';
-import { Reflector } from '@nestjs/core';
-import { APP_GUARD } from '@nestjs/core';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { TenantsModule } from '../tenants/tenants.module';
+
+import { AuthService } from './auth.service';
+import { JwtRefreshStrategy } from './infrastructure/strategies/jwt-refresh.strategy';
+import { JwtStrategy } from './infrastructure/strategies/jwt.strategy';
+import { LocalStrategy } from './infrastructure/strategies/local.strategy';
+import { AuthController } from './presentation/controllers/auth.controller';
 
 @Module({
   imports: [
@@ -37,6 +39,7 @@ import { TenantsModule } from '../tenants/tenants.module';
     Reflector,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: PlanGuard },
   ],
   exports: [AuthService],
 })

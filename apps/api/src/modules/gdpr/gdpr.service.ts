@@ -1,7 +1,9 @@
 import { Injectable, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service';
-import * as bcrypt from 'bcrypt';
 import { ConsentType } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+
+import { PrismaService } from '../database/prisma.service';
+
 
 @Injectable()
 export class GdprService {
@@ -43,7 +45,7 @@ export class GdprService {
       },
     });
 
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) {throw new NotFoundException('User not found');}
 
     // Strip sensitive fields
     const { passwordHash, mfaSecret, mfaBackupCodes, ...safeUser } = user as any;
@@ -171,13 +173,13 @@ export class GdprService {
       }
     }
 
-    if (processed > 0) this.logger.log(`Anonymized ${processed} user(s)`);
+    if (processed > 0) {this.logger.log(`Anonymized ${processed} user(s)`);}
     return processed;
   }
 
   private async anonymizeUser(userId: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) return;
+    if (!user) {return;}
 
     const anonEmail = this.ANON_EMAIL(userId);
     const anonHash = await bcrypt.hash(crypto.randomUUID(), 12);

@@ -1,9 +1,10 @@
-import { Resolver, Subscription, Args, ID } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { PubSub } = require('graphql-subscriptions');
-import { GqlAuthGuard } from '../guards/gql-auth.guard';
+import { Resolver, Subscription, Args, ID , ObjectType, Field, ID as GqlID } from '@nestjs/graphql';
+
+import { PubSub } from 'graphql-subscriptions';
+
 import { CurrentUser } from '../../core/decorators/current-user.decorator';
+import { GqlAuthGuard } from '../guards/gql-auth.guard';
 import { Notification } from '../types/notification.types';
 
 export const pubSub = new PubSub();
@@ -15,7 +16,6 @@ export const GQL_EVENTS = {
   LIVE_SESSION_STARTED: 'liveSessionStarted',
 } as const;
 
-import { ObjectType, Field, ID as GqlID } from '@nestjs/graphql';
 
 @ObjectType()
 class ChatMessage {

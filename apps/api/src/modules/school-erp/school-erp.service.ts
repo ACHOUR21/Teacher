@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+
 import { PrismaService } from '../database/prisma.service';
 
 @Injectable()
@@ -27,7 +28,7 @@ export class SchoolErpService {
         _count: { select: { teachers: true, students: true } },
       },
     });
-    if (!school) throw new NotFoundException('School not found');
+    if (!school) {throw new NotFoundException('School not found');}
     return school;
   }
 
@@ -69,7 +70,7 @@ export class SchoolErpService {
 
   async deleteTimetableEntry(id: string) {
     const entry = await this.prisma.timetable.findUnique({ where: { id } });
-    if (!entry) throw new NotFoundException('Timetable entry not found');
+    if (!entry) {throw new NotFoundException('Timetable entry not found');}
     return this.prisma.timetable.delete({ where: { id } });
   }
 
@@ -85,7 +86,7 @@ export class SchoolErpService {
 
   async assignStudentToClass(studentId: string, classId: string) {
     const student = await this.prisma.student.findUnique({ where: { id: studentId } });
-    if (!student) throw new NotFoundException('Student not found');
+    if (!student) {throw new NotFoundException('Student not found');}
     return this.prisma.student.update({
       where: { id: studentId },
       data: { classId },
@@ -94,7 +95,7 @@ export class SchoolErpService {
 
   async removeStudentFromClass(studentId: string, classId: string) {
     const student = await this.prisma.student.findFirst({ where: { id: studentId, classId } });
-    if (!student) throw new NotFoundException('Student not found in this class');
+    if (!student) {throw new NotFoundException('Student not found in this class');}
     return this.prisma.student.update({
       where: { id: studentId },
       data: { classId: null },
@@ -112,7 +113,7 @@ export class SchoolErpService {
 
   async assignTeacherToSchool(teacherId: string, schoolId: string) {
     const teacher = await this.prisma.teacher.findUnique({ where: { id: teacherId } });
-    if (!teacher) throw new NotFoundException('Teacher not found');
+    if (!teacher) {throw new NotFoundException('Teacher not found');}
     return this.prisma.teacher.update({
       where: { id: teacherId },
       data: { schoolId },

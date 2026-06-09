@@ -1,4 +1,4 @@
-import { TenantType, UserRole } from '@prisma/client';
+import { type TenantType, type UserRole } from '@prisma/client';
 
 export class RegisterCommand {
   firstName: string;

@@ -5,11 +5,12 @@ import {
   ConflictException,
   Logger,
 } from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service';
-import { RedisService } from '../cache/redis.service';
-import { PaginationDto, paginate } from '../core/pagination/pagination.dto';
 import { UserRole, Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+
+import { RedisService } from '../cache/redis.service';
+import { PaginationDto, paginate } from '../core/pagination/pagination.dto';
+import { PrismaService } from '../database/prisma.service';
 
 export class UpdateUserDto {
   firstName?: string;
@@ -83,7 +84,7 @@ export class UsersService {
   async findById(id: string, tenantId: string) {
     const cacheKey = `user:${id}:profile`;
     const cached = await this.redis.getObject<unknown>(cacheKey);
-    if (cached) return cached;
+    if (cached) {return cached;}
 
     const user = await this.prisma.user.findFirst({
       where: { id, tenantId },
@@ -111,7 +112,7 @@ export class UsersService {
       },
     });
 
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) {throw new NotFoundException('User not found');}
 
     await this.redis.setObject(cacheKey, user, 300);
     return user;
@@ -119,7 +120,7 @@ export class UsersService {
 
   async update(id: string, tenantId: string, dto: UpdateUserDto) {
     const user = await this.prisma.user.findFirst({ where: { id, tenantId } });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) {throw new NotFoundException('User not found');}
 
     const updated = await this.prisma.user.update({
       where: { id },
@@ -138,7 +139,7 @@ export class UsersService {
 
   async updateProfile(userId: string, tenantId: string, dto: UpdateUserProfileDto) {
     const user = await this.prisma.user.findFirst({ where: { id: userId, tenantId } });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) {throw new NotFoundException('User not found');}
 
     const profile = await this.prisma.userProfile.upsert({
       where: { userId },
@@ -171,7 +172,7 @@ export class UsersService {
 
   async delete(id: string, tenantId: string, requestingUser: { id: string; role: UserRole }) {
     const user = await this.prisma.user.findFirst({ where: { id, tenantId } });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) {throw new NotFoundException('User not found');}
 
     if (
       requestingUser.role !== UserRole.SUPER_ADMIN &&
@@ -195,7 +196,7 @@ export class UsersService {
     }
 
     const user = await this.prisma.user.findFirst({ where: { id: userId, tenantId } });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) {throw new NotFoundException('User not found');}
 
     const updated = await this.prisma.user.update({
       where: { id: userId },
@@ -209,7 +210,7 @@ export class UsersService {
 
   async updateMe(userId: string, tenantId: string, dto: UpdateUserDto & UpdateUserProfileDto) {
     const user = await this.prisma.user.findFirst({ where: { id: userId, tenantId } });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) {throw new NotFoundException('User not found');}
 
     const [updatedUser] = await this.prisma.$transaction([
       this.prisma.user.update({
@@ -250,13 +251,13 @@ export class UsersService {
 
   async revokeDevice(userId: string, deviceId: string) {
     const device = await this.prisma.userDevice.findFirst({ where: { userId, deviceId } });
-    if (!device) throw new NotFoundException('Device not found');
+    if (!device) {throw new NotFoundException('Device not found');}
     await this.prisma.userDevice.update({ where: { deviceId }, data: { isActive: false } });
   }
 
   async getUserActivity(userId: string, tenantId: string) {
     const user = await this.prisma.user.findFirst({ where: { id: userId, tenantId } });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) {throw new NotFoundException('User not found');}
 
     const [recentSessions, recentAuditLogs, courseProgress, achievements] = await Promise.all([
       this.prisma.userSession.findMany({

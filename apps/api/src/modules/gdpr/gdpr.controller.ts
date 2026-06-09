@@ -1,10 +1,14 @@
 import { Controller, Get, Post, Delete, Put, Body, Request, HttpCode, HttpStatus, UseGuards, Ip, Headers } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { GdprService } from './gdpr.service';
-import { JwtAuthGuard } from '../core/guards/jwt-auth.guard';
-import { CurrentUser } from '../core/decorators/current-user.decorator';
-import type { CurrentUserPayload } from '../core/decorators/current-user.decorator';
 import { ConsentType } from '@prisma/client';
+
+import { CurrentUser } from '../core/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../core/guards/jwt-auth.guard';
+
+import { GdprService } from './gdpr.service';
+
+import type { CurrentUserPayload } from '../core/decorators/current-user.decorator';
+
 
 @ApiTags('GDPR')
 @ApiBearerAuth('JWT-auth')

@@ -1,9 +1,10 @@
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { SubscriptionPlan } from '@prisma/client';
+
+import { planHasFeature, PlanFeatureKey } from '../../billing/domain/plan-features';
 import { PrismaService } from '../../database/prisma.service';
 import { PLAN_FEATURE_KEY } from '../decorators/require-plan.decorator';
-import { planHasFeature, PlanFeatureKey } from '../../billing/domain/plan-features';
-import { SubscriptionPlan } from '@prisma/client';
 
 @Injectable()
 export class PlanGuard implements CanActivate {
@@ -19,7 +20,7 @@ export class PlanGuard implements CanActivate {
     ]);
 
     // No feature requirement on this route — pass through
-    if (!feature) return true;
+    if (!feature) {return true;}
 
     const request = context.switchToHttp().getRequest();
     const tenantId: string | undefined = request.tenant?.id;

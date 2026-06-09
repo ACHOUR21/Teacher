@@ -6,25 +6,28 @@ import {
   BadRequestException,
   Logger,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../database/prisma.service';
-import { RedisService } from '../cache/redis.service';
-import * as bcrypt from 'bcrypt';
-import * as speakeasy from 'speakeasy';
-import * as QRCode from 'qrcode';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { v4: uuidv4 } = require('uuid') as { v4: () => string };
+import { JwtService } from '@nestjs/jwt';
 import { TenantType, UserRole } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+import * as QRCode from 'qrcode';
+import * as speakeasy from 'speakeasy';
+import { v4 as uuidv4 } from 'uuid';
+
+import { RedisService } from '../cache/redis.service';
+import { PrismaService } from '../database/prisma.service';
+
+import { NotificationsService } from '../notifications/notifications.service';
+
+import { LoginCommand } from './application/commands/login.command';
+import { RegisterCommand, CreateTenantAndAdminCommand } from './application/commands/register.command';
 import {
   AuthTokens,
   AuthUser,
   JwtPayload,
   MfaSetupResult,
 } from './domain/entities/auth.entity';
-import { RegisterCommand, CreateTenantAndAdminCommand } from './application/commands/register.command';
-import { LoginCommand } from './application/commands/login.command';
-import { NotificationsService } from '../notifications/notifications.service';
+
 
 @Injectable()
 export class AuthService {
@@ -195,7 +198,7 @@ export class AuthService {
         },
       });
       deviceTrusted =
-        device.mfaTrusted && device.mfaTrustedUntil != null && device.mfaTrustedUntil > new Date();
+        device.mfaTrusted && device.mfaTrustedUntil !== null && device.mfaTrustedUntil > new Date();
     }
 
     if (user.mfaEnabled && !deviceTrusted) {
@@ -239,9 +242,9 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { tenantId_email: { tenantId, email: email.toLowerCase() } },
     });
-    if (!user || !user.isActive) return null;
+    if (!user || !user.isActive) {return null;}
     const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) return null;
+    if (!valid) {return null;}
     return new AuthUser({
       id: user.id,
       email: user.email,
@@ -280,8 +283,8 @@ export class AuthService {
 
   async setupMfa(userId: string): Promise<MfaSetupResult> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
-    if (user.mfaEnabled) throw new BadRequestException('MFA is already enabled');
+    if (!user) {throw new NotFoundException('User not found');}
+    if (user.mfaEnabled) {throw new BadRequestException('MFA is already enabled');}
 
     const secret = speakeasy.generateSecret({
       name: `EduAI (${user.email})`,
@@ -302,7 +305,7 @@ export class AuthService {
 
   async verifyAndEnableMfa(userId: string, token: string): Promise<{ backupCodes: string[] }> {
     const secret = await this.redis.get(`mfa:setup:${userId}`);
-    if (!secret) throw new BadRequestException('MFA setup session expired. Please restart setup.');
+    if (!secret) {throw new BadRequestException('MFA setup session expired. Please restart setup.');}
 
     const isValid = speakeasy.totp.verify({
       secret,
@@ -311,7 +314,7 @@ export class AuthService {
       window: 2,
     });
 
-    if (!isValid) throw new BadRequestException('Invalid MFA token');
+    if (!isValid) {throw new BadRequestException('Invalid MFA token');}
 
     // Retrieve the plain backup codes that were generated in setupMfa
     const storedRaw = await this.redis.get(`mfa:backup:${userId}`);
@@ -339,10 +342,10 @@ export class AuthService {
     opts?: { trustDevice?: boolean; deviceId?: string; deviceName?: string },
   ): Promise<AuthTokens & { deviceTrusted?: boolean }> {
     const userId = await this.redis.get(`mfa:challenge:${challengeToken}`);
-    if (!userId) throw new UnauthorizedException('MFA challenge expired');
+    if (!userId) {throw new UnauthorizedException('MFA challenge expired');}
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user || !user.mfaSecret) throw new UnauthorizedException('MFA not configured');
+    if (!user || !user.mfaSecret) {throw new UnauthorizedException('MFA not configured');}
 
     // Try TOTP first
     const totpValid = speakeasy.totp.verify({
@@ -355,7 +358,7 @@ export class AuthService {
     if (!totpValid) {
       // Fall back to backup code redemption
       const matched = await this.redeemBackupCode(user.id, code, user.mfaBackupCodes);
-      if (!matched) throw new UnauthorizedException('Invalid MFA code');
+      if (!matched) {throw new UnauthorizedException('Invalid MFA code');}
     }
 
     await this.redis.del(`mfa:challenge:${challengeToken}`);
@@ -371,11 +374,11 @@ export class AuthService {
 
   async disableMfa(userId: string, token: string, password: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
-    if (!user.mfaEnabled) throw new BadRequestException('MFA is not enabled');
+    if (!user) {throw new NotFoundException('User not found');}
+    if (!user.mfaEnabled) {throw new BadRequestException('MFA is not enabled');}
 
     const passwordValid = await bcrypt.compare(password, user.passwordHash);
-    if (!passwordValid) throw new UnauthorizedException('Invalid password');
+    if (!passwordValid) {throw new UnauthorizedException('Invalid password');}
 
     const isValid = speakeasy.totp.verify({
       secret: user.mfaSecret || '',
@@ -384,7 +387,7 @@ export class AuthService {
       window: 2,
     });
 
-    if (!isValid) throw new BadRequestException('Invalid MFA token');
+    if (!isValid) {throw new BadRequestException('Invalid MFA token');}
 
     await this.prisma.user.update({
       where: { id: userId },
@@ -400,11 +403,11 @@ export class AuthService {
 
   async regenerateBackupCodes(userId: string, password: string): Promise<{ backupCodes: string[] }> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
-    if (!user.mfaEnabled) throw new BadRequestException('MFA is not enabled');
+    if (!user) {throw new NotFoundException('User not found');}
+    if (!user.mfaEnabled) {throw new BadRequestException('MFA is not enabled');}
 
     const passwordValid = await bcrypt.compare(password, user.passwordHash);
-    if (!passwordValid) throw new UnauthorizedException('Invalid password');
+    if (!passwordValid) {throw new UnauthorizedException('Invalid password');}
 
     const plainCodes = this.generatePlainBackupCodes();
     const hashedCodes = await Promise.all(plainCodes.map((c) => bcrypt.hash(c, this.BCRYPT_ROUNDS)));
@@ -437,7 +440,7 @@ export class AuthService {
 
   async revokeTrustedDevice(userId: string, deviceId: string): Promise<void> {
     const device = await this.prisma.userDevice.findUnique({ where: { deviceId } });
-    if (!device || device.userId !== userId) throw new NotFoundException('Device not found');
+    if (!device || device.userId !== userId) {throw new NotFoundException('Device not found');}
     await this.prisma.userDevice.update({
       where: { deviceId },
       data: { mfaTrusted: false, mfaTrustedUntil: null },
@@ -462,10 +465,10 @@ export class AuthService {
 
   async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) {throw new NotFoundException('User not found');}
 
     const valid = await bcrypt.compare(currentPassword, user.passwordHash);
-    if (!valid) throw new UnauthorizedException('Current password is incorrect');
+    if (!valid) {throw new UnauthorizedException('Current password is incorrect');}
 
     const passwordHash = await bcrypt.hash(newPassword, this.BCRYPT_ROUNDS);
     await this.prisma.user.update({ where: { id: userId }, data: { passwordHash } });
@@ -478,7 +481,7 @@ export class AuthService {
       where: { tenantId_email: { tenantId, email: email.toLowerCase() } },
     });
     // Always return success to prevent email enumeration
-    if (!user) return;
+    if (!user) {return;}
 
     const resetToken = uuidv4();
     await this.redis.set(`pwd:reset:${resetToken}`, user.id, 3600);
@@ -489,8 +492,8 @@ export class AuthService {
 
   async sendVerificationEmail(userId: string): Promise<void> {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
-    if (user.emailVerified) return; // already verified
+    if (!user) {throw new NotFoundException('User not found');}
+    if (user.emailVerified) {return;} // already verified
 
     const verificationToken = uuidv4();
     await this.redis.set(`email:verify:${verificationToken}`, userId, 24 * 3600); // 24 hours
@@ -500,7 +503,7 @@ export class AuthService {
 
   async verifyEmail(token: string): Promise<{ verified: boolean }> {
     const userId = await this.redis.get(`email:verify:${token}`);
-    if (!userId) throw new BadRequestException('Invalid or expired verification token');
+    if (!userId) {throw new BadRequestException('Invalid or expired verification token');}
 
     await this.prisma.user.update({ where: { id: userId }, data: { emailVerified: true } });
     await this.redis.del(`email:verify:${token}`);
@@ -510,7 +513,7 @@ export class AuthService {
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
     const userId = await this.redis.get(`pwd:reset:${token}`);
-    if (!userId) throw new BadRequestException('Invalid or expired reset token');
+    if (!userId) {throw new BadRequestException('Invalid or expired reset token');}
 
     const passwordHash = await bcrypt.hash(newPassword, this.BCRYPT_ROUNDS);
     await this.prisma.user.update({

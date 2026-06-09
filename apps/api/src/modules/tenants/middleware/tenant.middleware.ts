@@ -1,7 +1,8 @@
 import { Injectable, NestMiddleware, Logger } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
-import { PrismaService } from '../../database/prisma.service';
+
 import { RedisService } from '../../cache/redis.service';
+import { PrismaService } from '../../database/prisma.service';
 
 export interface TenantRequest extends Request {
   tenantId?: string;
@@ -85,16 +86,16 @@ export class TenantMiddleware implements NestMiddleware {
   private extractTenantIdentifier(req: Request): string | null {
     // 1. X-Tenant-ID or TenantId header (highest priority)
     const headerTenantId = (req.headers['x-tenant-id'] || req.headers['tenantid']) as string;
-    if (headerTenantId) return headerTenantId;
+    if (headerTenantId) {return headerTenantId;}
 
     // 2. Subdomain extraction (e.g., acme.eduai.app)
     const host = req.headers.host || '';
     const subdomain = this.extractSubdomain(host);
-    if (subdomain && subdomain !== 'www' && subdomain !== 'api') return subdomain;
+    if (subdomain && subdomain !== 'www' && subdomain !== 'api') {return subdomain;}
 
     // 3. Query parameter (for development/testing)
     const queryTenant = req.query['tenant'] as string;
-    if (queryTenant) return queryTenant;
+    if (queryTenant) {return queryTenant;}
 
     return null;
   }

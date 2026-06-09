@@ -1,8 +1,9 @@
 import { Processor, Process } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bull';
-import { QUEUE_CERTIFICATE } from '../queue.module';
+
 import { CertificatesService } from '../../certificates/certificates.service';
+import { QUEUE_CERTIFICATE } from '../queue.module';
 
 export interface CertificateJobData {
   studentId: string;

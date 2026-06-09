@@ -1,6 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
+
 import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+
 import {
   GamificationEventType,
   RULES_MAP,
@@ -33,14 +35,14 @@ export class GamificationService {
     metadata?: Record<string, unknown>,
   ): Promise<ProcessEventResult> {
     const rule = RULES_MAP.get(eventType);
-    if (!rule) return { xpAwarded: 0, newLevel: null, newAchievements: [], streak: 0 };
+    if (!rule) {return { xpAwarded: 0, newLevel: null, newAchievements: [], streak: 0 };}
 
     // --- deduplication / cap checks ---
     if (rule.once) {
       const already = await this.prisma.gamificationEvent.count({
         where: { userId, eventType },
       });
-      if (already > 0) return { xpAwarded: 0, newLevel: null, newAchievements: [], streak: 0 };
+      if (already > 0) {return { xpAwarded: 0, newLevel: null, newAchievements: [], streak: 0 };}
     }
 
     if (rule.dailyCap !== undefined) {
@@ -96,7 +98,7 @@ export class GamificationService {
 
   private async updateStreak(userId: string): Promise<number> {
     const record = await this.prisma.userPoints.findUnique({ where: { userId } });
-    if (!record) return 0;
+    if (!record) {return 0;}
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -128,8 +130,8 @@ export class GamificationService {
     });
 
     // fire streak milestone events without double-counting
-    if (newStreak === 7) await this.processEvent(userId, 'streak_7');
-    if (newStreak === 30) await this.processEvent(userId, 'streak_30');
+    if (newStreak === 7) {await this.processEvent(userId, 'streak_7');}
+    if (newStreak === 30) {await this.processEvent(userId, 'streak_30');}
 
     return newStreak;
   }

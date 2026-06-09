@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+
 import { PrismaService } from '../database/prisma.service';
 
 export interface CreateDeckDto {
@@ -21,7 +22,7 @@ function sm2(
   prevEaseFactor: number,
 ): { interval: number; easeFactor: number; nextReview: Date } {
   let easeFactor = prevEaseFactor + (0.1 - (5 - rating) * (0.08 + (5 - rating) * 0.02));
-  if (easeFactor < 1.3) easeFactor = 1.3;
+  if (easeFactor < 1.3) {easeFactor = 1.3;}
 
   let interval: number;
   if (rating < 3) {
@@ -85,14 +86,14 @@ export class FlashcardsService {
       where: { id: deckId },
       include: { cards: { orderBy: { order: 'asc' } } },
     });
-    if (!deck) throw new NotFoundException('Deck not found');
+    if (!deck) {throw new NotFoundException('Deck not found');}
     return deck;
   }
 
   async deleteDeck(deckId: string, userId: string) {
     const deck = await this.prisma.flashcardDeck.findUnique({ where: { id: deckId } });
-    if (!deck) throw new NotFoundException('Deck not found');
-    if (deck.createdBy !== userId) throw new ForbiddenException('Only the creator can delete this deck');
+    if (!deck) {throw new NotFoundException('Deck not found');}
+    if (deck.createdBy !== userId) {throw new ForbiddenException('Only the creator can delete this deck');}
     await this.prisma.flashcardDeck.delete({ where: { id: deckId } });
   }
 
@@ -102,7 +103,7 @@ export class FlashcardsService {
       where: { id: deckId },
       include: { cards: { orderBy: { order: 'asc' } } },
     });
-    if (!deck) throw new NotFoundException('Deck not found');
+    if (!deck) {throw new NotFoundException('Deck not found');}
 
     const reviews = await this.prisma.flashcardReview.findMany({
       where: { userId, card: { deckId } },
@@ -112,14 +113,14 @@ export class FlashcardsService {
     const now = new Date();
     return deck.cards.filter((card) => {
       const review = reviewMap.get(card.id);
-      if (!review) return true; // never reviewed
+      if (!review) {return true;} // never reviewed
       return review.nextReview <= now;
     });
   }
 
   async reviewCard(userId: string, dto: ReviewCardDto) {
     const card = await this.prisma.flashcard.findUnique({ where: { id: dto.cardId } });
-    if (!card) throw new NotFoundException('Card not found');
+    if (!card) {throw new NotFoundException('Card not found');}
 
     const existing = await this.prisma.flashcardReview.findUnique({
       where: { cardId_userId: { cardId: dto.cardId, userId } },
@@ -141,7 +142,7 @@ export class FlashcardsService {
       where: { id: deckId },
       include: { _count: { select: { cards: true } } },
     });
-    if (!deck) throw new NotFoundException('Deck not found');
+    if (!deck) {throw new NotFoundException('Deck not found');}
 
     const reviews = await this.prisma.flashcardReview.findMany({
       where: { userId, card: { deckId } },

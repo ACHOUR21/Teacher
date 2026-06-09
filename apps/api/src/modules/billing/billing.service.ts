@@ -7,13 +7,16 @@ import {
   Optional,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../database/prisma.service';
-import { RedisService } from '../cache/redis.service';
-import { ApiEcosystemService } from '../api-ecosystem/api-ecosystem.service';
-import { NotificationsService } from '../notifications/notifications.service';
-import Stripe from 'stripe';
 import { SubscriptionPlan, SubscriptionStatus } from '@prisma/client';
 import Decimal from 'decimal.js';
+import Stripe from 'stripe';
+
+import { ApiEcosystemService } from '../api-ecosystem/api-ecosystem.service';
+import { RedisService } from '../cache/redis.service';
+import { PrismaService } from '../database/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+
+
 import { PLAN_PRICE_CENTS } from './domain/plan-features';
 
 const PLAN_PRICES: Record<SubscriptionPlan, string> = {
@@ -60,11 +63,11 @@ export class BillingService {
       this.prisma.tenant.findUnique({ where: { id: tenantId }, include: { subscription: true } }),
       this.prisma.user.findUnique({ where: { id: userId } }),
     ]);
-    if (!tenant) throw new NotFoundException('Tenant not found');
-    if (!user) throw new NotFoundException('User not found');
+    if (!tenant) {throw new NotFoundException('Tenant not found');}
+    if (!user) {throw new NotFoundException('User not found');}
 
     const priceId = PLAN_PRICES[plan];
-    if (!priceId) throw new BadRequestException('Invalid plan or plan requires manual setup (Enterprise)');
+    if (!priceId) {throw new BadRequestException('Invalid plan or plan requires manual setup (Enterprise)');}
 
     // Get or create Stripe customer
     let stripeCustomerId = tenant.subscription?.stripeCustomerId;
@@ -132,13 +135,13 @@ export class BillingService {
 
   async applyCoupon(tenantId: string, couponCode: string) {
     const coupon = await this.prisma.coupon.findUnique({ where: { code: couponCode } });
-    if (!coupon) throw new NotFoundException('Coupon not found');
-    if (!coupon.isActive) throw new BadRequestException('Coupon is no longer active');
+    if (!coupon) {throw new NotFoundException('Coupon not found');}
+    if (!coupon.isActive) {throw new BadRequestException('Coupon is no longer active');}
 
     const now = new Date();
-    if (now < coupon.validFrom) throw new BadRequestException('Coupon is not yet valid');
-    if (coupon.validUntil && now > coupon.validUntil) throw new BadRequestException('Coupon has expired');
-    if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) throw new BadRequestException('Coupon usage limit reached');
+    if (now < coupon.validFrom) {throw new BadRequestException('Coupon is not yet valid');}
+    if (coupon.validUntil && now > coupon.validUntil) {throw new BadRequestException('Coupon has expired');}
+    if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {throw new BadRequestException('Coupon usage limit reached');}
 
     const subscription = await this.prisma.subscription.findUnique({ where: { tenantId } });
 
@@ -165,7 +168,7 @@ export class BillingService {
 
   async getInvoices(tenantId: string, page = 1, limit = 20) {
     const subscription = await this.prisma.subscription.findUnique({ where: { tenantId } });
-    if (!subscription) throw new NotFoundException('No subscription found');
+    if (!subscription) {throw new NotFoundException('No subscription found');}
 
     const skip = (page - 1) * limit;
     const [invoices, total] = await Promise.all([
@@ -215,7 +218,7 @@ export class BillingService {
     // Group by month
     const monthlyRevenue: Record<string, number> = {};
     for (const inv of recentInvoices) {
-      if (!inv.paidAt) continue;
+      if (!inv.paidAt) {continue;}
       const key = `${inv.paidAt.getFullYear()}-${String(inv.paidAt.getMonth() + 1).padStart(2, '0')}`;
       monthlyRevenue[key] = (monthlyRevenue[key] ?? 0) + Number(inv.amount);
     }
@@ -277,13 +280,13 @@ export class BillingService {
       this.prisma.course.findUnique({ where: { id: courseId } }),
       this.prisma.student.findFirst({ where: { userId } }),
     ]);
-    if (!course) throw new NotFoundException('Course not found');
+    if (!course) {throw new NotFoundException('Course not found');}
 
     if (student) {
       const enrolled = await this.prisma.courseProgress.findUnique({
         where: { studentId_courseId: { studentId: student.id, courseId } },
       });
-      if (enrolled) throw new ConflictException('Already enrolled in this course');
+      if (enrolled) {throw new ConflictException('Already enrolled in this course');}
     }
 
     const session = await this.stripe.checkout.sessions.create({
@@ -326,22 +329,22 @@ export class BillingService {
 
     switch (event.type) {
       case 'checkout.session.completed':
-        await this.handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+        await this.handleCheckoutCompleted(event.data.object);
         break;
       case 'invoice.paid':
-        await this.handleInvoicePaid(event.data.object as Stripe.Invoice);
+        await this.handleInvoicePaid(event.data.object);
         break;
       case 'invoice.payment_failed':
-        await this.handlePaymentFailed(event.data.object as Stripe.Invoice);
+        await this.handlePaymentFailed(event.data.object);
         break;
       case 'customer.subscription.updated':
-        await this.handleSubscriptionUpdated(event.data.object as Stripe.Subscription);
+        await this.handleSubscriptionUpdated(event.data.object);
         break;
       case 'customer.subscription.deleted':
-        await this.handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+        await this.handleSubscriptionDeleted(event.data.object);
         break;
       case 'customer.subscription.trial_will_end':
-        await this.handleTrialWillEnd(event.data.object as Stripe.Subscription);
+        await this.handleTrialWillEnd(event.data.object);
         break;
       default:
         this.logger.debug(`Unhandled Stripe event: ${event.type}`);
@@ -412,12 +415,12 @@ export class BillingService {
     // --- course purchase ---
     if (userId && courseId && session.payment_status === 'paid') {
       const student = await this.prisma.student.findFirst({ where: { userId } });
-      if (!student) return;
+      if (!student) {return;}
 
       const existing = await this.prisma.courseProgress.findUnique({
         where: { studentId_courseId: { studentId: student.id, courseId } },
       });
-      if (existing) return;
+      if (existing) {return;}
 
       await this.prisma.$transaction([
         this.prisma.courseProgress.create({ data: { studentId: student.id, courseId } }),
@@ -435,11 +438,11 @@ export class BillingService {
   }
 
   private async handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
-    if (!invoice.subscription) return;
+    if (!invoice.subscription) {return;}
     const subscription = await this.prisma.subscription.findFirst({
       where: { stripeSubscriptionId: invoice.subscription as string },
     });
-    if (!subscription) return;
+    if (!subscription) {return;}
 
     await this.prisma.invoice.create({
       data: {
@@ -460,12 +463,12 @@ export class BillingService {
   }
 
   private async handlePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
-    if (!invoice.subscription) return;
+    if (!invoice.subscription) {return;}
     const subscription = await this.prisma.subscription.findFirst({
       where: { stripeSubscriptionId: invoice.subscription as string },
       include: { tenant: { include: { users: { where: { role: 'ADMIN' }, take: 1 } } } },
     });
-    if (!subscription) return;
+    if (!subscription) {return;}
 
     await this.prisma.subscription.update({
       where: { id: subscription.id },
@@ -490,7 +493,7 @@ export class BillingService {
     const subscription = await this.prisma.subscription.findFirst({
       where: { stripeSubscriptionId: stripeSubscription.id },
     });
-    if (!subscription) return;
+    if (!subscription) {return;}
 
     const statusMap: Record<string, SubscriptionStatus> = {
       active: SubscriptionStatus.ACTIVE,
@@ -516,7 +519,7 @@ export class BillingService {
     const subscription = await this.prisma.subscription.findFirst({
       where: { stripeSubscriptionId: stripeSubscription.id },
     });
-    if (!subscription) return;
+    if (!subscription) {return;}
 
     await this.prisma.subscription.update({
       where: { id: subscription.id },
@@ -535,7 +538,7 @@ export class BillingService {
       where: { stripeSubscriptionId: stripeSubscription.id },
       include: { tenant: { include: { users: { where: { role: 'ADMIN' }, take: 1 } } } },
     });
-    if (!subscription) return;
+    if (!subscription) {return;}
 
     const trialEnd = new Date(stripeSubscription.trial_end! * 1000);
     const daysLeft = Math.ceil((trialEnd.getTime() - Date.now()) / 86_400_000);

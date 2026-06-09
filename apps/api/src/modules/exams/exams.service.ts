@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service';
+
 import { CertificatesService } from '../certificates/certificates.service';
+import { PrismaService } from '../database/prisma.service';
 import { SearchService } from '../search/search.service';
 
 export interface GeneratedQuestion {
@@ -88,14 +89,14 @@ export class ExamsService {
         creator: { select: { firstName: true, lastName: true } },
       },
     });
-    if (!exam) throw new NotFoundException('Exam not found');
+    if (!exam) {throw new NotFoundException('Exam not found');}
     return exam;
   }
 
   async publishExam(examId: string, userId: string) {
     const exam = await this.prisma.exam.findUnique({ where: { id: examId } });
-    if (!exam) throw new NotFoundException('Exam not found');
-    if (exam.createdBy !== userId) throw new ForbiddenException('Only the creator can publish this exam');
+    if (!exam) {throw new NotFoundException('Exam not found');}
+    if (exam.createdBy !== userId) {throw new ForbiddenException('Only the creator can publish this exam');}
     const updated = await this.prisma.exam.update({ where: { id: examId }, data: { isPublished: true } });
     this.search.indexExam({ id: updated.id, title: updated.title, subject: updated.subject, topic: updated.topic, difficulty: updated.difficulty, tenantId: updated.tenantId, isPublished: true });
     return updated;
@@ -103,8 +104,8 @@ export class ExamsService {
 
   async deleteExam(examId: string, userId: string) {
     const exam = await this.prisma.exam.findUnique({ where: { id: examId } });
-    if (!exam) throw new NotFoundException('Exam not found');
-    if (exam.createdBy !== userId) throw new ForbiddenException('Only the creator can delete this exam');
+    if (!exam) {throw new NotFoundException('Exam not found');}
+    if (exam.createdBy !== userId) {throw new ForbiddenException('Only the creator can delete this exam');}
     await this.prisma.exam.delete({ where: { id: examId } });
     this.search.deleteDocument('exams', examId);
   }
@@ -116,14 +117,14 @@ export class ExamsService {
       where: { id: examId },
       include: { questions: { orderBy: { order: 'asc' }, select: { id: true, order: true, type: true, question: true, options: true, points: true } } },
     });
-    if (!exam) throw new NotFoundException('Exam not found');
-    if (!exam.isPublished) throw new ForbiddenException('This exam is not published yet');
+    if (!exam) {throw new NotFoundException('Exam not found');}
+    if (!exam.isPublished) {throw new ForbiddenException('This exam is not published yet');}
 
     // Check for in-progress attempt
     const existing = await this.prisma.examAttempt.findFirst({
       where: { examId, userId, submittedAt: null },
     });
-    if (existing) return { attempt: existing, questions: exam.questions };
+    if (existing) {return { attempt: existing, questions: exam.questions };}
 
     const attempt = await this.prisma.examAttempt.create({
       data: { examId, userId, answers: {} },
@@ -136,9 +137,9 @@ export class ExamsService {
       where: { id: attemptId },
       include: { exam: { include: { questions: true } } },
     });
-    if (!attempt) throw new NotFoundException('Attempt not found');
-    if (attempt.userId !== userId) throw new ForbiddenException('Not your attempt');
-    if (attempt.submittedAt) throw new BadRequestException('Attempt already submitted');
+    if (!attempt) {throw new NotFoundException('Attempt not found');}
+    if (attempt.userId !== userId) {throw new ForbiddenException('Not your attempt');}
+    if (attempt.submittedAt) {throw new BadRequestException('Attempt already submitted');}
 
     // Auto-score objective questions
     let score = 0;
@@ -189,8 +190,8 @@ export class ExamsService {
         },
       },
     });
-    if (!attempt) throw new NotFoundException('Attempt not found');
-    if (attempt.userId !== userId) throw new ForbiddenException('Not your attempt');
+    if (!attempt) {throw new NotFoundException('Attempt not found');}
+    if (attempt.userId !== userId) {throw new ForbiddenException('Not your attempt');}
     return attempt;
   }
 

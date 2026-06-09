@@ -1,3 +1,5 @@
+import { Logger } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -8,8 +10,7 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+
 import { MessagingService } from '../../messaging.service';
 
 interface AuthSocket extends Socket {
@@ -53,7 +54,7 @@ export class MessagingGateway implements OnGatewayConnection, OnGatewayDisconnec
     @ConnectedSocket() client: AuthSocket,
     @MessageBody() data: { conversationId: string; content: string; type?: string },
   ) {
-    if (!client.userId) return;
+    if (!client.userId) {return;}
     const message = await this.messagingService.sendMessage(data.conversationId, client.userId, data.content, data.type);
     this.server.to(`conv:${data.conversationId}`).emit('new-message', message);
     return message;

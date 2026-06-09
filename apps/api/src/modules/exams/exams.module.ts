@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
+
+import { CertificatesModule } from '../certificates/certificates.module';
+import { DatabaseModule } from '../database/database.module';
+import { SearchModule } from '../search/search.module';
+
 import { ExamsService } from './exams.service';
 import { ExamsController } from './presentation/controllers/exams.controller';
-import { DatabaseModule } from '../database/database.module';
-import { CertificatesModule } from '../certificates/certificates.module';
-import { SearchModule } from '../search/search.module';
 
 @Module({
   imports: [DatabaseModule, CertificatesModule, SearchModule],

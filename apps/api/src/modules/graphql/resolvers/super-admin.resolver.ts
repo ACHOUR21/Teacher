@@ -1,14 +1,14 @@
-import { Resolver, Query, Mutation, Args, ID, Int } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
-import { InputType, Field } from '@nestjs/graphql';
-import { SuperAdminService } from '../../super-admin/super-admin.service';
-import { GqlAuthGuard } from '../guards/gql-auth.guard';
+import { Resolver, Query, Mutation, Args, ID, Int , InputType, Field } from '@nestjs/graphql';
+import { UserRole } from '@prisma/client';
+
 import { CurrentUser } from '../../core/decorators/current-user.decorator';
 import { Roles } from '../../core/decorators/roles.decorator';
 import { RolesGuard } from '../../core/guards/roles.guard';
-import { UserRole } from '@prisma/client';
-import { PlatformOverview, TenantPage, BillingOverview, TenantSummary } from '../types/super-admin.types';
+import { SuperAdminService } from '../../super-admin/super-admin.service';
+import { GqlAuthGuard } from '../guards/gql-auth.guard';
 import { UserBrief } from '../types/common.types';
+import { PlatformOverview, TenantPage, BillingOverview, TenantSummary } from '../types/super-admin.types';
 
 @InputType()
 class UpdateTenantInput {

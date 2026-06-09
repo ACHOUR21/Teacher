@@ -12,7 +12,17 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation , ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { UserRole, CourseLevel } from '@prisma/client';
+import { IsInt, Min, Max, IsOptional, IsString } from 'class-validator';
+
+import { CurrentUser, CurrentUserPayload } from '../../../core/decorators/current-user.decorator';
+import { Public } from '../../../core/decorators/public.decorator';
+import { Roles } from '../../../core/decorators/roles.decorator';
+import { TenantId } from '../../../core/decorators/tenant.decorator';
+import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../core/guards/roles.guard';
+import { PaginationDto } from '../../../core/pagination/pagination.dto';
 import {
   CoursesService,
   CreateCourseDto,
@@ -20,16 +30,6 @@ import {
   CreateSectionDto,
   CreateLessonDto,
 } from '../../courses.service';
-import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
-import { RolesGuard } from '../../../core/guards/roles.guard';
-import { Roles } from '../../../core/decorators/roles.decorator';
-import { CurrentUser, CurrentUserPayload } from '../../../core/decorators/current-user.decorator';
-import { TenantId } from '../../../core/decorators/tenant.decorator';
-import { PaginationDto } from '../../../core/pagination/pagination.dto';
-import { Public } from '../../../core/decorators/public.decorator';
-import { UserRole, CourseLevel } from '@prisma/client';
-import { IsInt, Min, Max, IsOptional, IsString } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 class AddReviewDto {
   @ApiProperty({ minimum: 1, maximum: 5 })

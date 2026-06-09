@@ -1,5 +1,7 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+
 import { PrismaService } from '../database/prisma.service';
+
 import { PluginSandboxService } from './application/plugin-sandbox.service';
 
 @Injectable()
@@ -14,8 +16,8 @@ export class PluginsService {
     const skip = (page - 1) * limit;
 
     const where: any = { isActive: true };
-    if (search) where.name = { contains: search, mode: 'insensitive' };
-    if (category) where.category = category;
+    if (search) {where.name = { contains: search, mode: 'insensitive' };}
+    if (category) {where.category = category;}
 
     const [data, total] = await Promise.all([
       this.prisma.plugin.findMany({ where, skip, take: limit, orderBy: { installCount: 'desc' } }),
@@ -27,7 +29,7 @@ export class PluginsService {
 
   async getPlugin(pluginId: string) {
     const plugin = await this.prisma.plugin.findUnique({ where: { id: pluginId } });
-    if (!plugin) throw new NotFoundException('Plugin not found');
+    if (!plugin) {throw new NotFoundException('Plugin not found');}
     return plugin;
   }
 
@@ -41,7 +43,7 @@ export class PluginsService {
 
   async installPlugin(tenantId: string, pluginId: string, config: Record<string, any> = {}) {
     const plugin = await this.prisma.plugin.findUnique({ where: { id: pluginId } });
-    if (!plugin) throw new NotFoundException('Plugin not found');
+    if (!plugin) {throw new NotFoundException('Plugin not found');}
 
     // Validate manifest before allowing installation
     this.sandbox.validateManifest(plugin.manifest);
@@ -49,7 +51,7 @@ export class PluginsService {
     const existing = await this.prisma.installedPlugin.findUnique({
       where: { tenantId_pluginId: { tenantId, pluginId } },
     });
-    if (existing) throw new ConflictException('Plugin already installed');
+    if (existing) {throw new ConflictException('Plugin already installed');}
 
     const [installed] = await this.prisma.$transaction([
       this.prisma.installedPlugin.create({
@@ -69,7 +71,7 @@ export class PluginsService {
     const installed = await this.prisma.installedPlugin.findUnique({
       where: { tenantId_pluginId: { tenantId, pluginId } },
     });
-    if (!installed) throw new NotFoundException('Plugin not installed');
+    if (!installed) {throw new NotFoundException('Plugin not installed');}
 
     await this.prisma.$transaction([
       this.prisma.installedPlugin.delete({ where: { tenantId_pluginId: { tenantId, pluginId } } }),
@@ -83,7 +85,7 @@ export class PluginsService {
     const installed = await this.prisma.installedPlugin.findUnique({
       where: { tenantId_pluginId: { tenantId, pluginId } },
     });
-    if (!installed) throw new NotFoundException('Plugin not installed');
+    if (!installed) {throw new NotFoundException('Plugin not installed');}
 
     return this.prisma.installedPlugin.update({
       where: { tenantId_pluginId: { tenantId, pluginId } },
@@ -96,7 +98,7 @@ export class PluginsService {
     const installed = await this.prisma.installedPlugin.findUnique({
       where: { tenantId_pluginId: { tenantId, pluginId } },
     });
-    if (!installed) throw new NotFoundException('Plugin not installed');
+    if (!installed) {throw new NotFoundException('Plugin not installed');}
 
     return this.prisma.installedPlugin.update({
       where: { tenantId_pluginId: { tenantId, pluginId } },
@@ -107,7 +109,7 @@ export class PluginsService {
 
   async getPluginSandboxMeta(pluginId: string) {
     const plugin = await this.prisma.plugin.findUnique({ where: { id: pluginId } });
-    if (!plugin) throw new NotFoundException('Plugin not found');
+    if (!plugin) {throw new NotFoundException('Plugin not found');}
     const manifest = this.sandbox.validateManifest(plugin.manifest);
     return {
       sandbox: this.sandbox.buildSandboxAttribute(manifest),

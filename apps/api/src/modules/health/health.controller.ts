@@ -1,9 +1,10 @@
 import { Controller, Get, HttpCode } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { HealthCheckService, HealthCheck, HealthCheckResult } from '@nestjs/terminus';
-import { PrismaService } from '../database/prisma.service';
+
 import { RedisService } from '../cache/redis.service';
 import { Public } from '../core/decorators/public.decorator';
+import { PrismaService } from '../database/prisma.service';
 
 @ApiTags('Health')
 @Controller('health')

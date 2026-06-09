@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
+
 import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -57,7 +58,7 @@ export class QuizzesService {
         _count: { select: { attempts: true } },
       },
     });
-    if (!quiz) throw new NotFoundException('Quiz not found');
+    if (!quiz) {throw new NotFoundException('Quiz not found');}
     return quiz;
   }
 
@@ -74,7 +75,7 @@ export class QuizzesService {
 
   async update(id: string, dto: UpdateQuizDto) {
     const quiz = await this.prisma.quiz.findUnique({ where: { id } });
-    if (!quiz) throw new NotFoundException('Quiz not found');
+    if (!quiz) {throw new NotFoundException('Quiz not found');}
 
     return this.prisma.quiz.update({
       where: { id },
@@ -88,13 +89,13 @@ export class QuizzesService {
 
   async deleteQuiz(id: string) {
     const quiz = await this.prisma.quiz.findUnique({ where: { id } });
-    if (!quiz) throw new NotFoundException('Quiz not found');
+    if (!quiz) {throw new NotFoundException('Quiz not found');}
     await this.prisma.quiz.delete({ where: { id } });
   }
 
   async submitAttempt(quizId: string, userId: string, answers: QuizAnswer[]) {
     const quiz = await this.prisma.quiz.findUnique({ where: { id: quizId } });
-    if (!quiz) throw new NotFoundException('Quiz not found');
+    if (!quiz) {throw new NotFoundException('Quiz not found');}
 
     const questions = quiz.questions as unknown as QuizQuestion[];
     if (!Array.isArray(questions) || questions.length === 0) {
@@ -110,7 +111,7 @@ export class QuizzesService {
       const submittedAnswer = submitted?.answer ?? '';
       const isCorrect =
         submittedAnswer.toLowerCase().trim() === q.answer.toLowerCase().trim();
-      if (isCorrect) correctPoints += q.points;
+      if (isCorrect) {correctPoints += q.points;}
       return {
         questionId: q.id,
         question: q.question,
@@ -157,7 +158,7 @@ export class QuizzesService {
 
   async getMyAttempts(quizId: string, userId: string) {
     const quiz = await this.prisma.quiz.findUnique({ where: { id: quizId } });
-    if (!quiz) throw new NotFoundException('Quiz not found');
+    if (!quiz) {throw new NotFoundException('Quiz not found');}
 
     return this.prisma.quizAttempt.findMany({
       where: { quizId, userId },
@@ -167,7 +168,7 @@ export class QuizzesService {
 
   async getResults(quizId: string) {
     const quiz = await this.prisma.quiz.findUnique({ where: { id: quizId } });
-    if (!quiz) throw new NotFoundException('Quiz not found');
+    if (!quiz) {throw new NotFoundException('Quiz not found');}
 
     return this.prisma.quizAttempt.findMany({
       where: { quizId },

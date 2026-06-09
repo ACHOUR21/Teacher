@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
+
+import { CacheModule } from '../cache/cache.module';
+import { DatabaseModule } from '../database/database.module';
+
 import { WhiteLabelController } from './presentation/controllers/white-label.controller';
 import { WhiteLabelService } from './white-label.service';
-import { DatabaseModule } from '../database/database.module';
-import { CacheModule } from '../cache/cache.module';
 
 @Module({
   imports: [DatabaseModule, CacheModule],

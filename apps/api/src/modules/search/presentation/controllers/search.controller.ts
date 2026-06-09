@@ -1,12 +1,13 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
-import { SearchService } from '../../search.service';
-import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
-import { RolesGuard } from '../../../core/guards/roles.guard';
+
+import { Public } from '../../../core/decorators/public.decorator';
 import { Roles } from '../../../core/decorators/roles.decorator';
 import { TenantId } from '../../../core/decorators/tenant.decorator';
-import { Public } from '../../../core/decorators/public.decorator';
+import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../core/guards/roles.guard';
+import { SearchService } from '../../search.service';
 
 @ApiTags('Search')
 @Controller('search')

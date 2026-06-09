@@ -1,10 +1,12 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const PDFDocument = require('pdfkit');
+
+import { ConfigService } from '@nestjs/config';
+import PDFDocument from 'pdfkit';
 import * as QRCode from 'qrcode';
+
 import { PrismaService } from '../database/prisma.service';
 import { StorageService } from '../storage/storage.service';
-import { ConfigService } from '@nestjs/config';
+
 
 interface PDFData {
   studentName: string;
@@ -39,10 +41,10 @@ export class CertificatesService {
 
   async issueCertificate(studentId: string, templateId: string, metadata: Record<string, unknown> = {}) {
     const template = await this.prisma.certificateTemplate.findUnique({ where: { id: templateId }, include: { course: true } });
-    if (!template) throw new NotFoundException('Certificate template not found');
+    if (!template) {throw new NotFoundException('Certificate template not found');}
 
     const student = await this.prisma.student.findUnique({ where: { id: studentId }, include: { user: true } });
-    if (!student) throw new NotFoundException('Student not found');
+    if (!student) {throw new NotFoundException('Student not found');}
 
     // Pre-create record to get the verifyCode
     const cert = await this.prisma.issuedCertificate.create({
@@ -94,14 +96,14 @@ export class CertificatesService {
     metadata: Record<string, unknown> = {},
   ) {
     const template = await this.prisma.certificateTemplate.findUnique({ where: { id: templateId }, include: { course: true } });
-    if (!template) throw new NotFoundException('Certificate template not found');
+    if (!template) {throw new NotFoundException('Certificate template not found');}
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) {throw new NotFoundException('User not found');}
 
     // Check if already issued for this template+user
     const existing = await this.prisma.issuedCertificate.findFirst({ where: { userId, templateId } });
-    if (existing) return existing;
+    if (existing) {return existing;}
 
     // Find or create student profile
     let student = await this.prisma.student.findFirst({ where: { userId } });
@@ -198,7 +200,7 @@ export class CertificatesService {
         template: { include: { course: { select: { title: true } } } },
       },
     });
-    if (!cert) throw new NotFoundException('Certificate not found or invalid code');
+    if (!cert) {throw new NotFoundException('Certificate not found or invalid code');}
     return {
       valid: true,
       recipientName: `${cert.student.user.firstName} ${cert.student.user.lastName}`,
@@ -290,7 +292,7 @@ export class CertificatesService {
         template: { include: { course: { select: { title: true } } } },
       },
     });
-    if (!cert) throw new NotFoundException('Certificate not found');
+    if (!cert) {throw new NotFoundException('Certificate not found');}
     return this.generatePDF({
       studentName: `${cert.student.user.firstName} ${cert.student.user.lastName}`,
       courseName: cert.template.course?.title ?? 'Course',

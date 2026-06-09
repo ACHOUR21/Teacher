@@ -1,10 +1,12 @@
-import { Resolver, Query, Mutation, Args, ID, Int } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
+import { Resolver, Query, Mutation, Args, ID, Int } from '@nestjs/graphql';
+import { UserRole } from '@prisma/client';
+
+import { CurrentUser } from '../../core/decorators/current-user.decorator';
 import { UsersService } from '../../users/users.service';
 import { GqlAuthGuard } from '../guards/gql-auth.guard';
-import { CurrentUser } from '../../core/decorators/current-user.decorator';
 import { User, UserPage } from '../types/user.types';
-import { UserRole } from '@prisma/client';
+
 
 @Resolver(() => User)
 export class UsersResolver {

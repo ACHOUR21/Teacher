@@ -1,8 +1,9 @@
-import { Resolver, Query, Args, Int } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
+import { Resolver, Query, Args, Int } from '@nestjs/graphql';
+
 import { AnalyticsService } from '../../analytics/analytics.service';
-import { GqlAuthGuard } from '../guards/gql-auth.guard';
 import { CurrentUser } from '../../core/decorators/current-user.decorator';
+import { GqlAuthGuard } from '../guards/gql-auth.guard';
 import {
   PlatformStats,
   DailyGrowth,

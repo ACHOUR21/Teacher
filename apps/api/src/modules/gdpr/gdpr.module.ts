@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
-import { GdprService } from './gdpr.service';
-import { GdprController } from './gdpr.controller';
+
 import { DatabaseModule } from '../database/database.module';
+
+import { GdprController } from './gdpr.controller';
 import { GdprScheduler } from './gdpr.scheduler';
+import { GdprService } from './gdpr.service';
 
 @Module({
   imports: [DatabaseModule],

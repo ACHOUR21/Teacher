@@ -1,8 +1,10 @@
 import { Controller, Get, Res } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiExcludeEndpoint } from '@nestjs/swagger';
 import { Response } from 'express';
-import { MetricsService } from './metrics.service';
+
 import { Public } from '../core/decorators/public.decorator';
+
+import { MetricsService } from './metrics.service';
 
 @ApiTags('Observability')
 @Controller('metrics')

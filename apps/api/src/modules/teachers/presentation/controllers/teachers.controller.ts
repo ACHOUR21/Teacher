@@ -1,8 +1,9 @@
 import { Controller, Get, Post, Patch, Param, Body, Query, UseGuards, Request, NotFoundException, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { TeachersService } from '../../teachers.service';
-import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+import { TeachersService } from '../../teachers.service';
 
 @ApiTags('Teachers')
 @ApiBearerAuth('JWT-auth')
@@ -21,7 +22,7 @@ export class TeachersController {
   @ApiOperation({ summary: 'Get my performance stats' })
   async myStats(@CurrentUser() user: any) {
     const teacher = await this.teachersService.findByUserId(user.sub ?? user.id);
-    if (!teacher) throw new NotFoundException('Teacher profile not found');
+    if (!teacher) {throw new NotFoundException('Teacher profile not found');}
     return this.teachersService.getPerformanceStats(teacher.id);
   }
 

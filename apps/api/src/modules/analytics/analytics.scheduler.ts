@@ -1,7 +1,8 @@
+import { InjectQueue } from '@nestjs/bull';
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
-import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
+
 import { PrismaService } from '../database/prisma.service';
 import { QUEUE_ANALYTICS } from '../queue/queue.module';
 

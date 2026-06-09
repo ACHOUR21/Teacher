@@ -1,10 +1,11 @@
 import { Controller, Get, Post, Body, Param, Query, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { StudentsService } from '../../students.service';
+
+import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { Roles } from '../../../core/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../core/guards/roles.guard';
-import { Roles } from '../../../core/decorators/roles.decorator';
-import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { StudentsService } from '../../students.service';
 
 @ApiTags('Students')
 @ApiBearerAuth('JWT-auth')

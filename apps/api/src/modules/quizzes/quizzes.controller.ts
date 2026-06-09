@@ -12,18 +12,20 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
+
+import { CurrentUser, CurrentUserPayload } from '../core/decorators/current-user.decorator';
+import { Roles } from '../core/decorators/roles.decorator';
+import { JwtAuthGuard } from '../core/guards/jwt-auth.guard';
+import { RolesGuard } from '../core/guards/roles.guard';
+import { PrismaService } from '../database/prisma.service';
+
 import {
   QuizzesService,
   CreateQuizDto,
   UpdateQuizDto,
   SubmitAttemptDto,
 } from './quizzes.service';
-import { JwtAuthGuard } from '../core/guards/jwt-auth.guard';
-import { RolesGuard } from '../core/guards/roles.guard';
-import { Roles } from '../core/decorators/roles.decorator';
-import { CurrentUser, CurrentUserPayload } from '../core/decorators/current-user.decorator';
-import { UserRole } from '@prisma/client';
-import { PrismaService } from '../database/prisma.service';
 
 @ApiTags('Quizzes')
 @ApiBearerAuth('JWT-auth')
@@ -53,7 +55,7 @@ export class QuizzesController {
   async create(@CurrentUser() user: CurrentUserPayload, @Body() dto: CreateQuizDto) {
     if (user.role === UserRole.TEACHER) {
       const teacher = await this.prisma.teacher.findUnique({ where: { userId: user.id } });
-      if (!teacher) throw new NotFoundException('Teacher profile not found');
+      if (!teacher) {throw new NotFoundException('Teacher profile not found');}
     }
     return this.quizzesService.create(dto);
   }
@@ -68,7 +70,7 @@ export class QuizzesController {
   ) {
     if (user.role === UserRole.TEACHER) {
       const teacher = await this.prisma.teacher.findUnique({ where: { userId: user.id } });
-      if (!teacher) throw new NotFoundException('Teacher profile not found');
+      if (!teacher) {throw new NotFoundException('Teacher profile not found');}
     }
     return this.quizzesService.update(id, dto);
   }
@@ -80,7 +82,7 @@ export class QuizzesController {
   async delete(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
     if (user.role === UserRole.TEACHER) {
       const teacher = await this.prisma.teacher.findUnique({ where: { userId: user.id } });
-      if (!teacher) throw new NotFoundException('Teacher profile not found');
+      if (!teacher) {throw new NotFoundException('Teacher profile not found');}
     }
     return this.quizzesService.deleteQuiz(id);
   }
@@ -108,7 +110,7 @@ export class QuizzesController {
   async getResults(@Param('id') quizId: string, @CurrentUser() user: CurrentUserPayload) {
     if (user.role === UserRole.TEACHER) {
       const teacher = await this.prisma.teacher.findUnique({ where: { userId: user.id } });
-      if (!teacher) throw new NotFoundException('Teacher profile not found');
+      if (!teacher) {throw new NotFoundException('Teacher profile not found');}
     }
     return this.quizzesService.getResults(quizId);
   }

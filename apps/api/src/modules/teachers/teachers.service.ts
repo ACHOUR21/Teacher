@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+
 import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -15,7 +16,7 @@ export class TeachersService {
     const skip = (page - 1) * limit;
 
     const where: Record<string, unknown> = { user: { tenantId, isActive: true } };
-    if (query.schoolId) where.schoolId = query.schoolId;
+    if (query.schoolId) {where.schoolId = query.schoolId;}
     if (query.search) {
       where.user = {
         tenantId,
@@ -68,7 +69,7 @@ export class TeachersService {
         _count: { select: { courses: true, liveSessions: true } },
       },
     });
-    if (!teacher) throw new NotFoundException('Teacher not found');
+    if (!teacher) {throw new NotFoundException('Teacher not found');}
     return teacher;
   }
 

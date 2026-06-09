@@ -1,5 +1,6 @@
 import { Injectable, NestMiddleware } from '@nestjs/common';
 import { Request, Response, NextFunction } from 'express';
+
 import { MetricsService } from './metrics.service';
 
 const SKIP_PATHS = new Set(['/health', '/health/ping', '/metrics', '/favicon.ico']);
@@ -20,7 +21,7 @@ export class MetricsMiddleware implements NestMiddleware {
     const startTime = Date.now();
     const path = normalizePath(req.path);
 
-    if (SKIP_PATHS.has(req.path)) return next();
+    if (SKIP_PATHS.has(req.path)) {return next();}
 
     const reqSize = parseInt(req.headers['content-length'] ?? '0', 10);
     if (reqSize > 0) {

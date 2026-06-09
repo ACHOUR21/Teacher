@@ -2,11 +2,14 @@ import {
   Controller, Get, Patch, Delete, Post, Param, Query, Body, UseGuards, HttpCode, HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { SuperAdminService } from './super-admin.service';
+import { UserRole, SubscriptionPlan } from '@prisma/client';
+
+import { Roles } from '../core/decorators/roles.decorator';
 import { JwtAuthGuard } from '../core/guards/jwt-auth.guard';
 import { RolesGuard } from '../core/guards/roles.guard';
-import { Roles } from '../core/decorators/roles.decorator';
-import { UserRole, SubscriptionPlan } from '@prisma/client';
+
+import { SuperAdminService } from './super-admin.service';
+
 
 @ApiTags('Super Admin')
 @ApiBearerAuth('JWT-auth')

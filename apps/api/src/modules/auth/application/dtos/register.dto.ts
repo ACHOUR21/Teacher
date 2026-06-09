@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { TenantType, UserRole } from '@prisma/client';
 import {
   IsEmail,
   IsString,
@@ -8,7 +9,6 @@ import {
   IsEnum,
   Matches,
 } from 'class-validator';
-import { TenantType, UserRole } from '@prisma/client';
 
 export class RegisterDto {
   @ApiProperty({ example: 'John' })

@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service';
 import Anthropic from '@anthropic-ai/sdk';
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AIModuleType } from '@prisma/client';
+
+import { PrismaService } from '../database/prisma.service';
 
 export type AgentEventType =
   | { type: 'status'; phase: 'thinking' | 'tool_calling' | 'responding' }
@@ -297,18 +298,18 @@ export class AiAgentsService {
         }
       }
 
-      totalInputTokens += (finalMsg.usage as any).input_tokens;
-      totalOutputTokens += (finalMsg.usage as any).output_tokens;
+      totalInputTokens += (finalMsg.usage).input_tokens;
+      totalOutputTokens += (finalMsg.usage).output_tokens;
       history.push({ role: 'assistant', content: finalMsg.content } as any);
 
-      if ((finalMsg as any).stop_reason !== 'tool_use') break;
+      if ((finalMsg).stop_reason !== 'tool_use') {break;}
 
       // Execute tools and continue the loop
       yield { type: 'status', phase: 'tool_calling' };
       const toolResultContent: any[] = [];
 
       for (const block of finalMsg.content) {
-        if (block.type !== 'tool_use') continue;
+        if (block.type !== 'tool_use') {continue;}
         yield { type: 'tool_call', id: block.id, name: block.name, input: block.input as Record<string, unknown> };
         const output = await this.executeTool(block.name, block.input as Record<string, any>, userId, tenantId);
         yield { type: 'tool_result', id: block.id, name: block.name, output };
@@ -387,7 +388,7 @@ export class AiAgentsService {
     });
   }
 
-  async getAvailableAgents() {
+  getAvailableAgents() {
     return [
       { type: 'STUDY_PLANNER', name: 'Study Planner', description: 'Creates personalized study schedules and tracks progress', icon: '📚' },
       { type: 'HOMEWORK_ASSISTANT', name: 'Homework Assistant', description: 'Guides you through problems step by step', icon: '✏️' },

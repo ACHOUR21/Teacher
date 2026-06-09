@@ -1,12 +1,12 @@
 /** XP required to reach a given level. Level 1 = 0 XP. */
 export function xpForLevel(level: number): number {
-  if (level <= 1) return 0;
+  if (level <= 1) {return 0;}
   return level * (level - 1) * 50;
 }
 
 /** Derive level from total accumulated XP (capped at 100). */
 export function calculateLevel(totalXp: number): number {
-  if (totalXp <= 0) return 1;
+  if (totalXp <= 0) {return 1;}
   // Solve level*(level-1)*50 <= totalXp for largest integer level
   // => level = floor((1 + sqrt(1 + 4*totalXp/50)) / 2)
   const level = Math.floor((1 + Math.sqrt(1 + (4 * totalXp) / 50)) / 2);

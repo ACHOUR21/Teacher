@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+
 import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
@@ -24,9 +25,9 @@ export class StudentsService {
     }
 
     const where: Record<string, unknown> = { user: userWhere };
-    if (query.schoolId) where.schoolId = query.schoolId;
-    if (query.classId) where.classId = query.classId;
-    if (query.grade) where.grade = query.grade;
+    if (query.schoolId) {where.schoolId = query.schoolId;}
+    if (query.classId) {where.classId = query.classId;}
+    if (query.grade) {where.grade = query.grade;}
 
     const [students, total] = await Promise.all([
       this.prisma.student.findMany({
@@ -63,7 +64,7 @@ export class StudentsService {
         _count: { select: { courseProgress: true, certificates: true, submissions: true } },
       },
     });
-    if (!student) throw new NotFoundException('Student not found');
+    if (!student) {throw new NotFoundException('Student not found');}
     return student;
   }
 
@@ -124,7 +125,7 @@ export class StudentsService {
       },
     });
 
-    if (!student) throw new NotFoundException('Student not found');
+    if (!student) {throw new NotFoundException('Student not found');}
 
     const userId = student.userId;
 

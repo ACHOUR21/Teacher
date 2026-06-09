@@ -12,17 +12,17 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
-import { UsersService, UpdateUserDto, UpdateUserProfileDto } from '../../users.service';
-import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
-import { RolesGuard } from '../../../core/guards/roles.guard';
-import { Roles } from '../../../core/decorators/roles.decorator';
-import { CurrentUser, CurrentUserPayload } from '../../../core/decorators/current-user.decorator';
-import { TenantId } from '../../../core/decorators/tenant.decorator';
-import { PaginationDto } from '../../../core/pagination/pagination.dto';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery , ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { IsEnum, IsOptional } from 'class-validator';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+
+import { CurrentUser, CurrentUserPayload } from '../../../core/decorators/current-user.decorator';
+import { Roles } from '../../../core/decorators/roles.decorator';
+import { TenantId } from '../../../core/decorators/tenant.decorator';
+import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+import { RolesGuard } from '../../../core/guards/roles.guard';
+import { PaginationDto } from '../../../core/pagination/pagination.dto';
+import { UsersService, UpdateUserDto, UpdateUserProfileDto } from '../../users.service';
 
 class AssignRoleDto {
   @ApiPropertyOptional({ enum: UserRole })

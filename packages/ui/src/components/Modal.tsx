@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { cva, type VariantProps } from 'class-variance-authority';
 
 import { cn } from '../utils.js';
@@ -102,11 +103,10 @@ function Modal({
 
   // ── Body scroll lock ───────────────────────────────────────────────────────
   React.useEffect(() => {
-    if (isOpen) {
-      const prev = document.body.style.overflow;
-      document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = prev; };
-    }
+    if (!isOpen) { return; }
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = prev; };
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -204,10 +204,7 @@ function ModalPortal({ children }: { children: React.ReactNode }) {
 
   if (!mounted) return null;
 
-  // Dynamic import of createPortal to avoid SSR issues in non-Next environments.
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const ReactDOM = require('react-dom') as typeof import('react-dom');
-  return ReactDOM.createPortal(children, document.body);
+  return createPortal(children, document.body);
 }
 
 // ─── Inline SVG icons ─────────────────────────────────────────────────────────

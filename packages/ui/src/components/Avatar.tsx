@@ -46,13 +46,15 @@ const PALETTE = [
 
 function getColourClass(name: string): string {
   const code = (name.charCodeAt(0) || 0) + (name.charCodeAt(1) || 0);
-  return PALETTE[code % PALETTE.length];
+  return PALETTE[code % PALETTE.length] ?? 'bg-blue-600';
 }
 
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  const first = parts[0] ?? '';
+  if (parts.length === 1) { return first.slice(0, 2).toUpperCase(); }
+  const last = parts[parts.length - 1] ?? '';
+  return ((first[0] ?? '') + (last[0] ?? '')).toUpperCase();
 }
 
 // ─── Online indicator size ────────────────────────────────────────────────────

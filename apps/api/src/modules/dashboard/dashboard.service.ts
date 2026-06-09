@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+
 import { PrismaService } from '../database/prisma.service';
 
 @Injectable()
@@ -10,7 +11,7 @@ export class DashboardService {
     if (!student) {
       // Teacher dashboard stats
       const teacher = await this.prisma.teacher.findUnique({ where: { userId }, select: { id: true } });
-      if (!teacher) return { enrolledCourses: 0, completedCourses: 0, upcomingSessions: 0, totalPoints: 0 };
+      if (!teacher) {return { enrolledCourses: 0, completedCourses: 0, upcomingSessions: 0, totalPoints: 0 };}
       const [courses, sessions, points] = await Promise.all([
         this.prisma.course.count({ where: { teacherId: teacher.id } }),
         this.prisma.liveSession.count({ where: { teacherId: teacher.id, status: { in: ['SCHEDULED', 'LIVE'] } } }),
@@ -36,7 +37,7 @@ export class DashboardService {
 
   async getRecentCourses(userId: string) {
     const student = await this.prisma.student.findUnique({ where: { userId }, select: { id: true } });
-    if (!student) return [];
+    if (!student) {return [];}
 
     const progress = await this.prisma.courseProgress.findMany({
       where: { studentId: student.id },

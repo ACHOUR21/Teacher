@@ -12,13 +12,15 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { AttendanceService, MarkAttendanceDto } from './attendance.service';
+import { UserRole } from '@prisma/client';
+
+import { CurrentUser, CurrentUserPayload } from '../core/decorators/current-user.decorator';
+import { Roles } from '../core/decorators/roles.decorator';
 import { JwtAuthGuard } from '../core/guards/jwt-auth.guard';
 import { RolesGuard } from '../core/guards/roles.guard';
-import { Roles } from '../core/decorators/roles.decorator';
-import { CurrentUser, CurrentUserPayload } from '../core/decorators/current-user.decorator';
-import { UserRole } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
+
+import { AttendanceService, MarkAttendanceDto } from './attendance.service';
 
 @ApiTags('Attendance')
 @ApiBearerAuth('JWT-auth')
@@ -55,7 +57,7 @@ export class AttendanceController {
     @Query('to') to?: string,
   ) {
     const student = await this.prisma.student.findUnique({ where: { userId: user.id } });
-    if (!student) throw new NotFoundException('Student profile not found');
+    if (!student) {throw new NotFoundException('Student profile not found');}
     return this.attendanceService.getStudentAttendance(student.id, from, to);
   }
 

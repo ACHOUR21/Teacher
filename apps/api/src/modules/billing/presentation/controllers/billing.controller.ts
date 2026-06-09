@@ -12,18 +12,18 @@ import {
   Req,
   Headers,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { IsEnum, IsString, IsOptional, IsUrl } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Request } from 'express';
+import { ApiTags, ApiBearerAuth, ApiOperation , ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole, SubscriptionPlan } from '@prisma/client';
-import { BillingService } from '../../billing.service';
+import { IsEnum, IsString, IsOptional, IsUrl } from 'class-validator';
+import { Request } from 'express';
+
+import { CurrentUser, CurrentUserPayload } from '../../../core/decorators/current-user.decorator';
+import { Public } from '../../../core/decorators/public.decorator';
+import { Roles } from '../../../core/decorators/roles.decorator';
+import { TenantId } from '../../../core/decorators/tenant.decorator';
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../core/guards/roles.guard';
-import { Roles } from '../../../core/decorators/roles.decorator';
-import { CurrentUser, CurrentUserPayload } from '../../../core/decorators/current-user.decorator';
-import { TenantId } from '../../../core/decorators/tenant.decorator';
-import { Public } from '../../../core/decorators/public.decorator';
+import { BillingService } from '../../billing.service';
 
 class SubscribeDto {
   @ApiProperty({ enum: SubscriptionPlan })
@@ -151,7 +151,7 @@ export class BillingController {
     @Req() req: RawBodyRequest<Request>,
     @Headers('stripe-signature') signature: string,
   ) {
-    if (!req.rawBody) throw new Error('Raw body not available');
+    if (!req.rawBody) {throw new Error('Raw body not available');}
     await this.billingService.handleStripeWebhook(req.rawBody, signature);
     return { received: true };
   }

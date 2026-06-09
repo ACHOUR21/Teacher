@@ -1,9 +1,10 @@
 import { Controller, Get, Post, Body, Query, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { GamificationService } from '../../gamification.service';
-import { GamificationEventType } from '../../domain/gamification-rules';
-import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+import { GamificationEventType } from '../../domain/gamification-rules';
+import { GamificationService } from '../../gamification.service';
 
 @ApiTags('Gamification')
 @ApiBearerAuth('JWT-auth')

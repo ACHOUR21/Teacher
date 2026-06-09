@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
+
 import { PrismaService } from '../database/prisma.service';
+
 import { NotificationsService } from './notifications.service';
 
 @Injectable()
@@ -36,7 +38,7 @@ export class ParentNotificationsService {
     maxScore: number;
   }) {
     const parentIds = await this.getParentUserIds(params.studentId);
-    if (!parentIds.length) return;
+    if (!parentIds.length) {return;}
 
     const name = this.studentName(params.studentFirstName, params.studentLastName);
     const pct = Math.round((params.score / params.maxScore) * 100);
@@ -69,7 +71,7 @@ export class ParentNotificationsService {
     date: Date;
   }) {
     const parentIds = await this.getParentUserIds(params.studentId);
-    if (!parentIds.length) return;
+    if (!parentIds.length) {return;}
 
     const name = this.studentName(params.studentFirstName, params.studentLastName);
     const dateStr = params.date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
@@ -102,10 +104,10 @@ export class ParentNotificationsService {
     percent: number;
   }) {
     const MILESTONES = [25, 50, 75, 100];
-    if (!MILESTONES.includes(params.percent)) return;
+    if (!MILESTONES.includes(params.percent)) {return;}
 
     const parentIds = await this.getParentUserIds(params.studentId);
-    if (!parentIds.length) return;
+    if (!parentIds.length) {return;}
 
     const name = this.studentName(params.studentFirstName, params.studentLastName);
     const emoji = params.percent === 100 ? '🎉' : '📈';
@@ -137,7 +139,7 @@ export class ParentNotificationsService {
     dueDate: Date;
   }) {
     const parentIds = await this.getParentUserIds(params.studentId);
-    if (!parentIds.length) return;
+    if (!parentIds.length) {return;}
 
     const name = this.studentName(params.studentFirstName, params.studentLastName);
     const dateStr = params.dueDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });

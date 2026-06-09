@@ -1,10 +1,11 @@
-import { Resolver, Query, Mutation, Args, ID } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
+import { Resolver, Query, Mutation, Args, ID } from '@nestjs/graphql';
+
+import { CurrentUser } from '../../core/decorators/current-user.decorator';
 import { CoursesService } from '../../courses/courses.service';
 import { GqlAuthGuard } from '../guards/gql-auth.guard';
-import { CurrentUser } from '../../core/decorators/current-user.decorator';
-import { Course, CoursePage } from '../types/course.types';
 import { CreateCourseInput, CourseFilterInput } from '../inputs/course.input';
+import { Course, CoursePage } from '../types/course.types';
 
 @Resolver(() => Course)
 export class CoursesResolver {

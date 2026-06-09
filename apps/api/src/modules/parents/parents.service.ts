@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+
 import { PrismaService } from '../database/prisma.service';
 
 @Injectable()
@@ -23,7 +24,7 @@ export class ParentsService {
         },
       },
     });
-    if (!parent) throw new NotFoundException('Parent profile not found');
+    if (!parent) {throw new NotFoundException('Parent profile not found');}
     return parent.children.map(c => c.student);
   }
 
@@ -61,10 +62,10 @@ export class ParentsService {
 
   async linkChild(parentUserId: string, studentId: string, relationship = 'parent') {
     const parent = await this.prisma.parent.findUnique({ where: { userId: parentUserId } });
-    if (!parent) throw new NotFoundException('Parent profile not found');
+    if (!parent) {throw new NotFoundException('Parent profile not found');}
 
     const student = await this.prisma.student.findUnique({ where: { id: studentId } });
-    if (!student) throw new NotFoundException('Student not found');
+    if (!student) {throw new NotFoundException('Student not found');}
 
     return this.prisma.parentStudent.upsert({
       where: { parentId_studentId: { parentId: parent.id, studentId } },
@@ -75,10 +76,10 @@ export class ParentsService {
 
   private async verifyParentAccess(parentUserId: string, studentId: string) {
     const parent = await this.prisma.parent.findUnique({ where: { userId: parentUserId } });
-    if (!parent) throw new ForbiddenException('Not a parent');
+    if (!parent) {throw new ForbiddenException('Not a parent');}
     const link = await this.prisma.parentStudent.findUnique({
       where: { parentId_studentId: { parentId: parent.id, studentId } },
     });
-    if (!link) throw new ForbiddenException('Not linked to this student');
+    if (!link) {throw new ForbiddenException('Not linked to this student');}
   }
 }

@@ -1,8 +1,10 @@
 import { Controller, Get, Post, Body, Query, UseGuards, Req, Res } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { AiAgentsService } from '../../ai-agents.service';
+
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
 import { TenantGuard } from '../../../core/guards/tenant.guard';
+import { AiAgentsService } from '../../ai-agents.service';
+
 import type { Response } from 'express';
 
 @ApiTags('ai-agents')
@@ -77,7 +79,7 @@ export class AiAgentsController {
       });
 
       for await (const event of gen) {
-        if (res.writableEnded) break;
+        if (res.writableEnded) {break;}
         write(event);
       }
     } catch (err: any) {
@@ -85,7 +87,7 @@ export class AiAgentsController {
         write({ type: 'error', message: err?.message ?? 'Unknown error' });
       }
     } finally {
-      if (!res.writableEnded) res.end();
+      if (!res.writableEnded) {res.end();}
     }
   }
 }

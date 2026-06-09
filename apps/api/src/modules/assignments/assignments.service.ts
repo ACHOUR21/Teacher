@@ -5,10 +5,11 @@ import {
   ConflictException,
   BadRequestException,
 } from '@nestjs/common';
+import { AssignmentStatus } from '@prisma/client';
+
+import { ApiEcosystemService } from '../api-ecosystem/api-ecosystem.service';
 import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { ApiEcosystemService } from '../api-ecosystem/api-ecosystem.service';
-import { AssignmentStatus } from '@prisma/client';
 
 export class CreateAssignmentDto {
   title: string;
@@ -74,8 +75,8 @@ export class AssignmentsService {
 
   async findAll(teacherId?: string, studentId?: string, lessonId?: string) {
     const where: Record<string, unknown> = {};
-    if (teacherId) where.teacherId = teacherId;
-    if (lessonId) where.lessonId = lessonId;
+    if (teacherId) {where.teacherId = teacherId;}
+    if (lessonId) {where.lessonId = lessonId;}
 
     const assignments = await this.prisma.assignment.findMany({
       where,
@@ -101,14 +102,14 @@ export class AssignmentsService {
         _count: { select: { submissions: true } },
       },
     });
-    if (!assignment) throw new NotFoundException('Assignment not found');
+    if (!assignment) {throw new NotFoundException('Assignment not found');}
     return assignment;
   }
 
   async update(id: string, teacherId: string, dto: Partial<CreateAssignmentDto>) {
     const assignment = await this.prisma.assignment.findUnique({ where: { id } });
-    if (!assignment) throw new NotFoundException('Assignment not found');
-    if (assignment.teacherId !== teacherId) throw new ForbiddenException('Not your assignment');
+    if (!assignment) {throw new NotFoundException('Assignment not found');}
+    if (assignment.teacherId !== teacherId) {throw new ForbiddenException('Not your assignment');}
 
     return this.prisma.assignment.update({
       where: { id },
@@ -124,14 +125,14 @@ export class AssignmentsService {
 
   async delete(id: string, teacherId: string) {
     const assignment = await this.prisma.assignment.findUnique({ where: { id } });
-    if (!assignment) throw new NotFoundException('Assignment not found');
-    if (assignment.teacherId !== teacherId) throw new ForbiddenException('Not your assignment');
+    if (!assignment) {throw new NotFoundException('Assignment not found');}
+    if (assignment.teacherId !== teacherId) {throw new ForbiddenException('Not your assignment');}
     await this.prisma.assignment.delete({ where: { id } });
   }
 
   async submit(assignmentId: string, studentId: string, dto: SubmitAssignmentDto) {
     const assignment = await this.prisma.assignment.findUnique({ where: { id: assignmentId } });
-    if (!assignment) throw new NotFoundException('Assignment not found');
+    if (!assignment) {throw new NotFoundException('Assignment not found');}
 
     let status: AssignmentStatus;
 
@@ -139,13 +140,13 @@ export class AssignmentsService {
       const existing = await this.prisma.submission.findUnique({
         where: { assignmentId_studentId: { assignmentId, studentId } },
       });
-      if (existing) throw new ConflictException('Already submitted');
+      if (existing) {throw new ConflictException('Already submitted');}
       status = AssignmentStatus.LATE;
     } else {
       const existing = await this.prisma.submission.findUnique({
         where: { assignmentId_studentId: { assignmentId, studentId } },
       });
-      if (existing) throw new ConflictException('Already submitted');
+      if (existing) {throw new ConflictException('Already submitted');}
       status = AssignmentStatus.SUBMITTED;
     }
 
@@ -178,8 +179,8 @@ export class AssignmentsService {
 
   async getSubmissions(assignmentId: string, teacherId: string) {
     const assignment = await this.prisma.assignment.findUnique({ where: { id: assignmentId } });
-    if (!assignment) throw new NotFoundException('Assignment not found');
-    if (assignment.teacherId !== teacherId) throw new ForbiddenException('Not your assignment');
+    if (!assignment) {throw new NotFoundException('Assignment not found');}
+    if (assignment.teacherId !== teacherId) {throw new ForbiddenException('Not your assignment');}
 
     return this.prisma.submission.findMany({
       where: { assignmentId },
@@ -203,8 +204,8 @@ export class AssignmentsService {
       where: { id: submissionId },
       include: { assignment: true, student: { select: { userId: true } } },
     });
-    if (!submission) throw new NotFoundException('Submission not found');
-    if (submission.assignment.teacherId !== teacherId) throw new ForbiddenException('Not your assignment');
+    if (!submission) {throw new NotFoundException('Submission not found');}
+    if (submission.assignment.teacherId !== teacherId) {throw new ForbiddenException('Not your assignment');}
     if (dto.score < 0 || dto.score > submission.assignment.maxScore) {
       throw new BadRequestException(`Score must be between 0 and ${submission.assignment.maxScore}`);
     }
@@ -253,7 +254,7 @@ export class AssignmentsService {
 
   async getStudentAssignments(studentId: string) {
     const student = await this.prisma.student.findUnique({ where: { id: studentId } });
-    if (!student) throw new NotFoundException('Student not found');
+    if (!student) {throw new NotFoundException('Student not found');}
 
     const enrolledCourses = await this.prisma.courseProgress.findMany({
       where: { studentId },

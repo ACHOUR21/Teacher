@@ -170,8 +170,8 @@ export class SearchService implements OnModuleInit {
         { multi_match: { query, fields: ['title^3', 'description', 'tags^2', 'teacherName'], fuzziness: 'AUTO' } },
         { term: { tenantId } },
       ];
-      if (filters?.category) must.push({ term: { category: filters.category } });
-      if (filters?.level) must.push({ term: { level: filters.level } });
+      if (filters?.category) {must.push({ term: { category: filters.category } });}
+      if (filters?.level) {must.push({ term: { level: filters.level } });}
 
       const result = await this.es.search({
         index: 'courses', from: (page - 1) * limit, size: limit,
@@ -203,7 +203,7 @@ export class SearchService implements OnModuleInit {
         { multi_match: { query, fields: ['firstName^2', 'lastName^2', 'email'], fuzziness: 'AUTO' } },
         { term: { tenantId } },
       ];
-      if (filters?.role) must.push({ term: { role: filters.role } });
+      if (filters?.role) {must.push({ term: { role: filters.role } });}
 
       const result = await this.es.search({
         index: 'users', from: (page - 1) * limit, size: limit,
@@ -230,7 +230,7 @@ export class SearchService implements OnModuleInit {
         { multi_match: { query, fields: ['title^3', 'subject^2', 'topic'], fuzziness: 'AUTO' } },
         { term: { tenantId } },
       ];
-      if (filters?.difficulty) must.push({ term: { difficulty: filters.difficulty } });
+      if (filters?.difficulty) {must.push({ term: { difficulty: filters.difficulty } });}
 
       const result = await this.es.search({
         index: 'exams', from: (page - 1) * limit, size: limit,

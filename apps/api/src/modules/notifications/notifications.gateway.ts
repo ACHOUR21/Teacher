@@ -1,4 +1,5 @@
 import { Logger } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -8,7 +9,6 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { JwtService } from '@nestjs/jwt';
 
 export interface NotificationPayload {
   id: string;
@@ -61,7 +61,7 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   @SubscribeMessage('subscribe')
   async handleSubscribe(@ConnectedSocket() client: Socket) {
     const userId = client.data?.['userId'];
-    if (userId) await client.join(`user:${userId}`);
+    if (userId) {await client.join(`user:${userId}`);}
   }
 
   /** Emit a real-time notification to a specific user across all their sessions. */

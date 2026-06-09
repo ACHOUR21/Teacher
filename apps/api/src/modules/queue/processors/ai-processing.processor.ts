@@ -1,8 +1,9 @@
 import { Processor, Process } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bull';
-import { QUEUE_AI_PROCESSING } from '../queue.module';
+
 import { AiService } from '../../ai/ai.service';
+import { QUEUE_AI_PROCESSING } from '../queue.module';
 
 export interface TutorJobData {
   userId: string;

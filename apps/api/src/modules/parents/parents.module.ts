@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
-import { ParentsController } from './presentation/controllers/parents.controller';
-import { ParentsService } from './parents.service';
+
 import { DatabaseModule } from '../database/database.module';
+
+import { ParentsService } from './parents.service';
+import { ParentsController } from './presentation/controllers/parents.controller';
 
 @Module({
   imports: [DatabaseModule],

@@ -1,5 +1,7 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import * as crypto from 'crypto';
+
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+
 import { PrismaService } from '../database/prisma.service';
 
 @Injectable()
@@ -21,8 +23,8 @@ export class ApiEcosystemService {
   async validateApiKey(rawKey: string) {
     const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex');
     const apiKey = await this.prisma.apiKey.findUnique({ where: { keyHash }, include: { tenant: true } });
-    if (!apiKey || !apiKey.isActive) throw new UnauthorizedException('Invalid API key');
-    if (apiKey.expiresAt && apiKey.expiresAt < new Date()) throw new UnauthorizedException('API key expired');
+    if (!apiKey || !apiKey.isActive) {throw new UnauthorizedException('Invalid API key');}
+    if (apiKey.expiresAt && apiKey.expiresAt < new Date()) {throw new UnauthorizedException('API key expired');}
 
     await this.prisma.apiKey.update({ where: { id: apiKey.id }, data: { lastUsedAt: new Date() } });
     return apiKey;

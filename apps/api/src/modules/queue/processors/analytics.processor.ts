@@ -1,8 +1,9 @@
 import { Processor, Process } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bull';
-import { QUEUE_ANALYTICS } from '../queue.module';
+
 import { AnalyticsService } from '../../analytics/analytics.service';
+import { QUEUE_ANALYTICS } from '../queue.module';
 
 export interface PlatformStatsJobData {
   tenantId: string;

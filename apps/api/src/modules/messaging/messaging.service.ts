@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+
 import { PrismaService } from '../database/prisma.service';
 
 @Injectable()
@@ -26,7 +27,7 @@ export class MessagingService {
       include: { participants: true },
     });
 
-    if (existing && existing.participants.length === 2) return existing;
+    if (existing && existing.participants.length === 2) {return existing;}
 
     return this.prisma.conversation.create({
       data: {
@@ -81,6 +82,6 @@ export class MessagingService {
     const participant = await this.prisma.conversationParticipant.findUnique({
       where: { conversationId_userId: { conversationId, userId } },
     });
-    if (!participant) throw new ForbiddenException('Not a conversation participant');
+    if (!participant) {throw new ForbiddenException('Not a conversation participant');}
   }
 }

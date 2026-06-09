@@ -6,7 +6,8 @@
     "sourceType": "module",
     "ecmaFeatures": {
       "jsx": true
-    }
+    },
+    "project": true
   },
   "plugins": ["@typescript-eslint", "import"],
   "extends": [
@@ -56,6 +57,9 @@
   "overrides": [
     {
       "files": ["*.spec.ts", "*.test.ts", "*.e2e-spec.ts"],
+      "parserOptions": {
+        "project": ["./tsconfig.eslint.json"]
+      },
       "rules": {
         "@typescript-eslint/no-explicit-any": "off",
         "no-console": "off"

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service';
+
 import { RedisService } from '../cache/redis.service';
+import { PrismaService } from '../database/prisma.service';
 
 @Injectable()
 export class AnalyticsService {
@@ -12,7 +13,7 @@ export class AnalyticsService {
   async getPlatformStats(tenantId: string) {
     const cacheKey = `analytics:platform:${tenantId}`;
     const cached = await this.cache.get(cacheKey);
-    if (cached) return JSON.parse(cached);
+    if (cached) {return JSON.parse(cached);}
 
     const [totalUsers, totalCourses, activeSessions, totalRevenue] = await Promise.all([
       this.prisma.user.count({ where: { tenantId, isActive: true } }),
@@ -135,7 +136,7 @@ export class AnalyticsService {
     const heatmap: Record<string, number> = {};
     activity.forEach(a => {
       const d = a.lastAccessedAt;
-      if (!d) return;
+      if (!d) {return;}
       const key = `${d.getDay()}-${d.getHours()}`;
       heatmap[key] = (heatmap[key] ?? 0) + 1;
     });

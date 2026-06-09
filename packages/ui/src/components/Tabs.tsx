@@ -69,7 +69,8 @@ function Tabs({
   // ── Keyboard navigation ────────────────────────────────────────────────────
   function handleKeyDown(e: React.KeyboardEvent<HTMLButtonElement>, currentIndex: number) {
     const enabledItems = items.filter((t) => !t.disabled);
-    const currentEnabledIndex = enabledItems.findIndex((t) => t.id === items[currentIndex].id);
+    const currentItem = items[currentIndex];
+    const currentEnabledIndex = currentItem ? enabledItems.findIndex((t) => t.id === currentItem.id) : 0;
 
     let nextIndex: number | undefined;
 
@@ -86,6 +87,7 @@ function Tabs({
     if (nextIndex !== undefined) {
       e.preventDefault();
       const nextTab = enabledItems[nextIndex];
+      if (!nextTab) { return; }
       onChange(nextTab.id);
 
       // Move focus to the newly activated tab button

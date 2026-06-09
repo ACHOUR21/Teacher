@@ -1,9 +1,9 @@
-import { Resolver, Query, Mutation, Args, ID, Int, Float } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
-import { InputType, Field } from '@nestjs/graphql';
+import { Resolver, Query, Mutation, Args, ID, Int, Float , InputType, Field } from '@nestjs/graphql';
+
 import { AssignmentsService } from '../../assignments/assignments.service';
-import { GqlAuthGuard } from '../guards/gql-auth.guard';
 import { CurrentUser } from '../../core/decorators/current-user.decorator';
+import { GqlAuthGuard } from '../guards/gql-auth.guard';
 import { AssignmentGql, AssignmentPage, AssignmentSubmissionGql } from '../types/assignment.types';
 
 @InputType()

@@ -5,10 +5,12 @@ import {
   ForbiddenException,
   Logger,
 } from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service';
+import { UserRole, TenantType, Prisma } from '@prisma/client';
+
 import { RedisService } from '../cache/redis.service';
 import { PaginationDto, paginate } from '../core/pagination/pagination.dto';
-import { UserRole, TenantType, Prisma } from '@prisma/client';
+import { PrismaService } from '../database/prisma.service';
+
 
 export class CreateTenantDto {
   name: string;
@@ -66,14 +68,14 @@ export class TenantsService {
       where: { slug },
       select: { id: true, name: true, slug: true, type: true, logoUrl: true, isActive: true },
     });
-    if (!tenant || !tenant.isActive) throw new NotFoundException('School not found');
+    if (!tenant || !tenant.isActive) {throw new NotFoundException('School not found');}
     return tenant;
   }
 
   async findById(id: string) {
     const cacheKey = `tenant:${id}:full`;
     const cached = await this.redis.getObject<unknown>(cacheKey);
-    if (cached) return cached;
+    if (cached) {return cached;}
 
     const tenant = await this.prisma.tenant.findUnique({
       where: { id },
@@ -84,7 +86,7 @@ export class TenantsService {
       },
     });
 
-    if (!tenant) throw new NotFoundException('Tenant not found');
+    if (!tenant) {throw new NotFoundException('Tenant not found');}
 
     await this.redis.setObject(cacheKey, tenant, this.CACHE_TTL);
     return tenant;
@@ -92,11 +94,11 @@ export class TenantsService {
 
   async create(dto: CreateTenantDto) {
     const existing = await this.prisma.tenant.findUnique({ where: { slug: dto.slug } });
-    if (existing) throw new ConflictException('Tenant slug already taken');
+    if (existing) {throw new ConflictException('Tenant slug already taken');}
 
     if (dto.domain) {
       const domainTaken = await this.prisma.tenant.findUnique({ where: { domain: dto.domain } });
-      if (domainTaken) throw new ConflictException('Domain already in use');
+      if (domainTaken) {throw new ConflictException('Domain already in use');}
     }
 
     const tenant = await this.prisma.tenant.create({
@@ -116,13 +118,13 @@ export class TenantsService {
 
   async update(id: string, dto: UpdateTenantDto) {
     const tenant = await this.prisma.tenant.findUnique({ where: { id } });
-    if (!tenant) throw new NotFoundException('Tenant not found');
+    if (!tenant) {throw new NotFoundException('Tenant not found');}
 
     if (dto.domain && dto.domain !== tenant.domain) {
       const domainTaken = await this.prisma.tenant.findFirst({
         where: { domain: dto.domain, id: { not: id } },
       });
-      if (domainTaken) throw new ConflictException('Domain already in use');
+      if (domainTaken) {throw new ConflictException('Domain already in use');}
     }
 
     const updated = await this.prisma.tenant.update({
@@ -143,12 +145,12 @@ export class TenantsService {
 
   async delete(id: string, requestingUserId: string) {
     const tenant = await this.prisma.tenant.findUnique({ where: { id } });
-    if (!tenant) throw new NotFoundException('Tenant not found');
+    if (!tenant) {throw new NotFoundException('Tenant not found');}
 
     const requestingUser = await this.prisma.user.findFirst({
       where: { id: requestingUserId, role: UserRole.SUPER_ADMIN },
     });
-    if (!requestingUser) throw new ForbiddenException('Only SUPER_ADMIN can delete tenants');
+    if (!requestingUser) {throw new ForbiddenException('Only SUPER_ADMIN can delete tenants');}
 
     await this.prisma.tenant.delete({ where: { id } });
     await this.redis.delPattern(`tenant:${id}*`);
@@ -158,7 +160,7 @@ export class TenantsService {
   async getStats(tenantId: string) {
     const cacheKey = `tenant:${tenantId}:stats`;
     const cached = await this.redis.getObject<unknown>(cacheKey);
-    if (cached) return cached;
+    if (cached) {return cached;}
 
     const [
       userCount,
@@ -189,7 +191,7 @@ export class TenantsService {
 
   async updateSettings(tenantId: string, settings: Record<string, unknown>) {
     const tenant = await this.prisma.tenant.findUnique({ where: { id: tenantId } });
-    if (!tenant) throw new NotFoundException('Tenant not found');
+    if (!tenant) {throw new NotFoundException('Tenant not found');}
 
     const currentSettings = tenant.settings as Record<string, unknown>;
     const merged = { ...currentSettings, ...settings };
@@ -208,7 +210,7 @@ export class TenantsService {
       where: { id: tenantId },
       select: { settings: true, logoUrl: true, name: true, slug: true },
     });
-    if (!tenant) throw new NotFoundException('Tenant not found');
+    if (!tenant) {throw new NotFoundException('Tenant not found');}
     const s = (tenant.settings as Record<string, unknown>) ?? {};
     return {
       completed: (s.onboardingCompleted as boolean) ?? false,
@@ -224,7 +226,7 @@ export class TenantsService {
       where: { id: tenantId },
       select: { settings: true },
     });
-    if (!tenant) throw new NotFoundException('Tenant not found');
+    if (!tenant) {throw new NotFoundException('Tenant not found');}
     const s = (tenant.settings as Record<string, unknown>) ?? {};
     await this.prisma.tenant.update({
       where: { id: tenantId },
@@ -248,7 +250,7 @@ export class TenantsService {
       where: { id: tenantId },
       select: { settings: true },
     });
-    if (!tenant) throw new NotFoundException('Tenant not found');
+    if (!tenant) {throw new NotFoundException('Tenant not found');}
     const s = (tenant.settings as Record<string, unknown>) ?? {};
     const updated = await this.prisma.tenant.update({
       where: { id: tenantId },

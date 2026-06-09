@@ -1,9 +1,10 @@
 import { Controller, Get, Put, Body, Param, UseGuards, Request } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
-import { WhiteLabelService } from '../../white-label.service';
-import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+
 import { Public } from '../../../core/decorators/public.decorator';
 import { Roles } from '../../../core/decorators/roles.decorator';
+import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+import { WhiteLabelService } from '../../white-label.service';
 
 @ApiTags('White Label')
 @Controller('white-label')

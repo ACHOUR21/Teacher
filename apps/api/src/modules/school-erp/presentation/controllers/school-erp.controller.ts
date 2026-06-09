@@ -1,10 +1,12 @@
 import { Controller, Get, Post, Delete, Param, Body, UseGuards, Request, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
-import { SchoolErpService } from '../../school-erp.service';
+import { UserRole } from '@prisma/client';
+
+import { Roles } from '../../../core/decorators/roles.decorator';
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../core/guards/roles.guard';
-import { Roles } from '../../../core/decorators/roles.decorator';
-import { UserRole } from '@prisma/client';
+import { SchoolErpService } from '../../school-erp.service';
+
 
 @ApiTags('School ERP')
 @ApiBearerAuth('JWT-auth')

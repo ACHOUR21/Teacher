@@ -1,17 +1,8 @@
 import { Module, MiddlewareConsumer, NestModule, RequestMethod } from '@nestjs/common';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
-import { ConfigAppModule } from './modules/config/config.module';
-import { DatabaseModule } from './modules/database/database.module';
-import { CacheModule } from './modules/cache/cache.module';
-import { QueueModule } from './modules/queue/queue.module';
-import { CoreModule } from './modules/core/core.module';
-import { AuthModule } from './modules/auth/auth.module';
-import { TenantsModule } from './modules/tenants/tenants.module';
-import { UsersModule } from './modules/users/users.module';
-import { BillingModule } from './modules/billing/billing.module';
-import { CoursesModule } from './modules/courses/courses.module';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+
 import { LiveModule } from './modules/live/live.module';
 import { AiModule } from './modules/ai/ai.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
@@ -36,15 +27,25 @@ import { PluginsModule } from './modules/plugins/plugins.module';
 import { AiAgentsModule } from './modules/ai-agents/ai-agents.module';
 import { AssignmentsModule } from './modules/assignments/assignments.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
-import { QuizzesModule } from './modules/quizzes/quizzes.module';
-import { SuperAdminModule } from './modules/super-admin/super-admin.module';
-import { AppGraphQLModule } from './modules/graphql/graphql.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { BillingModule } from './modules/billing/billing.module';
+import { CacheModule } from './modules/cache/cache.module';
+import { ConfigAppModule } from './modules/config/config.module';
+import { CoreModule } from './modules/core/core.module';
+import { CoursesModule } from './modules/courses/courses.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { DatabaseModule } from './modules/database/database.module';
 import { ExamsModule } from './modules/exams/exams.module';
 import { FlashcardsModule } from './modules/flashcards/flashcards.module';
 import { GdprModule } from './modules/gdpr/gdpr.module';
-import { TenantMiddleware } from './modules/tenants/middleware/tenant.middleware';
+import { AppGraphQLModule } from './modules/graphql/graphql.module';
 import { MetricsMiddleware } from './modules/metrics/metrics.middleware';
+import { QueueModule } from './modules/queue/queue.module';
+import { QuizzesModule } from './modules/quizzes/quizzes.module';
+import { SuperAdminModule } from './modules/super-admin/super-admin.module';
+import { TenantMiddleware } from './modules/tenants/middleware/tenant.middleware';
+import { TenantsModule } from './modules/tenants/tenants.module';
+import { UsersModule } from './modules/users/users.module';
 
 @Module({
   imports: [

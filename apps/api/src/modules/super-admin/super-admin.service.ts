@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service';
-import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
 import { SubscriptionPlan, UserRole, PaymentStatus } from '@prisma/client';
+
+import { PrismaService } from '../database/prisma.service';
 
 @Injectable()
 export class SuperAdminService {
@@ -87,7 +88,7 @@ export class SuperAdminService {
   async getTenants(page = 1, limit = 20, search?: string, plan?: SubscriptionPlan) {
     const skip = (page - 1) * limit;
     const where: Record<string, unknown> = {};
-    if (plan) where.plan = plan;
+    if (plan) {where.plan = plan;}
     if (search) {
       where.OR = [
         { name: { contains: search, mode: 'insensitive' } },
@@ -121,7 +122,7 @@ export class SuperAdminService {
         _count: { select: { users: true, schools: true, universities: true } },
       },
     });
-    if (!tenant) throw new NotFoundException('Tenant not found');
+    if (!tenant) {throw new NotFoundException('Tenant not found');}
 
     const [courseCount, enrollmentCount, revenue] = await Promise.all([
       this.prisma.course.count({ where: { tenantId: id } }),
@@ -142,21 +143,21 @@ export class SuperAdminService {
 
   async updateTenant(id: string, dto: { name?: string; plan?: SubscriptionPlan; isActive?: boolean; domain?: string }) {
     const tenant = await this.prisma.tenant.findUnique({ where: { id } });
-    if (!tenant) throw new NotFoundException('Tenant not found');
+    if (!tenant) {throw new NotFoundException('Tenant not found');}
     return this.prisma.tenant.update({ where: { id }, data: dto });
   }
 
   async deleteTenant(id: string) {
     const tenant = await this.prisma.tenant.findUnique({ where: { id } });
-    if (!tenant) throw new NotFoundException('Tenant not found');
+    if (!tenant) {throw new NotFoundException('Tenant not found');}
     await this.prisma.tenant.delete({ where: { id } });
   }
 
   async getUsers(page = 1, limit = 20, search?: string, role?: UserRole, tenantId?: string) {
     const skip = (page - 1) * limit;
     const where: Record<string, unknown> = {};
-    if (role) where.role = role;
-    if (tenantId) where.tenantId = tenantId;
+    if (role) {where.role = role;}
+    if (tenantId) {where.tenantId = tenantId;}
     if (search) {
       where.OR = [
         { firstName: { contains: search, mode: 'insensitive' } },
@@ -185,7 +186,7 @@ export class SuperAdminService {
 
   async updateUser(id: string, dto: { role?: UserRole; isActive?: boolean }) {
     const user = await this.prisma.user.findUnique({ where: { id } });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) {throw new NotFoundException('User not found');}
     return this.prisma.user.update({ where: { id }, data: dto });
   }
 
@@ -230,7 +231,7 @@ export class SuperAdminService {
       where: { id: targetUserId },
       include: { tenant: { select: { name: true, slug: true } } },
     });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) {throw new NotFoundException('User not found');}
 
     const payload = {
       sub: user.id,

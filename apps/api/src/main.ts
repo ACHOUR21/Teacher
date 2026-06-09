@@ -2,20 +2,22 @@
 import { startTelemetry } from './instrumentation';
 startTelemetry();
 
-import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import { NestExpressApplication } from '@nestjs/platform-express';
+import { NestFactory } from '@nestjs/core';
+import { type NestExpressApplication } from '@nestjs/platform-express';
 import { IoAdapter } from '@nestjs/platform-socket.io';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const helmet = require('helmet');
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const compression = require('compression');
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './modules/core/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './modules/core/interceptors/logging.interceptor';
-import { TransformInterceptor } from './modules/core/interceptors/transform.interceptor';
 import { TimeoutInterceptor } from './modules/core/interceptors/timeout.interceptor';
+import { TransformInterceptor } from './modules/core/interceptors/transform.interceptor';
+
+const compression = require('compression');
+const helmet = require('helmet');
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');

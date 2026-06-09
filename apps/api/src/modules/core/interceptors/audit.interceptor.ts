@@ -4,11 +4,12 @@ import {
   ExecutionContext,
   CallHandler,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
-import { AuditService } from '../../audit/audit.service';
 import { AuditAction } from '@prisma/client';
 import { Request } from 'express';
+import { Observable } from 'rxjs';
+import { tap } from 'rxjs/operators';
+
+import { AuditService } from '../../audit/audit.service';
 
 const METHOD_ACTION: Record<string, AuditAction> = {
   POST: AuditAction.CREATE,
@@ -25,7 +26,7 @@ export class AuditInterceptor implements NestInterceptor {
     const req = context.switchToHttp().getRequest<Request & { user?: any; tenantId?: string }>();
     const action = METHOD_ACTION[req.method];
 
-    if (!action || !req.user) return next.handle();
+    if (!action || !req.user) {return next.handle();}
 
     const segments = req.path.split('/').filter(Boolean);
     const resource = segments[0] ?? 'unknown';

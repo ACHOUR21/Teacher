@@ -1,9 +1,11 @@
 import { Module } from '@nestjs/common';
-import { AiController } from './presentation/controllers/ai.controller';
-import { AiService } from './ai.service';
-import { AiProcessingProcessor } from '../queue/processors/ai-processing.processor';
-import { DatabaseModule } from '../database/database.module';
+
 import { CacheModule } from '../cache/cache.module';
+import { DatabaseModule } from '../database/database.module';
+import { AiProcessingProcessor } from '../queue/processors/ai-processing.processor';
+
+import { AiService } from './ai.service';
+import { AiController } from './presentation/controllers/ai.controller';
 
 @Module({
   imports: [DatabaseModule, CacheModule],

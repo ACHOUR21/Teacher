@@ -1,5 +1,5 @@
-import { createParamDecorator, ExecutionContext } from '@nestjs/common';
-import { UserRole } from '@prisma/client';
+import { createParamDecorator, type ExecutionContext } from '@nestjs/common';
+import { type UserRole } from '@prisma/client';
 
 export interface CurrentUserPayload {
   id: string;

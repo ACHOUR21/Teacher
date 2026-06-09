@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service';
 import { AuditAction } from '@prisma/client';
+
+import { PrismaService } from '../database/prisma.service';
 
 interface CreateAuditLogDto {
   tenantId: string;
@@ -48,13 +49,13 @@ export class AuditService {
     const skip = (page - 1) * limit;
 
     const where: Record<string, unknown> = { tenantId };
-    if (filters.userId) where.userId = filters.userId;
-    if (filters.action) where.action = filters.action;
-    if (filters.resource) where.resource = filters.resource;
+    if (filters.userId) {where.userId = filters.userId;}
+    if (filters.action) {where.action = filters.action;}
+    if (filters.resource) {where.resource = filters.resource;}
     if (filters.from || filters.to) {
       where.createdAt = {};
-      if (filters.from) (where.createdAt as Record<string, Date>).gte = filters.from;
-      if (filters.to) (where.createdAt as Record<string, Date>).lte = filters.to;
+      if (filters.from) {(where.createdAt as Record<string, Date>).gte = filters.from;}
+      if (filters.to) {(where.createdAt as Record<string, Date>).lte = filters.to;}
     }
 
     const [logs, total] = await Promise.all([

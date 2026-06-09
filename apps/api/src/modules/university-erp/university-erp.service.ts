@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service';
 import { EnrollmentStatus } from '@prisma/client';
+
+import { PrismaService } from '../database/prisma.service';
 
 @Injectable()
 export class UniversityErpService {
@@ -29,7 +30,7 @@ export class UniversityErpService {
         },
       },
     });
-    if (!university) throw new NotFoundException('University not found');
+    if (!university) {throw new NotFoundException('University not found');}
 
     const enrollmentsCount = await this.prisma.enrollment.count({
       where: { program: { universityId: id } },
@@ -43,7 +44,7 @@ export class UniversityErpService {
 
   async updateUniversity(id: string, dto: { name?: string; code?: string }) {
     const existing = await this.prisma.university.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException('University not found');
+    if (!existing) {throw new NotFoundException('University not found');}
     return this.prisma.university.update({ where: { id }, data: dto });
   }
 
@@ -60,7 +61,7 @@ export class UniversityErpService {
 
   async deleteFaculty(id: string) {
     const existing = await this.prisma.faculty.findUnique({ where: { id } });
-    if (!existing) throw new NotFoundException('Faculty not found');
+    if (!existing) {throw new NotFoundException('Faculty not found');}
     return this.prisma.faculty.delete({ where: { id } });
   }
 
@@ -134,7 +135,7 @@ export class UniversityErpService {
         },
       },
     });
-    if (!student) throw new NotFoundException('Student not found');
+    if (!student) {throw new NotFoundException('Student not found');}
     return student;
   }
 
@@ -143,7 +144,7 @@ export class UniversityErpService {
       where: { id: studentId },
       select: { gpa: true },
     });
-    if (!student) throw new NotFoundException('Student not found');
+    if (!student) {throw new NotFoundException('Student not found');}
     return { gpa: student.gpa };
   }
 }

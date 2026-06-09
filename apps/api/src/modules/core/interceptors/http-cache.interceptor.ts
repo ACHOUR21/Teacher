@@ -5,10 +5,11 @@ import {
   CallHandler,
   Logger,
 } from '@nestjs/common';
+import { Request } from 'express';
 import { Observable, of } from 'rxjs';
 import { tap } from 'rxjs/operators';
+
 import { RedisService } from '../../cache/redis.service';
-import { Request } from 'express';
 
 const DEFAULT_TTL = 60; // seconds
 
@@ -22,10 +23,10 @@ export class HttpCacheInterceptor implements NestInterceptor {
     const ctx = context.switchToHttp();
     const request = ctx.getRequest<Request & { user?: { tenantId?: string } }>();
 
-    if (request.method !== 'GET') return next.handle();
+    if (request.method !== 'GET') {return next.handle();}
 
     const ttl = Reflect.getMetadata('cache_ttl', context.getHandler()) ?? DEFAULT_TTL;
-    if (ttl === 0) return next.handle();
+    if (ttl === 0) {return next.handle();}
 
     const tenantId = (request as any).tenantId ?? request.user?.tenantId ?? 'global';
     const cacheKey = `http:${tenantId}:${request.url}`;

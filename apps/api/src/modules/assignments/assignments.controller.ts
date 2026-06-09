@@ -13,18 +13,20 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
+
+import { CurrentUser, CurrentUserPayload } from '../core/decorators/current-user.decorator';
+import { Roles } from '../core/decorators/roles.decorator';
+import { JwtAuthGuard } from '../core/guards/jwt-auth.guard';
+import { RolesGuard } from '../core/guards/roles.guard';
+import { PrismaService } from '../database/prisma.service';
+
 import {
   AssignmentsService,
   CreateAssignmentDto,
   SubmitAssignmentDto,
   GradeSubmissionDto,
 } from './assignments.service';
-import { JwtAuthGuard } from '../core/guards/jwt-auth.guard';
-import { RolesGuard } from '../core/guards/roles.guard';
-import { Roles } from '../core/decorators/roles.decorator';
-import { CurrentUser, CurrentUserPayload } from '../core/decorators/current-user.decorator';
-import { UserRole } from '@prisma/client';
-import { PrismaService } from '../database/prisma.service';
 
 @ApiTags('Assignments')
 @ApiBearerAuth('JWT-auth')
@@ -41,7 +43,7 @@ export class AssignmentsController {
   @ApiOperation({ summary: 'Create an assignment' })
   async create(@CurrentUser() user: CurrentUserPayload, @Body() dto: CreateAssignmentDto) {
     const teacher = await this.prisma.teacher.findUnique({ where: { userId: user.id } });
-    if (!teacher) throw new NotFoundException('Teacher profile not found');
+    if (!teacher) {throw new NotFoundException('Teacher profile not found');}
     return this.assignmentsService.create(teacher.id, dto);
   }
 
@@ -59,7 +61,7 @@ export class AssignmentsController {
     const isStudentRole = user.role === UserRole.STUDENT;
     if (isStudentRole) {
       const student = await this.prisma.student.findUnique({ where: { userId: user.id } });
-      if (!student) throw new NotFoundException('Student profile not found');
+      if (!student) {throw new NotFoundException('Student profile not found');}
       return this.assignmentsService.getStudentAssignments(student.id);
     }
     return this.assignmentsService.findAll(undefined, undefined, lessonId);
@@ -70,7 +72,7 @@ export class AssignmentsController {
   @ApiOperation({ summary: 'Get all assignments for the logged-in student' })
   async myAssignments(@CurrentUser() user: CurrentUserPayload) {
     const student = await this.prisma.student.findUnique({ where: { userId: user.id } });
-    if (!student) throw new NotFoundException('Student profile not found');
+    if (!student) {throw new NotFoundException('Student profile not found');}
     return this.assignmentsService.getStudentAssignments(student.id);
   }
 
@@ -89,7 +91,7 @@ export class AssignmentsController {
     @Body() dto: Partial<CreateAssignmentDto>,
   ) {
     const teacher = await this.prisma.teacher.findUnique({ where: { userId: user.id } });
-    if (!teacher) throw new NotFoundException('Teacher profile not found');
+    if (!teacher) {throw new NotFoundException('Teacher profile not found');}
     return this.assignmentsService.update(id, teacher.id, dto);
   }
 
@@ -99,7 +101,7 @@ export class AssignmentsController {
   @ApiOperation({ summary: 'Delete an assignment' })
   async delete(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
     const teacher = await this.prisma.teacher.findUnique({ where: { userId: user.id } });
-    if (!teacher) throw new NotFoundException('Teacher profile not found');
+    if (!teacher) {throw new NotFoundException('Teacher profile not found');}
     return this.assignmentsService.delete(id, teacher.id);
   }
 
@@ -113,7 +115,7 @@ export class AssignmentsController {
     @Body() dto: SubmitAssignmentDto,
   ) {
     const student = await this.prisma.student.findUnique({ where: { userId: user.id } });
-    if (!student) throw new NotFoundException('Student profile not found');
+    if (!student) {throw new NotFoundException('Student profile not found');}
     return this.assignmentsService.submit(assignmentId, student.id, dto);
   }
 
@@ -122,7 +124,7 @@ export class AssignmentsController {
   @ApiOperation({ summary: 'Get all submissions for an assignment' })
   async getSubmissions(@Param('id') id: string, @CurrentUser() user: CurrentUserPayload) {
     const teacher = await this.prisma.teacher.findUnique({ where: { userId: user.id } });
-    if (!teacher) throw new NotFoundException('Teacher profile not found');
+    if (!teacher) {throw new NotFoundException('Teacher profile not found');}
     return this.assignmentsService.getSubmissions(id, teacher.id);
   }
 
@@ -131,7 +133,7 @@ export class AssignmentsController {
   @ApiOperation({ summary: 'Get my submission for an assignment' })
   async getMySubmission(@Param('id') assignmentId: string, @CurrentUser() user: CurrentUserPayload) {
     const student = await this.prisma.student.findUnique({ where: { userId: user.id } });
-    if (!student) throw new NotFoundException('Student profile not found');
+    if (!student) {throw new NotFoundException('Student profile not found');}
     return this.assignmentsService.getMySubmission(assignmentId, student.id);
   }
 
@@ -144,7 +146,7 @@ export class AssignmentsController {
     @Body() dto: GradeSubmissionDto,
   ) {
     const teacher = await this.prisma.teacher.findUnique({ where: { userId: user.id } });
-    if (!teacher) throw new NotFoundException('Teacher profile not found');
+    if (!teacher) {throw new NotFoundException('Teacher profile not found');}
     return this.assignmentsService.grade(submissionId, teacher.id, dto);
   }
 }

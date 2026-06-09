@@ -1,4 +1,4 @@
-import { SubscriptionPlan } from '@prisma/client';
+import { type SubscriptionPlan } from '@prisma/client';
 
 export interface PlanLimits {
   maxStudents: number;
@@ -129,7 +129,7 @@ export type PlanFeatureKey = keyof PlanLimits;
 export function planHasFeature(plan: SubscriptionPlan, feature: PlanFeatureKey): boolean {
   const limits = PLAN_FEATURES[plan];
   const value = limits[feature];
-  return typeof value === 'boolean' ? value : (value as number) !== 0;
+  return typeof value === 'boolean' ? value : (value) !== 0;
 }
 
 /** Prices in USD cents for the plan (monthly recurring, or one-time for LIFETIME). */

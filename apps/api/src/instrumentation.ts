@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-require-imports */
+/* eslint-disable @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires */
 /**
  * OpenTelemetry instrumentation bootstrap.
  * Loaded conditionally — only when OTEL_ENABLED=true and packages are installed.
@@ -6,7 +6,7 @@
  */
 
 export function startTelemetry() {
-  if (process.env['OTEL_ENABLED'] !== 'true') return;
+  if (process.env['OTEL_ENABLED'] !== 'true') {return;}
 
   try {
     const { NodeSDK } = require('@opentelemetry/sdk-node');

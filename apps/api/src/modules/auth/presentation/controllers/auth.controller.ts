@@ -19,17 +19,18 @@ import {
   ApiBearerAuth,
   ApiResponse,
 } from '@nestjs/swagger';
-import { AuthService } from '../../auth.service';
-import { RegisterDto, CreateTenantRegisterDto } from '../../application/dtos/register.dto';
-import { LoginDto, ForgotPasswordDto, ResetPasswordDto } from '../../application/dtos/login.dto';
-import { RefreshTokenDto } from '../../application/dtos/refresh-token.dto';
-import { VerifyMfaDto, DisableMfaDto } from '../../application/dtos/verify-mfa.dto';
-import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+import { Request as ExpressRequest } from 'express';
+
 import { CurrentUser, CurrentUserPayload } from '../../../core/decorators/current-user.decorator';
 import { Public } from '../../../core/decorators/public.decorator';
 import { TenantId } from '../../../core/decorators/tenant.decorator';
-import { Request as ExpressRequest } from 'express';
+import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
 import { TenantsService } from '../../../tenants/tenants.service';
+import { LoginDto, ForgotPasswordDto, ResetPasswordDto } from '../../application/dtos/login.dto';
+import { RefreshTokenDto } from '../../application/dtos/refresh-token.dto';
+import { RegisterDto, CreateTenantRegisterDto } from '../../application/dtos/register.dto';
+import { VerifyMfaDto, DisableMfaDto } from '../../application/dtos/verify-mfa.dto';
+import { AuthService } from '../../auth.service';
 
 @ApiTags('Auth')
 @Controller('auth')

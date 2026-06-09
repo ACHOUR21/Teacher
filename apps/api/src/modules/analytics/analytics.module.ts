@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
-import { AnalyticsController } from './presentation/controllers/analytics.controller';
-import { AnalyticsService } from './analytics.service';
-import { AnalyticsProcessor } from '../queue/processors/analytics.processor';
-import { AnalyticsScheduler } from './analytics.scheduler';
-import { DatabaseModule } from '../database/database.module';
+
 import { CacheModule } from '../cache/cache.module';
+import { DatabaseModule } from '../database/database.module';
+import { AnalyticsProcessor } from '../queue/processors/analytics.processor';
 import { QueueModule } from '../queue/queue.module';
+
+import { AnalyticsScheduler } from './analytics.scheduler';
+import { AnalyticsService } from './analytics.service';
+import { AnalyticsController } from './presentation/controllers/analytics.controller';
 
 @Module({
   imports: [DatabaseModule, CacheModule, QueueModule],

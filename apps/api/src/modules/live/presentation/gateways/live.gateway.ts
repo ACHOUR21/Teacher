@@ -1,3 +1,5 @@
+import { Logger } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import {
   WebSocketGateway,
   WebSocketServer,
@@ -9,8 +11,7 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { Logger } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
+
 import { LiveService } from '../../live.service';
 
 interface LiveClient extends Socket {
@@ -57,7 +58,7 @@ export class LiveGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @ConnectedSocket() client: LiveClient,
     @MessageBody() data: { sessionId: string },
   ) {
-    if (!client.userId) return { error: 'Unauthorized' };
+    if (!client.userId) {return { error: 'Unauthorized' };}
     await client.join(data.sessionId);
     client.sessionId = data.sessionId;
     await this.liveService.joinSession(data.sessionId, client.userId);

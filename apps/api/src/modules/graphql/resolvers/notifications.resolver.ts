@@ -1,8 +1,9 @@
-import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
 import { UseGuards } from '@nestjs/common';
+import { Resolver, Query, Mutation, Args, Int } from '@nestjs/graphql';
+
+import { CurrentUser } from '../../core/decorators/current-user.decorator';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { GqlAuthGuard } from '../guards/gql-auth.guard';
-import { CurrentUser } from '../../core/decorators/current-user.decorator';
 import { Notification, NotificationPage } from '../types/notification.types';
 
 @Resolver(() => Notification)

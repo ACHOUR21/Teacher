@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../database/prisma.service';
-import { RedisService } from '../cache/redis.service';
 import { Prisma } from '@prisma/client';
+
+import { RedisService } from '../cache/redis.service';
+import { PrismaService } from '../database/prisma.service';
 
 @Injectable()
 export class WhiteLabelService {
@@ -13,10 +14,10 @@ export class WhiteLabelService {
   async getSettings(tenantId: string) {
     const cacheKey = `white-label:${tenantId}`;
     const cached = await this.cache.get(cacheKey);
-    if (cached) return JSON.parse(cached);
+    if (cached) {return JSON.parse(cached);}
 
     const settings = await this.prisma.whiteLabel.findUnique({ where: { tenantId } });
-    if (settings) await this.cache.set(cacheKey, JSON.stringify(settings), 600);
+    if (settings) {await this.cache.set(cacheKey, JSON.stringify(settings), 600);}
     return settings;
   }
 
@@ -52,7 +53,7 @@ export class WhiteLabelService {
 
   async generateThemeCSS(tenantId: string): Promise<string> {
     const settings = await this.getSettings(tenantId);
-    if (!settings) return '';
+    if (!settings) {return '';}
 
     return `:root {
   --color-primary: ${settings.primaryColor};

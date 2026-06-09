@@ -1,7 +1,8 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { LiveSessionStatus, Prisma } from '@prisma/client';
+
 import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { LiveSessionStatus, Prisma } from '@prisma/client';
 
 @Injectable()
 export class LiveService {
@@ -82,15 +83,15 @@ export class LiveService {
         participants: { include: { user: { select: { id: true, firstName: true, lastName: true, avatarUrl: true } } } },
       },
     });
-    if (!session) throw new NotFoundException('Live session not found');
+    if (!session) {throw new NotFoundException('Live session not found');}
     return session;
   }
 
   async startSession(id: string, teacherId: string) {
     const session = await this.prisma.liveSession.findUnique({ where: { id } });
-    if (!session) throw new NotFoundException('Session not found');
-    if (session.teacherId !== teacherId) throw new BadRequestException('Not session owner');
-    if (session.status !== LiveSessionStatus.SCHEDULED) throw new BadRequestException('Session already started or ended');
+    if (!session) {throw new NotFoundException('Session not found');}
+    if (session.teacherId !== teacherId) {throw new BadRequestException('Not session owner');}
+    if (session.status !== LiveSessionStatus.SCHEDULED) {throw new BadRequestException('Session already started or ended');}
 
     const updatedSession = await this.prisma.liveSession.update({
       where: { id },
@@ -117,9 +118,9 @@ export class LiveService {
 
   async endSession(id: string, teacherId: string) {
     const session = await this.prisma.liveSession.findUnique({ where: { id } });
-    if (!session) throw new NotFoundException('Session not found');
-    if (session.teacherId !== teacherId) throw new BadRequestException('Not session owner');
-    if (session.status !== LiveSessionStatus.LIVE) throw new BadRequestException('Session is not live');
+    if (!session) {throw new NotFoundException('Session not found');}
+    if (session.teacherId !== teacherId) {throw new BadRequestException('Not session owner');}
+    if (session.status !== LiveSessionStatus.LIVE) {throw new BadRequestException('Session is not live');}
 
     return this.prisma.liveSession.update({
       where: { id },
@@ -129,13 +130,13 @@ export class LiveService {
 
   async joinSession(sessionId: string, userId: string, role = 'student') {
     const session = await this.prisma.liveSession.findUnique({ where: { id: sessionId } });
-    if (!session) throw new NotFoundException('Session not found');
-    if (session.status === LiveSessionStatus.ENDED) throw new BadRequestException('Session has ended');
+    if (!session) {throw new NotFoundException('Session not found');}
+    if (session.status === LiveSessionStatus.ENDED) {throw new BadRequestException('Session has ended');}
 
     const existing = await this.prisma.liveParticipant.findFirst({
       where: { sessionId, userId, leftAt: null },
     });
-    if (existing) return existing;
+    if (existing) {return existing;}
 
     return this.prisma.liveParticipant.create({
       data: { sessionId, userId, role },

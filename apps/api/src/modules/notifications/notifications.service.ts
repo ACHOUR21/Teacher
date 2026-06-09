@@ -1,7 +1,9 @@
 import { Injectable, Logger, Optional } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
-import { PrismaService } from '../database/prisma.service';
 import { NotificationType, Prisma } from '@prisma/client';
+import * as nodemailer from 'nodemailer';
+
+import { PrismaService } from '../database/prisma.service';
+
 import type { NotificationsGateway } from './notifications.gateway';
 
 @Injectable()
@@ -36,7 +38,8 @@ export class NotificationsService {
     const authToken = process.env.TWILIO_AUTH_TOKEN;
     if (!accountSid || !authToken) { this.logger.warn('Twilio not configured'); return; }
     try {
-      const twilio = require('twilio')(accountSid, authToken);
+      // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-call
+      const twilio = (require('twilio') as (sid: string, tok: string) => { messages: { create: (opts: Record<string, string | undefined>) => Promise<void> } })(accountSid, authToken);
       await twilio.messages.create({ body, from: process.env.TWILIO_PHONE_NUMBER, to });
     } catch (err) {
       this.logger.error(`Failed to send SMS to ${to}`, err);
@@ -52,7 +55,7 @@ export class NotificationsService {
         headers: { Authorization: `key=${serverKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ to: fcmToken, notification: { title, body }, data: data ?? {} }),
       });
-      if (!response.ok) this.logger.error('FCM push failed', await response.text());
+      if (!response.ok) {this.logger.error('FCM push failed', await response.text());}
     } catch (err) {
       this.logger.error('FCM push error', err);
     }
@@ -69,7 +72,7 @@ export class NotificationsService {
       where: { id: userId },
       include: { devices: { where: { isActive: true } } },
     });
-    if (!user) return;
+    if (!user) {return;}
 
     const notification = await this.createInApp(userId, NotificationType.IN_APP, title, body, data);
 
