@@ -1,5 +1,11 @@
 import type { NextConfig } from 'next';
 
+// Allow the Railway/custom API host in CSP at build time
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const wsUrl = process.env.NEXT_PUBLIC_WS_URL ?? 'ws://localhost:4000';
+const apiOrigin = apiUrl.replace(/\/api\/v1\/?$/, '');
+const wsOrigin = wsUrl.replace(/^http/, 'ws');
+
 const securityHeaders = [
   { key: 'X-DNS-Prefetch-Control', value: 'on' },
   { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
@@ -17,8 +23,8 @@ const securityHeaders = [
       "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://www.paypal.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' https://fonts.gstatic.com",
-      "img-src 'self' data: blob: https: http://localhost:* http://minio:*",
-      "connect-src 'self' https://api.stripe.com https://www.paypal.com http://localhost:* ws://localhost:* wss://*.eduai.app",
+      "img-src 'self' data: blob: https: http://localhost:*",
+      `connect-src 'self' https://api.stripe.com https://www.paypal.com ${apiOrigin} ${wsOrigin} wss://*.eduai.app http://localhost:* ws://localhost:*`,
       "frame-src https://js.stripe.com https://www.paypal.com",
       "worker-src 'self' blob:",
       "media-src 'self' blob: https:",
