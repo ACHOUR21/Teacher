@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { SchoolErpService } from '../school-erp.service';
 import { PrismaService } from '../../database/prisma.service';
+import { RedisService } from '../../cache/redis.service';
 
 const mockPrisma = {
   school: {
@@ -22,9 +23,15 @@ const mockPrisma = {
     findMany: jest.fn(),
     create: jest.fn(),
   },
-  student: { count: jest.fn() },
-  teacher: { count: jest.fn() },
+  student: { count: jest.fn(), findUnique: jest.fn(), findFirst: jest.fn(), update: jest.fn(), findMany: jest.fn() },
+  teacher: { count: jest.fn(), findUnique: jest.fn(), update: jest.fn(), findMany: jest.fn() },
   liveSession: { count: jest.fn() },
+};
+
+const mockCache = {
+  get: jest.fn(),
+  set: jest.fn(),
+  del: jest.fn(),
 };
 
 describe('SchoolErpService', () => {
@@ -35,6 +42,7 @@ describe('SchoolErpService', () => {
       providers: [
         SchoolErpService,
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: RedisService, useValue: mockCache },
       ],
     }).compile();
 
@@ -46,10 +54,12 @@ describe('SchoolErpService', () => {
     it('should create a school for a tenant', async () => {
       const school = { id: 'sch-1', tenantId: 'tenant-1', name: 'Main Campus' };
       mockPrisma.school.create.mockResolvedValueOnce(school);
+      mockCache.del.mockResolvedValue(undefined);
 
       const result = await service.createSchool('tenant-1', { name: 'Main Campus' });
 
       expect(result.name).toBe('Main Campus');
+      expect(mockCache.del).toHaveBeenCalledWith('school-erp:tenant-1:schools');
     });
   });
 
@@ -58,12 +68,24 @@ describe('SchoolErpService', () => {
       const schools = [
         { id: 'sch-1', name: 'Main Campus', _count: { departments: 5, classes: 20, teachers: 30, students: 300 } },
       ];
+      mockCache.get.mockResolvedValueOnce(null);
       mockPrisma.school.findMany.mockResolvedValueOnce(schools);
+      mockCache.set.mockResolvedValue(undefined);
 
       const result = await service.getSchools('tenant-1');
 
       expect(result).toHaveLength(1);
       expect(result[0]._count.students).toBe(300);
+    });
+
+    it('should return cached schools when cache hit', async () => {
+      const cached = [{ id: 'sch-1', name: 'Cached Campus' }];
+      mockCache.get.mockResolvedValueOnce(JSON.stringify(cached));
+
+      const result = await service.getSchools('tenant-1');
+
+      expect(result).toHaveLength(1);
+      expect(mockPrisma.school.findMany).not.toHaveBeenCalled();
     });
   });
 
@@ -106,10 +128,12 @@ describe('SchoolErpService', () => {
     it('should create a school class', async () => {
       const cls = { id: 'cls-1', schoolId: 'sch-1', name: '10A', grade: '10', academicYear: '2025' };
       mockPrisma.schoolClass.create.mockResolvedValueOnce(cls);
+      mockCache.del.mockResolvedValue(undefined);
 
       const result = await service.createClass('sch-1', { name: '10A', grade: '10', academicYear: '2025' });
 
       expect(result.grade).toBe('10');
+      expect(mockCache.del).toHaveBeenCalledWith('school-erp:sch-1:classes');
     });
   });
 

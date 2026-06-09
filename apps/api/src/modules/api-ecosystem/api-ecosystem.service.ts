@@ -2,11 +2,15 @@ import * as crypto from 'crypto';
 
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 
+import { RedisService } from '../cache/redis.service';
 import { PrismaService } from '../database/prisma.service';
 
 @Injectable()
 export class ApiEcosystemService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: RedisService,
+  ) {}
 
   async createApiKey(tenantId: string, name: string, scopes: string[], rateLimit = 1000, expiresAt?: Date) {
     const rawKey = `eduai_${crypto.randomBytes(24).toString('hex')}`;
@@ -16,6 +20,12 @@ export class ApiEcosystemService {
     const apiKey = await this.prisma.apiKey.create({
       data: { tenantId, name, keyHash, keyPrefix, scopes, rateLimit, expiresAt },
     });
+
+    // Invalidate list and usage caches after creating a new key
+    await Promise.all([
+      this.cache.del(`api-ecosystem:${tenantId}:keys`),
+      this.cache.del(`api-ecosystem:${tenantId}:usage`),
+    ]);
 
     return { ...apiKey, rawKey };
   }
@@ -31,34 +41,77 @@ export class ApiEcosystemService {
   }
 
   async listApiKeys(tenantId: string) {
-    return this.prisma.apiKey.findMany({
+    const cacheKey = `api-ecosystem:${tenantId}:keys`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch {
+        // fall through to DB
+      }
+    }
+
+    const keys = await this.prisma.apiKey.findMany({
       where: { tenantId },
       select: { id: true, name: true, keyPrefix: true, scopes: true, rateLimit: true, isActive: true, lastUsedAt: true, expiresAt: true, createdAt: true },
     });
+
+    await this.cache.set(cacheKey, JSON.stringify(keys), 30);
+    return keys;
   }
 
   async revokeApiKey(id: string, tenantId: string) {
-    return this.prisma.apiKey.update({
+    const result = await this.prisma.apiKey.update({
       where: { id },
       data: { isActive: false },
     });
+    await Promise.all([
+      this.cache.del(`api-ecosystem:${tenantId}:keys`),
+      this.cache.del(`api-ecosystem:${tenantId}:usage`),
+    ]);
+    return result;
   }
 
   async createWebhook(tenantId: string, url: string, events: string[]) {
     const secret = `whsec_${crypto.randomBytes(32).toString('hex')}`;
-    return this.prisma.webhookEndpoint.create({
+    const webhook = await this.prisma.webhookEndpoint.create({
       data: { tenantId, url, events, secret },
     });
+    await this.cache.del(`api-ecosystem:${tenantId}:webhooks`);
+    return webhook;
   }
 
   async listWebhooks(tenantId: string) {
-    return this.prisma.webhookEndpoint.findMany({
+    const cacheKey = `api-ecosystem:${tenantId}:webhooks`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch {
+        // fall through to DB
+      }
+    }
+
+    const webhooks = await this.prisma.webhookEndpoint.findMany({
       where: { tenantId },
       select: { id: true, url: true, events: true, isActive: true, createdAt: true },
     });
+
+    await this.cache.set(cacheKey, JSON.stringify(webhooks), 30);
+    return webhooks;
   }
 
   async getUsageStats(tenantId: string) {
+    const cacheKey = `api-ecosystem:${tenantId}:usage`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch {
+        // fall through to DB
+      }
+    }
+
     const [totalKeys, activeKeys, totalWebhooks, recentKeys] = await Promise.all([
       this.prisma.apiKey.count({ where: { tenantId } }),
       this.prisma.apiKey.count({ where: { tenantId, isActive: true } }),
@@ -70,21 +123,30 @@ export class ApiEcosystemService {
         select: { id: true, name: true, keyPrefix: true, lastUsedAt: true, isActive: true },
       }),
     ]);
-    return { totalKeys, activeKeys, totalWebhooks, recentKeys };
+    const stats = { totalKeys, activeKeys, totalWebhooks, recentKeys };
+    await this.cache.set(cacheKey, JSON.stringify(stats), 30);
+    return stats;
   }
 
   async deleteWebhook(id: string, tenantId: string) {
-    return this.prisma.webhookEndpoint.update({
+    const result = await this.prisma.webhookEndpoint.update({
       where: { id },
       data: { isActive: false },
     });
+    await this.cache.del(`api-ecosystem:${tenantId}:webhooks`);
+    return result;
   }
 
   async toggleApiKey(id: string, tenantId: string, isActive: boolean) {
-    return this.prisma.apiKey.update({
+    const result = await this.prisma.apiKey.update({
       where: { id },
       data: { isActive },
     });
+    await Promise.all([
+      this.cache.del(`api-ecosystem:${tenantId}:keys`),
+      this.cache.del(`api-ecosystem:${tenantId}:usage`),
+    ]);
+    return result;
   }
 
   async deliverWebhook(tenantId: string, event: string, payload: unknown) {

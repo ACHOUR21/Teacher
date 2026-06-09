@@ -34,6 +34,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  compress: true,
   eslint: { ignoreDuringBuilds: true },
   images: {
     remotePatterns: [
@@ -41,7 +42,18 @@ const nextConfig: NextConfig = {
       { protocol: 'http', hostname: 'minio' },
       { protocol: 'https', hostname: 's3.amazonaws.com' },
       { protocol: 'https', hostname: '**.amazonaws.com' },
+      { protocol: 'https', hostname: '**.gravatar.com' },
+      { protocol: 'https', hostname: 'res.cloudinary.com' },
+      { protocol: 'https', hostname: 'images.unsplash.com' },
     ],
+  },
+  experimental: {
+    optimizePackageImports: ['@radix-ui/react-icons', 'lucide-react', 'date-fns'],
+  },
+  logging: {
+    fetches: {
+      fullUrl: true,
+    },
   },
   async headers() {
     return [

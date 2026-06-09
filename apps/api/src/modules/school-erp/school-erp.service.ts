@@ -1,22 +1,41 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 
+import { RedisService } from '../cache/redis.service';
 import { PrismaService } from '../database/prisma.service';
 
 @Injectable()
 export class SchoolErpService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cache: RedisService,
+  ) {}
 
   async createSchool(tenantId: string, dto: { name: string; code?: string; address?: object; phone?: string; email?: string }) {
-    return this.prisma.school.create({ data: { tenantId, ...dto } });
+    const school = await this.prisma.school.create({ data: { tenantId, ...dto } });
+    await this.cache.del(`school-erp:${tenantId}:schools`);
+    return school;
   }
 
   async getSchools(tenantId: string) {
-    return this.prisma.school.findMany({
+    const cacheKey = `school-erp:${tenantId}:schools`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch {
+        // fall through to DB
+      }
+    }
+
+    const schools = await this.prisma.school.findMany({
       where: { tenantId, isActive: true },
       include: {
         _count: { select: { departments: true, classes: true, teachers: true, students: true } },
       },
     });
+
+    await this.cache.set(cacheKey, JSON.stringify(schools), 60);
+    return schools;
   }
 
   async getSchool(id: string) {
@@ -44,17 +63,32 @@ export class SchoolErpService {
   }
 
   async createClass(schoolId: string, dto: { name: string; grade: string; section?: string; academicYear: string; capacity?: number; departmentId?: string }) {
-    return this.prisma.schoolClass.create({ data: { schoolId, ...dto } });
+    const cls = await this.prisma.schoolClass.create({ data: { schoolId, ...dto } });
+    await this.cache.del(`school-erp:${schoolId}:classes`);
+    return cls;
   }
 
   async getClasses(schoolId: string) {
-    return this.prisma.schoolClass.findMany({
+    const cacheKey = `school-erp:${schoolId}:classes`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch {
+        // fall through to DB
+      }
+    }
+
+    const classes = await this.prisma.schoolClass.findMany({
       where: { schoolId },
       include: {
         department: { select: { name: true } },
         _count: { select: { students: true } },
       },
     });
+
+    await this.cache.set(cacheKey, JSON.stringify(classes), 60);
+    return classes;
   }
 
   async getTimetable(classId: string) {
@@ -87,45 +121,81 @@ export class SchoolErpService {
   async assignStudentToClass(studentId: string, classId: string) {
     const student = await this.prisma.student.findUnique({ where: { id: studentId } });
     if (!student) {throw new NotFoundException('Student not found');}
-    return this.prisma.student.update({
+    const updated = await this.prisma.student.update({
       where: { id: studentId },
       data: { classId },
     });
+    // Invalidate both old and new class student lists
+    await Promise.all([
+      this.cache.del(`school-erp:${classId}:students`),
+      student.classId ? this.cache.del(`school-erp:${student.classId}:students`) : Promise.resolve(),
+    ]);
+    return updated;
   }
 
   async removeStudentFromClass(studentId: string, classId: string) {
     const student = await this.prisma.student.findFirst({ where: { id: studentId, classId } });
     if (!student) {throw new NotFoundException('Student not found in this class');}
-    return this.prisma.student.update({
+    const updated = await this.prisma.student.update({
       where: { id: studentId },
       data: { classId: null },
     });
+    await this.cache.del(`school-erp:${classId}:students`);
+    return updated;
   }
 
   async getClassStudents(classId: string) {
-    return this.prisma.student.findMany({
+    const cacheKey = `school-erp:${classId}:students`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch {
+        // fall through to DB
+      }
+    }
+
+    const students = await this.prisma.student.findMany({
       where: { classId },
       include: {
         user: { select: { firstName: true, lastName: true, email: true, avatarUrl: true } },
       },
     });
+
+    await this.cache.set(cacheKey, JSON.stringify(students), 60);
+    return students;
   }
 
   async assignTeacherToSchool(teacherId: string, schoolId: string) {
     const teacher = await this.prisma.teacher.findUnique({ where: { id: teacherId } });
     if (!teacher) {throw new NotFoundException('Teacher not found');}
-    return this.prisma.teacher.update({
+    const updated = await this.prisma.teacher.update({
       where: { id: teacherId },
       data: { schoolId },
     });
+    await this.cache.del(`school-erp:${schoolId}:teachers`);
+    return updated;
   }
 
   async getSchoolTeachers(schoolId: string) {
-    return this.prisma.teacher.findMany({
+    const cacheKey = `school-erp:${schoolId}:teachers`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch {
+        // fall through to DB
+      }
+    }
+
+    const teachers = await this.prisma.teacher.findMany({
       where: { schoolId },
       include: {
         user: { select: { firstName: true, lastName: true, email: true, avatarUrl: true } },
       },
     });
+
+    await this.cache.set(cacheKey, JSON.stringify(teachers), 60);
+    return teachers;
   }
 }
