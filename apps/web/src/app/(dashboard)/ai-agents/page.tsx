@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Send, Sparkles, ChevronRight, Square } from 'lucide-react';
+import { useEffect, useRef , useState } from 'react';
+
+import { AgentToolCallCard } from '@/components/ai/AgentToolCallCard';
+import { useAgentStream, type AgentMessage } from '@/hooks/useAgentStream';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { useAgentStream, type AgentMessage } from '@/hooks/useAgentStream';
-import { AgentToolCallCard } from '@/components/ai/AgentToolCallCard';
 
 interface Agent {
   type: string;
@@ -19,7 +19,7 @@ interface Agent {
 const API_BASE = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000';
 
 function getStoredToken() {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === 'undefined') {return null;}
   return localStorage.getItem('accessToken');
 }
 
@@ -88,7 +88,7 @@ export default function AiAgentsPage() {
   }, [messages, phase]);
 
   const handleSend = () => {
-    if (!draft.trim() || isStreaming || !selectedAgent) return;
+    if (!draft.trim() || isStreaming || !selectedAgent) {return;}
     const msg = draft.trim();
     setDraft('');
     send(selectedAgent.type, msg);

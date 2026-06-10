@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/stores/authStore';
+import { useCallback } from 'react';
+
 import { apiPost } from '@/lib/api';
+import { useAuthStore } from '@/stores/authStore';
 
 interface LoginCredentials {
   email: string;
@@ -139,7 +140,7 @@ export function useAuth() {
 
   const hasRole = useCallback(
     (roles: string | string[]) => {
-      if (!user) return false;
+      if (!user) {return false;}
       const allowedRoles = Array.isArray(roles) ? roles : [roles];
       return allowedRoles.includes(user.role);
     },

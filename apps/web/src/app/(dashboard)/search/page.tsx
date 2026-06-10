@@ -1,10 +1,11 @@
 'use client';
 
-import { Suspense, useState, useEffect, useRef } from 'react';
-import Link from 'next/link';
-import { useSearchParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { Search, BookOpen, Users, X, Filter, FileQuestion } from 'lucide-react';
+import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Suspense, useState, useEffect, useRef } from 'react';
+
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/stores/authStore';
 
@@ -226,21 +227,21 @@ function SearchInner() {
 
   const handleInputChange = (value: string) => {
     setInputValue(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (debounceRef.current) {clearTimeout(debounceRef.current);}
     debounceRef.current = setTimeout(() => {
       setDebouncedQ(value);
       const params = new URLSearchParams();
-      if (value.trim()) params.set('q', value.trim());
+      if (value.trim()) {params.set('q', value.trim());}
       router.replace(`/search${value.trim() ? `?${params.toString()}` : ''}`);
     }, 300);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (debounceRef.current) {clearTimeout(debounceRef.current);}
     setDebouncedQ(inputValue);
     const params = new URLSearchParams();
-    if (inputValue.trim()) params.set('q', inputValue.trim());
+    if (inputValue.trim()) {params.set('q', inputValue.trim());}
     router.push(`/search${inputValue.trim() ? `?${params.toString()}` : ''}`);
   };
 
@@ -263,8 +264,8 @@ function SearchInner() {
     queryKey: ['search-courses', q, category, level],
     queryFn: async () => {
       const params: Record<string, string> = { q, page: '1', limit: '20' };
-      if (category !== 'All') params.category = category;
-      if (level !== 'All') params.level = level;
+      if (category !== 'All') {params.category = category;}
+      if (level !== 'All') {params.level = level;}
       const res = await api.get<CourseSearchResponse>('/search/courses', { params });
       return res.data;
     },
@@ -280,7 +281,7 @@ function SearchInner() {
     queryKey: ['search-users', q, role],
     queryFn: async () => {
       const params: Record<string, string> = { q, page: '1', limit: '20' };
-      if (role !== 'All') params.role = role;
+      if (role !== 'All') {params.role = role;}
       const res = await api.get<UserSearchResponse>('/search/users', { params });
       return res.data;
     },
@@ -296,7 +297,7 @@ function SearchInner() {
     queryKey: ['search-exams', q, difficulty],
     queryFn: async () => {
       const params: Record<string, string> = { q, page: '1', limit: '20' };
-      if (difficulty !== 'All') params.difficulty = difficulty.toLowerCase();
+      if (difficulty !== 'All') {params.difficulty = difficulty.toLowerCase();}
       const res = await api.get<ExamSearchResponse>('/search/exams', { params });
       return res.data;
     },

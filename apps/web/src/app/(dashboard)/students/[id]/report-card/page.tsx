@@ -1,9 +1,6 @@
 'use client';
 
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
-import { apiGet } from '@/lib/api';
 import {
   ArrowLeft,
   Printer,
@@ -21,6 +18,10 @@ import {
   GraduationCap,
   BarChart2,
 } from 'lucide-react';
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+
+import { apiGet } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -102,23 +103,23 @@ interface ReportCard {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function gradeLetter(pct: number): string {
-  if (pct >= 90) return 'A';
-  if (pct >= 80) return 'B';
-  if (pct >= 70) return 'C';
-  if (pct >= 60) return 'D';
+  if (pct >= 90) {return 'A';}
+  if (pct >= 80) {return 'B';}
+  if (pct >= 70) {return 'C';}
+  if (pct >= 60) {return 'D';}
   return 'F';
 }
 
-function gradeColor(pct: number): string {
-  if (pct >= 90) return 'text-green-600';
-  if (pct >= 80) return 'text-blue-600';
-  if (pct >= 70) return 'text-yellow-600';
-  if (pct >= 60) return 'text-orange-600';
+function _gradeColor(pct: number): string {
+  if (pct >= 90) {return 'text-green-600';}
+  if (pct >= 80) {return 'text-blue-600';}
+  if (pct >= 70) {return 'text-yellow-600';}
+  if (pct >= 60) {return 'text-orange-600';}
   return 'text-red-600';
 }
 
 function formatDate(date: string | null | undefined): string {
-  if (!date) return '—';
+  if (!date) {return '—';}
   return new Date(date).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -321,7 +322,6 @@ export default function StudentReportCardPage() {
             {/* Avatar */}
             <div className="h-20 w-20 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex items-center justify-center text-white text-2xl font-bold shrink-0 shadow-lg">
               {student.avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={student.avatarUrl}
                   alt={initials}
@@ -352,7 +352,7 @@ export default function StudentReportCardPage() {
                     {[student.class, student.grade].filter(Boolean).join(' · ')}
                   </div>
                 )}
-                {student.gpa != null && (
+                {student.gpa !== null && student.gpa !== undefined && (
                   <div className="flex items-center gap-1.5 text-xs text-gray-500">
                     <Star className="h-3.5 w-3.5" />
                     GPA: <span className="font-semibold text-gray-900">{student.gpa}</span>
@@ -367,9 +367,9 @@ export default function StudentReportCardPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <SummaryCard
             label="Assignment Avg"
-            value={summary.avgScore != null ? `${summary.avgScore}%` : 'N/A'}
+            value={summary.avgScore !== null && summary.avgScore !== undefined ? `${summary.avgScore}%` : 'N/A'}
             sub={
-              summary.avgScore != null
+              summary.avgScore !== null && summary.avgScore !== undefined
                 ? `Grade: ${gradeLetter(summary.avgScore)}`
                 : 'No graded work'
             }
@@ -378,7 +378,7 @@ export default function StudentReportCardPage() {
           />
           <SummaryCard
             label="Attendance Rate"
-            value={summary.attendanceRate != null ? `${summary.attendanceRate}%` : 'N/A'}
+            value={summary.attendanceRate !== null && summary.attendanceRate !== undefined ? `${summary.attendanceRate}%` : 'N/A'}
             sub={`${attendance.present} days present`}
             icon={CheckCircle}
             color={
@@ -567,7 +567,7 @@ export default function StudentReportCardPage() {
             </div>
 
             {/* Quiz summary bar */}
-            {summary.quizzesTaken > 0 && summary.quizPassRate != null && (
+            {summary.quizzesTaken > 0 && summary.quizPassRate !== null && summary.quizPassRate !== undefined && (
               <div className="mt-4 flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
                 <div className="flex-1">
                   <div className="flex items-center justify-between text-xs text-gray-500 mb-1.5">
@@ -601,7 +601,7 @@ export default function StudentReportCardPage() {
                     : 'text-red-600',
                 )}
               >
-                {attendance.rate != null ? `${attendance.rate}%` : 'N/A'}
+                {attendance.rate !== null && attendance.rate !== undefined ? `${attendance.rate}%` : 'N/A'}
               </span>
               <span className="text-xs text-gray-400">Attendance Rate</span>
               <span className="text-xs text-gray-400">(last 90 days)</span>

@@ -1,7 +1,8 @@
 'use client';
 
-import { AreaChart, Area, ResponsiveContainer } from 'recharts';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { AreaChart, Area, ResponsiveContainer } from 'recharts';
+
 import { cn } from '@/lib/utils';
 
 interface Props {

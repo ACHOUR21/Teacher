@@ -1,7 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException } from '@nestjs/common';
-import { MessagingService } from '../messaging.service';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { PrismaService } from '../../database/prisma.service';
+import { MessagingService } from '../messaging.service';
 
 const mockPrisma = {
   conversation: {

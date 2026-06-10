@@ -1,14 +1,16 @@
 'use client';
 
-import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { format } from 'date-fns';
 import {
-  Award, Download, ExternalLink, Calendar, BookOpen, Search, Shield,
-  Crown, Plus, X, Eye, FileText, ChevronRight,
+  Award, Download, Calendar, BookOpen, Search, Shield,
+  Crown, Plus, X, Eye, FileText,
 } from 'lucide-react';
+import { useState } from 'react';
+
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -97,7 +99,7 @@ function IssuedCertificatesSection() {
   });
 
   const certificates: IssuedCertificate[] = ((data as IssuedCertificate[]) ?? []).filter(c => {
-    if (!search) return true;
+    if (!search) {return true;}
     const name = c.template?.name?.toLowerCase() ?? '';
     const course = c.enrollment?.course?.title?.toLowerCase() ?? '';
     return name.includes(search.toLowerCase()) || course.includes(search.toLowerCase());
@@ -314,24 +316,24 @@ function TemplateCard({
 }
 
 function TemplateBorderOverlay({ borderStyle }: { borderStyle?: string }) {
-  if (!borderStyle || borderStyle === 'none') return null;
+  if (!borderStyle || borderStyle === 'none') {return null;}
   if (borderStyle === 'single')
-    return <div className="absolute inset-2 border-2 border-white/30 rounded pointer-events-none" />;
+    {return <div className="absolute inset-2 border-2 border-white/30 rounded pointer-events-none" />;}
   if (borderStyle === 'double')
-    return (
+    {return (
       <>
         <div className="absolute inset-2 border-2 border-white/30 rounded pointer-events-none" />
         <div className="absolute inset-4 border border-white/20 rounded pointer-events-none" />
       </>
-    );
+    );}
   if (borderStyle === 'ornate')
-    return (
+    {return (
       <>
         <div className="absolute inset-1 border-4 border-white/20 rounded pointer-events-none" />
         <div className="absolute inset-3 border border-white/15 rounded pointer-events-none" />
         <div className="absolute inset-[18px] border border-white/10 rounded pointer-events-none" />
       </>
-    );
+    );}
   return null;
 }
 

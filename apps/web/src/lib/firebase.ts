@@ -22,7 +22,7 @@ let app: FirebaseApp | null = null;
 let messaging: Messaging | null = null;
 
 export function getFirebaseApp(): FirebaseApp | null {
-  if (!isFirebaseConfigured()) return null;
+  if (!isFirebaseConfigured()) {return null;}
   if (!app) {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
   }
@@ -30,9 +30,9 @@ export function getFirebaseApp(): FirebaseApp | null {
 }
 
 export function getFirebaseMessaging(): Messaging | null {
-  if (typeof window === 'undefined') return null;
+  if (typeof window === 'undefined') {return null;}
   const a = getFirebaseApp();
-  if (!a) return null;
+  if (!a) {return null;}
   if (!messaging) {
     try {
       messaging = getMessaging(a);
@@ -45,11 +45,11 @@ export function getFirebaseMessaging(): Messaging | null {
 
 export async function requestFcmToken(): Promise<string | null> {
   const m = getFirebaseMessaging();
-  if (!m) return null;
+  if (!m) {return null;}
 
   try {
     const permission = await Notification.requestPermission();
-    if (permission !== 'granted') return null;
+    if (permission !== 'granted') {return null;}
 
     const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
     const token = await getToken(m, { vapidKey });
@@ -64,6 +64,6 @@ export function onForegroundMessage(
   handler: (payload: { notification?: { title?: string; body?: string }; data?: Record<string, string> }) => void,
 ) {
   const m = getFirebaseMessaging();
-  if (!m) return () => {};
+  if (!m) {return () => {};}
   return onMessage(m, handler);
 }

@@ -1,7 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { TeachersService } from '../teachers.service';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../../notifications/notifications.service';
+import { TeachersService } from '../teachers.service';
 
 const mockPrisma = {
   teacher: {
@@ -39,6 +41,13 @@ describe('TeachersService', () => {
       providers: [
         TeachersService,
         { provide: PrismaService, useValue: mockPrisma },
+        {
+          provide: NotificationsService,
+          useValue: {
+            createNotification: jest.fn().mockResolvedValue({}),
+            sendToUser: jest.fn().mockResolvedValue({}),
+          },
+        },
       ],
     }).compile();
 

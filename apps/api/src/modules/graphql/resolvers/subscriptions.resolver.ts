@@ -1,9 +1,7 @@
 import { UseGuards } from '@nestjs/common';
 import { Resolver, Subscription, Args, ID , ObjectType, Field, ID as GqlID } from '@nestjs/graphql';
-
 import { PubSub } from 'graphql-subscriptions';
 
-import { CurrentUser } from '../../core/decorators/current-user.decorator';
 import { GqlAuthGuard } from '../guards/gql-auth.guard';
 import { Notification } from '../types/notification.types';
 

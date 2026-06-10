@@ -1,4 +1,4 @@
-import { ObjectType, Field, Int, Float, ID } from '@nestjs/graphql';
+import { ObjectType, Field, Float, ID } from '@nestjs/graphql';
 
 import { PaginationMeta } from './common.types';
 

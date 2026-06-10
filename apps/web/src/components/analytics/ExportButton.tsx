@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import { Download, Check } from 'lucide-react';
+import { useState } from 'react';
 
 interface Props {
   data: Record<string, unknown>[];
@@ -10,7 +10,7 @@ interface Props {
 }
 
 function toCsv(rows: Record<string, unknown>[]): string {
-  if (!rows.length) return '';
+  if (!rows.length) {return '';}
   const keys = Object.keys(rows[0]);
   const header = keys.join(',');
   const body = rows.map(row =>
@@ -28,7 +28,7 @@ export function ExportButton({ data, filename = 'export', label = 'Export CSV' }
   const [done, setDone] = useState(false);
 
   function handleExport() {
-    if (!data.length) return;
+    if (!data.length) {return;}
     const csv = toCsv(data);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);

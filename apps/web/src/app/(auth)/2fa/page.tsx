@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
-import Link from 'next/link';
 import { ArrowLeft, Shield, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
+import React, { useState, useRef, useEffect } from 'react';
+
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/useToast';
 import { parseErrorMessage } from '@/lib/utils';
@@ -56,8 +57,8 @@ export default function TwoFactorPage() {
         setCode(newCode);
       }
     }
-    if (e.key === 'ArrowLeft' && index > 0) inputRefs.current[index - 1]?.focus();
-    if (e.key === 'ArrowRight' && index < 5) inputRefs.current[index + 1]?.focus();
+    if (e.key === 'ArrowLeft' && index > 0) {inputRefs.current[index - 1]?.focus();}
+    if (e.key === 'ArrowRight' && index < 5) {inputRefs.current[index + 1]?.focus();}
   };
 
   const handlePaste = (e: React.ClipboardEvent) => {
@@ -76,7 +77,7 @@ export default function TwoFactorPage() {
   const handleRecoverySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = recoveryCode.trim().toUpperCase();
-    if (!trimmed) return;
+    if (!trimmed) {return;}
     try {
       await verifyMfa(trimmed, deviceOpts);
     } catch (err) {

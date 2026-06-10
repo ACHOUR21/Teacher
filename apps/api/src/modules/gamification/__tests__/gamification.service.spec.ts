@@ -1,7 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { GamificationService } from '../gamification.service';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { PrismaService } from '../../database/prisma.service';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { GamificationService } from '../gamification.service';
 
 const mockPrisma = {
   userPoints: {

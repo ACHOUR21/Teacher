@@ -1,8 +1,5 @@
 'use client';
 
-import React from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -36,10 +33,15 @@ import {
   FileQuestion,
   Layers,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useUIStore } from '@/stores/uiStore';
-import { useAuthStore } from '@/stores/authStore';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import React from 'react';
+
+import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/authStore';
+import { useUIStore } from '@/stores/uiStore';
+
 
 type NavItemKey = {
   labelKey: string;
@@ -119,13 +121,13 @@ export function Sidebar() {
   const tItems = useTranslations('nav.items');
 
   const isActive = (href: string) => {
-    if (href === '/dashboard') return pathname === '/dashboard';
+    if (href === '/dashboard') {return pathname === '/dashboard';}
     return pathname.startsWith(href);
   };
 
   const canSeeItem = (item: NavItemKey) => {
-    if (!item.roles) return true;
-    if (!user) return false;
+    if (!item.roles) {return true;}
+    if (!user) {return false;}
     return item.roles.includes(user.role);
   };
 
@@ -196,7 +198,7 @@ export function Sidebar() {
       <nav className="flex-1 overflow-y-auto py-4 px-2 scrollbar-thin">
         {navSections.map((section) => {
           const visibleItems = section.items.filter(canSeeItem);
-          if (visibleItems.length === 0) return null;
+          if (visibleItems.length === 0) {return null;}
 
           return (
             <div key={section.titleKey} className="mb-6">

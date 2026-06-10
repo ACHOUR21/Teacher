@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+
 import type { ToastActionElement, ToastProps } from '@/components/ui/Toast';
 
 const TOAST_LIMIT = 5;
@@ -32,7 +33,7 @@ function genId() {
 }
 
 function addToRemoveQueue(toastId: string, dispatch: React.Dispatch<Action>) {
-  if (toastTimeouts.has(toastId)) return;
+  if (toastTimeouts.has(toastId)) {return;}
   const timeout = setTimeout(() => {
     toastTimeouts.delete(toastId);
     dispatch({ type: 'REMOVE_TOAST', toastId });
@@ -66,7 +67,7 @@ function reducer(state: State, action: Action): State {
       };
     }
     case 'REMOVE_TOAST':
-      if (action.toastId === undefined) return { ...state, toasts: [] };
+      if (action.toastId === undefined) {return { ...state, toasts: [] };}
       return {
         ...state,
         toasts: state.toasts.filter((t) => t.id !== action.toastId),
@@ -96,7 +97,7 @@ function toast(props: ToastInput) {
       id,
       open: true,
       onOpenChange: (open) => {
-        if (!open) dismiss();
+        if (!open) {dismiss();}
       },
     },
   });
@@ -125,7 +126,7 @@ function useToast() {
     listeners.push(setState);
     return () => {
       const index = listeners.indexOf(setState);
-      if (index > -1) listeners.splice(index, 1);
+      if (index > -1) {listeners.splice(index, 1);}
     };
   }, []);
 

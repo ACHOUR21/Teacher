@@ -5,7 +5,7 @@ import {
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery , ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 import { Type } from 'class-transformer';
-import { IsString, IsOptional, IsEnum, IsInt, IsArray, IsNumber, Min, ValidateNested } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsInt, IsArray, IsNumber, ValidateNested } from 'class-validator';
 
 import { CurrentUser, CurrentUserPayload } from '../../../core/decorators/current-user.decorator';
 import { RequiresPlanFeature } from '../../../core/decorators/require-plan.decorator';

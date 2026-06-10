@@ -37,7 +37,7 @@ export function useAgentStream({ getToken, baseUrl = '' }: UseAgentStreamOptions
   const pendingToolCallsRef = useRef<ToolCallEvent[]>([]);
 
   const send = useCallback(async (agentType: string, message: string) => {
-    if (phase === 'thinking' || phase === 'tool_calling' || phase === 'responding') return;
+    if (phase === 'thinking' || phase === 'tool_calling' || phase === 'responding') {return;}
 
     // Append user message immediately
     setMessages(prev => [...prev, { role: 'user', content: message }]);
@@ -82,19 +82,20 @@ export function useAgentStream({ getToken, baseUrl = '' }: UseAgentStreamOptions
         });
       };
 
-      while (true) {
+      let streamDone = false;
+      while (!streamDone) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) { streamDone = true; break; }
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
         buffer = lines.pop() ?? '';
 
         for (const line of lines) {
-          if (!line.startsWith('data: ')) continue;
+          if (!line.startsWith('data: ')) {continue;}
           let event: Record<string, unknown>;
           try {
-            event = JSON.parse(line.slice(6));
+            event = JSON.parse(line.slice(6)) as Record<string, unknown>;
           } catch {
             continue;
           }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 import Anthropic from '@anthropic-ai/sdk';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -289,10 +290,10 @@ export class AiAgentsService {
         messages: history,
       });
 
-      let iterationText = '';
+      let _iterationText = '';
       for (const block of (finalMsg.content as any[])) {
         if (block.type === 'text') {
-          iterationText += block.text;
+          _iterationText += block.text;
           finalText += block.text;
           yield { type: 'delta', text: block.text };
         }
@@ -348,7 +349,7 @@ export class AiAgentsService {
     yield { type: 'done', sessionId: convId, inputTokens: totalInputTokens, outputTokens: totalOutputTokens };
   }
 
-  private async executeTool(toolName: string, input: Record<string, any>, userId: string, tenantId: string): Promise<string> {
+  private async executeTool(toolName: string, input: Record<string, any>, userId: string, _tenantId: string): Promise<string> {
     switch (toolName) {
       case 'get_student_schedule': {
         const enrollments = await this.prisma.enrollment.findMany({

@@ -1,6 +1,6 @@
 import { type ClassValue, clsx } from 'clsx';
-import { twMerge } from 'tailwind-merge';
 import { format, formatDistanceToNow, parseISO } from 'date-fns';
+import { twMerge } from 'tailwind-merge';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -33,7 +33,7 @@ export function formatCurrency(
 }
 
 export function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${seconds}s`;
+  if (seconds < 60) {return `${seconds}s`;}
   const minutes = Math.floor(seconds / 60);
   const remainingSeconds = seconds % 60;
   if (minutes < 60) {
@@ -62,7 +62,7 @@ export function formatNumber(
 }
 
 export function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
+  if (bytes === 0) {return '0 B';}
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
@@ -70,7 +70,7 @@ export function formatBytes(bytes: number): string {
 }
 
 export function truncate(str: string, maxLength: number): string {
-  if (str.length <= maxLength) return str;
+  if (str.length <= maxLength) {return str;}
   return `${str.slice(0, maxLength)}...`;
 }
 
@@ -125,8 +125,8 @@ export function sleep(ms: number): Promise<void> {
 }
 
 export function parseErrorMessage(error: unknown): string {
-  if (typeof error === 'string') return error;
-  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') {return error;}
+  if (error instanceof Error) {return error.message;}
   if (
     error &&
     typeof error === 'object' &&
@@ -139,9 +139,9 @@ export function parseErrorMessage(error: unknown): string {
 }
 
 export function getProgressColor(progress: number): string {
-  if (progress >= 80) return 'bg-green-500';
-  if (progress >= 50) return 'bg-blue-500';
-  if (progress >= 25) return 'bg-amber-500';
+  if (progress >= 80) {return 'bg-green-500';}
+  if (progress >= 50) {return 'bg-blue-500';}
+  if (progress >= 25) {return 'bg-amber-500';}
   return 'bg-red-500';
 }
 

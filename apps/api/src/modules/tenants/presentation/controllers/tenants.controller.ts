@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation , ApiPropertyOptional } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
-import { IsOptional, IsString, IsBoolean, IsArray, IsNumber } from 'class-validator';
+import { IsOptional, IsString, IsBoolean, IsArray } from 'class-validator';
 
 import { CurrentUser, CurrentUserPayload } from '../../../core/decorators/current-user.decorator';
 import { Roles } from '../../../core/decorators/roles.decorator';

@@ -1,5 +1,7 @@
-import { Test, TestingModule } from '@nestjs/testing';
+/* eslint-disable @typescript-eslint/no-var-requires */
 import { ConfigService } from '@nestjs/config';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { RedisService } from '../redis.service';
 
 jest.mock('ioredis', () => {

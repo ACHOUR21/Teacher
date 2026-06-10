@@ -1,11 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ForbiddenException, BadRequestException, ConflictException } from '@nestjs/common';
-import { CoursesService } from '../courses.service';
-import { PrismaService } from '../../database/prisma.service';
-import { RedisService } from '../../cache/redis.service';
-import { SearchService } from '../../search/search.service';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { ApiEcosystemService } from '../../api-ecosystem/api-ecosystem.service';
+import { RedisService } from '../../cache/redis.service';
 import { PaginationDto } from '../../core/pagination/pagination.dto';
+import { PrismaService } from '../../database/prisma.service';
+import { SearchService } from '../../search/search.service';
+import { CoursesService } from '../courses.service';
 
 // Helper: build a PaginationDto-compatible object with the skip getter
 function makePagination(page = 1, limit = 20, extra: Partial<PaginationDto> = {}): PaginationDto {
@@ -66,6 +67,7 @@ const mockPrisma = {
   },
   teacher: {
     findFirst: jest.fn(),
+    findUnique: jest.fn().mockResolvedValue(null),
   },
   user: {
     findUnique: jest.fn(),
@@ -309,29 +311,28 @@ describe('CoursesService', () => {
       await expect(service.publish('nonexistent', 'tenant-1')).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw BadRequestException when course has no sections', async () => {
-      mockPrisma.course.findFirst.mockResolvedValueOnce({
-        id: 'course-1',
-        tenantId: 'tenant-1',
-        sections: [],
-      });
+    it('should return course idempotently when already published', async () => {
+      const alreadyPublished = { id: 'course-1', tenantId: 'tenant-1', isPublished: true, sections: [] };
+      mockPrisma.course.findFirst.mockResolvedValueOnce(alreadyPublished);
 
-      await expect(service.publish('course-1', 'tenant-1')).rejects.toThrow(
-        new BadRequestException('Course must have at least one section with lessons to publish'),
-      );
+      const result = await service.publish('course-1', 'tenant-1');
+
+      expect(result).toEqual(alreadyPublished);
+      expect(mockPrisma.course.update).not.toHaveBeenCalled();
     });
 
-    it('should publish course and index in search when sections exist', async () => {
+    it('should publish unpublished course and index in search', async () => {
       const publishedCourse = {
         id: 'course-1',
         tenantId: 'tenant-1',
         isPublished: true,
-        sections: [{ id: 'section-1', lessons: [{ id: 'lesson-1' }] }],
+        sections: [],
       };
       mockPrisma.course.findFirst.mockResolvedValueOnce({
         id: 'course-1',
         tenantId: 'tenant-1',
-        sections: [{ id: 'section-1', lessons: [{ id: 'lesson-1' }] }],
+        isPublished: false,
+        sections: [],
       });
       mockPrisma.course.update.mockResolvedValueOnce(publishedCourse);
 
@@ -389,21 +390,20 @@ describe('CoursesService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw ConflictException when student is already enrolled', async () => {
+    it('should return existing progress when student is already enrolled (idempotent)', async () => {
+      const existingProgress = { studentId: 'student-1', courseId: 'course-1', completedLessons: [] };
       mockPrisma.course.findFirst.mockResolvedValueOnce({
         id: 'course-1',
         tenantId: 'tenant-1',
         isPublished: true,
       });
       mockPrisma.student.findFirst.mockResolvedValueOnce({ id: 'student-1' });
-      mockPrisma.courseProgress.findUnique.mockResolvedValueOnce({
-        studentId: 'student-1',
-        courseId: 'course-1',
-      });
+      mockPrisma.courseProgress.findUnique.mockResolvedValueOnce(existingProgress);
 
-      await expect(
-        service.enrollStudent('course-1', 'student-1', 'tenant-1'),
-      ).rejects.toThrow(new ConflictException('Already enrolled in this course'));
+      const result = await service.enrollStudent('course-1', 'student-1', 'tenant-1');
+
+      expect(result).toEqual(existingProgress);
+      expect(mockPrisma.courseProgress.create).not.toHaveBeenCalled();
     });
 
     it('should create progress record and increment enrollCount on success', async () => {

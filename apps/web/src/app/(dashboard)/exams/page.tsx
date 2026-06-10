@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
-import { FileQuestion, Clock, Users, CheckCircle, Trash2, Globe, Lock, Loader2, Plus } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { cn } from '@/lib/utils';
+import { FileQuestion, Clock, Users, Trash2, Globe, Lock, Loader2, Plus } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
+import { Button } from '@/components/ui/Button';
+import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
+
 
 interface Exam {
   id: string;
@@ -37,9 +39,9 @@ export default function ExamsPage() {
     queryKey: ['exams', filter],
     queryFn: () => {
       const params = new URLSearchParams();
-      if (filter === 'mine') params.set('mine', 'true');
-      if (filter === 'published') params.set('published', 'true');
-      return api.get(`/exams?${params}`).then(r => r.data);
+      if (filter === 'mine') {params.set('mine', 'true');}
+      if (filter === 'published') {params.set('published', 'true');}
+      return api.get(`/exams?${params.toString()}`).then(r => r.data);
     },
   });
 
@@ -128,7 +130,7 @@ export default function ExamsPage() {
                   </Button>
                 )}
                 <button
-                  onClick={() => { if (confirm('Delete this exam?')) deleteMutation.mutate(exam.id); }}
+                  onClick={() => { if (confirm('Delete this exam?')) {deleteMutation.mutate(exam.id);} }}
                   className="p-1.5 text-muted-foreground hover:text-destructive transition-colors rounded-md hover:bg-destructive/10">
                   <Trash2 className="h-4 w-4" />
                 </button>

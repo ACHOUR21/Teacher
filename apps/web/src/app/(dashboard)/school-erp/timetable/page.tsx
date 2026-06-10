@@ -1,8 +1,9 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
 import { CalendarDays, Plus, X, Clock } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -288,9 +289,9 @@ export default function TimetablePage() {
 
   // Helper: entries for a specific (day, hour) cell
   const getEntriesForCell = (day: number, hour: number): TimetableEntry[] => {
-    if (!entries) return [];
+    if (!entries) {return [];}
     return entries.filter((e) => {
-      if (e.dayOfWeek !== day) return false;
+      if (e.dayOfWeek !== day) {return false;}
       const startH = parseInt(e.startTime.split(':')[0], 10);
       const endH = parseInt(e.endTime.split(':')[0], 10);
       return startH <= hour && endH > hour;

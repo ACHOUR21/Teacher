@@ -1,11 +1,12 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
-import { Layers, Trash2, Loader2, Play, Plus, Globe, Lock, Calendar } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Layers, Trash2, Play, Plus, Globe, Lock, Calendar } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+import { Button } from '@/components/ui/Button';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 interface Deck {
@@ -41,7 +42,7 @@ const SUBJECT_COLORS: Record<string, string> = {
 function getSubjectColor(subject?: string, topic?: string): string {
   const key = (subject ?? topic ?? '').toLowerCase();
   for (const [k, v] of Object.entries(SUBJECT_COLORS)) {
-    if (key.includes(k)) return v;
+    if (key.includes(k)) {return v;}
   }
   return 'bg-gray-400';
 }

@@ -1,20 +1,21 @@
 'use client';
 
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Users, BookOpen, TrendingUp, DollarSign, Zap, Activity, Star, Award } from 'lucide-react';
+import { useState } from 'react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   ComposedChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import { Users, BookOpen, TrendingUp, DollarSign, Zap, Activity, Star, Award } from 'lucide-react';
-import { api } from '@/lib/api';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { cn } from '@/lib/utils';
-import { ChartTooltip } from '@/components/analytics/ChartTooltip';
+
 import { ChartSkeleton } from '@/components/analytics/ChartSkeleton';
-import { SparklineCard } from '@/components/analytics/SparklineCard';
+import { ChartTooltip } from '@/components/analytics/ChartTooltip';
 import { ExportButton } from '@/components/analytics/ExportButton';
+import { SparklineCard } from '@/components/analytics/SparklineCard';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 const COLORS = ['#2563EB', '#7C3AED', '#059669', '#D97706', '#DC2626', '#0891B2', '#DB2777', '#65A30D'];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

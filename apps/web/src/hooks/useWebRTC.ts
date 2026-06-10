@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
+
 import type { Socket } from 'socket.io-client';
 
 const ICE_SERVERS: RTCConfiguration = {
@@ -102,7 +103,7 @@ export function useWebRTC(socket: Socket | null) {
   // ------------------------------------------------------------------ signaling listeners
 
   useEffect(() => {
-    if (!socket) return;
+    if (!socket) {return;}
 
     const onOffer = async ({ from, offer }: { from: string; offer: RTCSessionDescriptionInit }) => {
       const pc = buildPeerConnection(from);
@@ -114,7 +115,7 @@ export function useWebRTC(socket: Socket | null) {
 
     const onAnswer = async ({ from, answer }: { from: string; answer: RTCSessionDescriptionInit }) => {
       const pc = peersRef.current.get(from);
-      if (pc) await pc.setRemoteDescription(new RTCSessionDescription(answer));
+      if (pc) {await pc.setRemoteDescription(new RTCSessionDescription(answer));}
     };
 
     const onIceCandidate = async ({
@@ -160,7 +161,6 @@ export function useWebRTC(socket: Socket | null) {
       cancelled = true;
       stopAll();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return { localStream, remoteStreams, callPeer, setMicEnabled, setCameraEnabled, stopAll };

@@ -1,10 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { SuperAdminService } from '../super-admin.service';
-import { PrismaService } from '../../database/prisma.service';
-import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { JwtService } from '@nestjs/jwt';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { SubscriptionPlan, UserRole } from '@prisma/client';
+
+import { PrismaService } from '../../database/prisma.service';
+import { SuperAdminService } from '../super-admin.service';
 
 const mockPrisma = {
   tenant: {

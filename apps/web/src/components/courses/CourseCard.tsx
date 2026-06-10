@@ -1,9 +1,10 @@
 'use client';
 
-import Link from 'next/link';
-import Image from 'next/image';
 import { Star, Users, Clock } from 'lucide-react';
-import { Badge } from '@/components/ui/Badge';
+import Image from 'next/image';
+import Link from 'next/link';
+
+
 
 interface Course {
   id: string;

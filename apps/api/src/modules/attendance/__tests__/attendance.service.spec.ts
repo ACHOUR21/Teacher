@@ -1,12 +1,14 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { AttendanceService } from '../attendance.service';
-import { PrismaService } from '../../database/prisma.service';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { AttendanceStatus } from '@prisma/client';
+
+import { PrismaService } from '../../database/prisma.service';
+import { AttendanceService } from '../attendance.service';
+
 
 const mockPrisma = {
   attendance: { upsert: jest.fn(), findMany: jest.fn() },
-  student: { findUnique: jest.fn() },
+  student: { findUnique: jest.fn(), findFirst: jest.fn(), findMany: jest.fn() },
   schoolClass: { findUnique: jest.fn() },
   $transaction: jest.fn(),
 };

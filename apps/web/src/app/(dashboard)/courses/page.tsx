@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import Link from 'next/link';
+import { BookOpen, Star, Clock, ShoppingBag, CheckCircle, Play } from 'lucide-react';
 import Image from 'next/image';
-import { BookOpen, Star, Clock, Users, ShoppingBag, CheckCircle, Play } from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
+
+import { Button } from '@/components/ui/Button';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/Button';
 
 type Tab = 'all' | 'in-progress' | 'completed';
 
@@ -169,8 +170,8 @@ export default function CoursesPage() {
   });
 
   const filtered = enrollments.filter((e) => {
-    if (activeTab === 'in-progress') return !e.completedAt && (e.progressPct ?? 0) > 0;
-    if (activeTab === 'completed') return !!e.completedAt;
+    if (activeTab === 'in-progress') {return !e.completedAt && (e.progressPct ?? 0) > 0;}
+    if (activeTab === 'completed') {return !!e.completedAt;}
     return true;
   });
 

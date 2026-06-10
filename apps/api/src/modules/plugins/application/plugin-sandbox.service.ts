@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Injectable, BadRequestException } from '@nestjs/common';
 
 import {
@@ -69,14 +70,19 @@ export class PluginSandboxService {
   }
 
   buildCsp(manifest: PluginManifest): string {
-    const hasStorage = manifest.permissions.includes('access:storage');
+    const permissions = manifest.permissions;
+    const hasStorage = permissions.includes('access:storage');
     const connectSrc = hasStorage ? "'self' blob:" : "'self'";
+    const imgSrc = ["'self'", 'data:', 'https:'];
+    if (hasStorage) {
+      imgSrc.push('blob:');
+    }
     return [
       "default-src 'none'",
       "script-src 'self' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline'",
       `connect-src ${connectSrc}`,
-      "img-src 'self' data: blob:",
+      `img-src ${imgSrc.join(' ')}`,
       "font-src 'self'",
       "frame-ancestors 'self'",
     ].join('; ');

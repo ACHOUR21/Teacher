@@ -1,15 +1,16 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { User, Mail, Lock, Eye, EyeOff, GraduationCap, Users, ArrowRight, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { User, Mail, Lock, Eye, EyeOff, GraduationCap, Users, ArrowRight, AlertCircle } from 'lucide-react';
+
 import { useAuth } from '@/hooks/useAuth';
-import { apiGet } from '@/lib/api';
 import { toast } from '@/hooks/useToast';
+import { apiGet } from '@/lib/api';
 import { parseErrorMessage, cn } from '@/lib/utils';
 
 interface TenantInfo {
@@ -70,7 +71,7 @@ export default function JoinPage() {
   }, [slug]);
 
   const onSubmit = async (data: FormData) => {
-    if (!tenant) return;
+    if (!tenant) {return;}
     try {
       await signUp({
         firstName: data.firstName,

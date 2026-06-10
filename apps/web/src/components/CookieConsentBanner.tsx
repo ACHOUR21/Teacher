@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
 import { Cookie, X, ChevronDown, ChevronUp, Shield } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+
 import { api } from '@/lib/api';
-import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/authStore';
 
 const STORAGE_KEY = 'eduai_cookie_consent';
 const VERSION = '1.0';
@@ -20,7 +21,7 @@ interface CookiePrefs {
 function getStored(): CookiePrefs | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
+    if (!raw) {return null;}
     return JSON.parse(raw);
   } catch {
     return null;
@@ -75,7 +76,7 @@ export function CookieConsentBanner() {
     setVisible(false);
   }
 
-  if (!visible) return null;
+  if (!visible) {return null;}
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 p-4 sm:p-6">

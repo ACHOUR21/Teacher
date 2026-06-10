@@ -1,7 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { WhiteLabelService } from '../white-label.service';
-import { PrismaService } from '../../database/prisma.service';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { RedisService } from '../../cache/redis.service';
+import { PrismaService } from '../../database/prisma.service';
+import { WhiteLabelService } from '../white-label.service';
 
 const mockPrisma = {
   whiteLabel: {
@@ -107,13 +108,14 @@ describe('WhiteLabelService', () => {
       expect(css).toContain('.logo { width: 120px; }');
     });
 
-    it('should return empty string when no settings found', async () => {
+    it('should return default CSS when no settings found', async () => {
       mockCache.get.mockResolvedValueOnce(null);
       mockPrisma.whiteLabel.findUnique.mockResolvedValueOnce(null);
 
       const css = await service.generateThemeCSS('tenant-1');
 
-      expect(css).toBe('');
+      expect(css).toContain('--color-primary: #2563EB');
+      expect(css).toContain('--color-secondary: #7C3AED');
     });
   });
 });

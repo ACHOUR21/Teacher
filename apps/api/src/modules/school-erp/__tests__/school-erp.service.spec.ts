@@ -1,8 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { SchoolErpService } from '../school-erp.service';
-import { PrismaService } from '../../database/prisma.service';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { RedisService } from '../../cache/redis.service';
+import { PrismaService } from '../../database/prisma.service';
+import { SchoolErpService } from '../school-erp.service';
 
 const mockPrisma = {
   school: {

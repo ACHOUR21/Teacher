@@ -1,8 +1,12 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ForbiddenException, ConflictException, BadRequestException } from '@nestjs/common';
-import { AssignmentsService } from '../assignments.service';
-import { PrismaService } from '../../database/prisma.service';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { AssignmentStatus } from '@prisma/client';
+
+import { ApiEcosystemService } from '../../api-ecosystem/api-ecosystem.service';
+import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../../notifications/notifications.service';
+import { AssignmentsService } from '../assignments.service';
+
 
 const mockPrisma = {
   assignment: {
@@ -24,6 +28,10 @@ const mockPrisma = {
   courseProgress: {
     findMany: jest.fn(),
   },
+  teacher: {
+    findUnique: jest.fn().mockResolvedValue(null),
+    findFirst: jest.fn().mockResolvedValue(null),
+  },
 };
 
 describe('AssignmentsService', () => {
@@ -34,6 +42,20 @@ describe('AssignmentsService', () => {
       providers: [
         AssignmentsService,
         { provide: PrismaService, useValue: mockPrisma },
+        {
+          provide: NotificationsService,
+          useValue: {
+            createNotification: jest.fn().mockResolvedValue({}),
+            sendToUser: jest.fn().mockResolvedValue({}),
+            notifyUser: jest.fn().mockResolvedValue({}),
+          },
+        },
+        {
+          provide: ApiEcosystemService,
+          useValue: {
+            deliverWebhook: jest.fn().mockResolvedValue(undefined),
+          },
+        },
       ],
     }).compile();
 

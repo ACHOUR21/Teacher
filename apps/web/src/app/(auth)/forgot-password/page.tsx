@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Mail, ArrowLeft, CheckCircle, ArrowRight, School, ChevronDown } from 'lucide-react';
+import Link from 'next/link';
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
 import { useAuth } from '@/hooks/useAuth';
-import { apiGet } from '@/lib/api';
 import { toast } from '@/hooks/useToast';
+import { apiGet } from '@/lib/api';
 import { parseErrorMessage, cn } from '@/lib/utils';
 
 const forgotSchema = z.object({

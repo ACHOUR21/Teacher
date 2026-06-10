@@ -1,9 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
 import { useQuery, useQueries } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import { useAuthStore } from '@/stores/authStore';
 import {
   Download,
   Search,
@@ -12,6 +9,11 @@ import {
   CheckCircle,
   BarChart2,
 } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+
+import { api } from '@/lib/api';
+import { useAuthStore } from '@/stores/authStore';
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -47,7 +49,7 @@ function truncate(str: string, max = 15): string {
 
 function scoreColor(score: number, maxScore: number): string {
   const pct = (score / maxScore) * 100;
-  if (pct >= 70) return 'text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/20';
+  if (pct >= 70) {return 'text-green-700 bg-green-50 dark:text-green-400 dark:bg-green-900/20';}
   return 'text-red-700 bg-red-50 dark:text-red-400 dark:bg-red-900/20';
 }
 
@@ -145,7 +147,7 @@ export default function GradeBookPage() {
           sub.student?.user
             ? `${sub.student.user.firstName} ${sub.student.user.lastName}`.trim()
             : sub.studentId;
-        if (!map[name]) map[name] = {};
+        if (!map[name]) {map[name] = {};}
         map[name][a.id] = sub;
       });
     });
@@ -165,7 +167,7 @@ export default function GradeBookPage() {
         total++;
         if (sub.status === 'GRADED' || sub.status === 'RETURNED') {
           graded++;
-          if (sub.score != null) {
+          if (sub.score !== null && sub.score !== undefined) {
             scoreSum += (sub.score / a.maxScore) * 100;
             gradedWithScore++;
           }
@@ -180,9 +182,9 @@ export default function GradeBookPage() {
   // ── Per-student average ───────────────────────────────────────────────────
   function getStudentAverage(subs: Record<string, Submission>): string {
     const graded = assignments.filter(
-      (a) => subs[a.id]?.score != null,
+      (a) => subs[a.id]?.score !== null && subs[a.id]?.score !== undefined,
     );
-    if (graded.length === 0) return '—';
+    if (graded.length === 0) {return '—';}
     const avg =
       graded.reduce((sum, a) => sum + ((subs[a.id].score as number) / a.maxScore) * 100, 0) /
       graded.length;
@@ -192,7 +194,7 @@ export default function GradeBookPage() {
   // ── Filtered students ─────────────────────────────────────────────────────
   const filteredStudents = useMemo(() => {
     const allStudents = Object.keys(studentMap).sort();
-    if (!search.trim()) return allStudents;
+    if (!search.trim()) {return allStudents;}
     const q = search.trim().toLowerCase();
     return allStudents.filter((name) => name.toLowerCase().includes(q));
   }, [studentMap, search]);
@@ -203,9 +205,9 @@ export default function GradeBookPage() {
     const rows = Object.entries(studentMap).map(([name, subs]) => {
       const scores = assignments.map((a) => {
         const s = subs[a.id];
-        if (!s) return '—';
-        if (s.score != null) return `${s.score}/${a.maxScore}`;
-        if (s.status === 'SUBMITTED' || s.status === 'LATE') return 'Submitted';
+        if (!s) {return '—';}
+        if (s.score !== null && s.score !== undefined) {return `${s.score}/${a.maxScore}`;}
+        if (s.status === 'SUBMITTED' || s.status === 'LATE') {return 'Submitted';}
         return '—';
       });
       const avg = getStudentAverage(subs);
@@ -393,7 +395,7 @@ export default function GradeBookPage() {
                         );
                       }
 
-                      if (sub.score != null) {
+                      if (sub.score !== null && sub.score !== undefined) {
                         return (
                           <td key={a.id} className="px-4 py-3 text-center">
                             <span

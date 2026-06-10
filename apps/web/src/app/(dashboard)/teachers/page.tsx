@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, Star, BookOpen, Users, Plus, X, Mail, ChevronLeft, ChevronRight } from 'lucide-react';
-import { api } from '@/lib/api';
+import { useState } from 'react';
+
 import { Button } from '@/components/ui/Button';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 /* ─── Types ─── */
@@ -37,7 +38,7 @@ function InviteModal({ onClose }: { onClose: () => void }) {
   const [sent, setSent] = useState(false);
 
   const handleSend = async () => {
-    if (!email.trim()) return;
+    if (!email.trim()) {return;}
     setSending(true);
     try {
       await api.post('/teachers/invite', { email: email.trim(), role });

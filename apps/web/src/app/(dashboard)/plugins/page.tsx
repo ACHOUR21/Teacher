@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Puzzle, Download, Trash2, ToggleLeft, ToggleRight, Search, Star, Package } from 'lucide-react';
+import { useState } from 'react';
+
+import { PluginPermissionList, type PluginPermission } from '@/components/plugins/PluginPermissionBadge';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { PluginPermissionList, type PluginPermission } from '@/components/plugins/PluginPermissionBadge';
 
 export default function PluginsPage() {
   const [tab, setTab] = useState<'marketplace' | 'installed'>('marketplace');
@@ -128,10 +129,10 @@ export default function PluginsPage() {
                     </div>
                   </div>
                   <p className="text-xs text-gray-500 leading-relaxed mb-3 line-clamp-2">{plugin.description}</p>
-                  {Array.isArray((plugin.manifest as any)?.permissions) && (plugin.manifest as any).permissions.length > 0 && (
+                  {Array.isArray((plugin.manifest)?.permissions) && (plugin.manifest).permissions.length > 0 && (
                     <div className="mb-3">
                       <PluginPermissionList
-                        permissions={(plugin.manifest as any).permissions as PluginPermission[]}
+                        permissions={(plugin.manifest).permissions as PluginPermission[]}
                         maxVisible={2}
                       />
                     </div>
@@ -186,7 +187,7 @@ export default function PluginsPage() {
                     {inst.isEnabled ? <ToggleRight className="h-6 w-6" /> : <ToggleLeft className="h-6 w-6" />}
                   </button>
                   <button
-                    onClick={() => { if (confirm('Uninstall this plugin?')) uninstallMutation.mutate(inst.pluginId); }}
+                    onClick={() => { if (confirm('Uninstall this plugin?')) {uninstallMutation.mutate(inst.pluginId);} }}
                     className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                   >
                     <Trash2 className="h-4 w-4" />

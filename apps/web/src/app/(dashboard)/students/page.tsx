@@ -1,14 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Search, Plus, MoreHorizontal, X, Mail, User, BookOpen, Calendar, FileText } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useStudents, studentKeys } from '@/hooks/useStudents';
-import type { Student } from '@/hooks/useStudents';
+import { Search, Plus, MoreHorizontal, X, Mail, User, BookOpen, Calendar, FileText } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
 import { Button } from '@/components/ui/Button';
+import { useStudents, studentKeys } from '@/hooks/useStudents';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+
+import type { Student } from '@/hooks/useStudents';
 
 /* ─── Invite Modal ─── */
 function InviteModal({ onClose }: { onClose: () => void }) {
@@ -17,7 +19,7 @@ function InviteModal({ onClose }: { onClose: () => void }) {
   const [sent, setSent] = useState(false);
 
   const handleSend = async () => {
-    if (!email.trim()) return;
+    if (!email.trim()) {return;}
     setSending(true);
     try {
       await api.post('/students/invite', { email: email.trim() });
@@ -184,14 +186,14 @@ function ActionMenu({
         <FileText className="h-4 w-4 text-gray-400" /> Report Card
       </button>
       <button
-        onClick={() => { /* TODO: navigate to messages */ onClose(); }}
+        onClick={() => { router.push(`/messages?studentId=${student.id}`); onClose(); }}
         className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
       >
         <Mail className="h-4 w-4 text-gray-400" /> Send Message
       </button>
       <div className="my-1 border-t border-gray-100" />
       <button
-        onClick={() => { if (confirm('Remove this student?')) remove.mutate(); }}
+        onClick={() => { if (confirm('Remove this student?')) {remove.mutate();} }}
         className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
       >
         <X className="h-4 w-4" /> Remove

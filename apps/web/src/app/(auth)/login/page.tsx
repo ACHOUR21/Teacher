@@ -1,15 +1,16 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Eye, EyeOff, Mail, Lock, School, ArrowRight, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, Mail, Lock, School, ArrowRight, ChevronDown } from 'lucide-react';
+
 import { useAuth } from '@/hooks/useAuth';
-import { apiGet } from '@/lib/api';
 import { toast } from '@/hooks/useToast';
+import { apiGet } from '@/lib/api';
 import { parseErrorMessage, cn } from '@/lib/utils';
 
 const loginSchema = z.object({

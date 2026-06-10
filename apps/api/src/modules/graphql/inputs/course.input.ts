@@ -1,5 +1,5 @@
 import { InputType, Field, Float, Int } from '@nestjs/graphql';
-import { IsString, IsOptional, IsNumber, IsEnum, IsArray, Min, MaxLength } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsArray, Min, MaxLength } from 'class-validator';
 
 export enum CourseLevelInput {
   BEGINNER = 'BEGINNER',

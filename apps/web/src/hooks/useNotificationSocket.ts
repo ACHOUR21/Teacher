@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { io, type Socket } from 'socket.io-client';
+
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
 
@@ -10,7 +11,7 @@ export function useNotificationSocket() {
   const { addNotification } = useUIStore();
 
   useEffect(() => {
-    if (!accessToken) return;
+    if (!accessToken) {return;}
 
     const wsUrl = process.env['NEXT_PUBLIC_WS_URL'] || 'http://localhost:3001';
 

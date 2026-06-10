@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
 import { Monitor, Tablet, Smartphone, LayoutDashboard, BookOpen, LogIn, Copy, CheckCheck, AlertTriangle } from 'lucide-react';
+import { useState } from 'react';
+
 import { cn } from '@/lib/utils';
+
 import { useContrastRatio } from './useContrastRatio';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -43,7 +45,6 @@ function isValidUrl(url: string) {
 function LogoOrPlaceholder({ url, className }: { url: string; className?: string }) {
   if (url && isValidUrl(url)) {
     return (
-      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={url}
         alt="logo"

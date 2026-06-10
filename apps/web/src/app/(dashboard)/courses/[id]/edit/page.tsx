@@ -1,13 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
 import {
   ArrowLeft,
   Plus,
-  Pencil,
   Trash2,
   ChevronDown,
   ChevronRight,
@@ -22,10 +18,14 @@ import {
   BookOpen,
 } from 'lucide-react';
 import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import React, { useState } from 'react';
+
+import { api } from '@/lib/api';
 
 const contentTypeIcon = (type: string) => {
-  if (type === 'VIDEO') return <Video className="h-3.5 w-3.5" />;
-  if (type === 'AUDIO') return <Headphones className="h-3.5 w-3.5" />;
+  if (type === 'VIDEO') {return <Video className="h-3.5 w-3.5" />;}
+  if (type === 'AUDIO') {return <Headphones className="h-3.5 w-3.5" />;}
   return <FileText className="h-3.5 w-3.5" />;
 };
 
@@ -53,7 +53,7 @@ function InlineEdit({ value, onSave, className = '' }: { value: string; onSave: 
         onChange={e => setVal(e.target.value)}
         onKeyDown={e => {
           if (e.key === 'Enter') { onSave(val); setEditing(false); }
-          if (e.key === 'Escape') setEditing(false);
+          if (e.key === 'Escape') {setEditing(false);}
         }}
       />
       <button onClick={() => { onSave(val); setEditing(false); }} className="text-green-500 hover:text-green-600">
@@ -167,13 +167,13 @@ function LessonQuizBadge({ lessonId }: { lessonId: string }) {
     queryKey: ['quiz-lesson', lessonId],
     queryFn: () =>
       api.get(`/quizzes/lesson/${lessonId}`).then(r => r.data.data).catch((err: any) => {
-        if (err?.response?.status === 404) return null;
+        if (err?.response?.status === 404) {return null;}
         throw err;
       }),
     retry: false,
   });
 
-  if (!data) return null;
+  if (!data) {return null;}
   return (
     <span className="text-xs px-1.5 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded shrink-0 font-medium">
       Quiz
@@ -192,7 +192,7 @@ function QuizEditorModal({ lessonId, lessonTitle, onClose }: {
     queryKey: ['quiz-lesson', lessonId],
     queryFn: () =>
       api.get(`/quizzes/lesson/${lessonId}`).then(r => r.data.data).catch((err: any) => {
-        if (err?.response?.status === 404) return null;
+        if (err?.response?.status === 404) {return null;}
         throw err;
       }),
     retry: false,
@@ -213,7 +213,7 @@ function QuizEditorModal({ lessonId, lessonTitle, onClose }: {
             ? existingQuiz.questions.map((q: any, i: number) => ({ ...q, id: i }))
             : []
         );
-        setTimeLimit(existingQuiz.timeLimit != null ? String(existingQuiz.timeLimit) : '');
+        setTimeLimit(existingQuiz.timeLimit !== null && existingQuiz.timeLimit !== undefined ? String(existingQuiz.timeLimit) : '');
       }
       setInitialized(true);
     }
@@ -449,7 +449,6 @@ function QuizEditorModal({ lessonId, lessonTitle, onClose }: {
 
 export default function CourseEditorPage() {
   const { id: courseId } = useParams<{ id: string }>();
-  const router = useRouter();
   const qc = useQueryClient();
 
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
@@ -487,13 +486,13 @@ export default function CourseEditorPage() {
   const addLessonMut = useMutation({
     mutationFn: ({ sectionId, data }: { sectionId: string; data: any }) =>
       api.post(`/courses/sections/${sectionId}/lessons`, data),
-    onSuccess: (_, vars) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['course', courseId] });
       setAddingLesson(null);
     },
   });
 
-  const updateLessonMut = useMutation({
+  const _updateLessonMut = useMutation({
     mutationFn: ({ sectionId, lessonId, data }: { sectionId: string; lessonId: string; data: any }) =>
       api.patch(`/courses/sections/${sectionId}/lessons/${lessonId}`, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['course', courseId] }),
@@ -513,8 +512,8 @@ export default function CourseEditorPage() {
   const toggleSection = (id: string) => {
     setExpandedSections(prev => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) {next.delete(id);}
+      else {next.add(id);}
       return next;
     });
   };
@@ -527,7 +526,7 @@ export default function CourseEditorPage() {
     );
   }
 
-  if (!course) return <div className="p-6 text-muted-foreground">Course not found.</div>;
+  if (!course) {return <div className="p-6 text-muted-foreground">Course not found.</div>;}
 
   const sections: any[] = course.sections ?? [];
 
@@ -667,7 +666,7 @@ export default function CourseEditorPage() {
                 if (e.key === 'Enter' && newSectionTitle.trim()) {
                   addSectionMut.mutate({ title: newSectionTitle, position: sections.length + 1 });
                 }
-                if (e.key === 'Escape') setAddingSection(false);
+                if (e.key === 'Escape') {setAddingSection(false);}
               }}
             />
             <button

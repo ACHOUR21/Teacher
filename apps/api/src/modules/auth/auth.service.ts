@@ -17,7 +17,6 @@ import * as speakeasy from 'speakeasy';
 
 import { RedisService } from '../cache/redis.service';
 import { PrismaService } from '../database/prisma.service';
-
 import { NotificationsService } from '../notifications/notifications.service';
 
 import { LoginCommand } from './application/commands/login.command';
@@ -319,6 +318,7 @@ export class AuthService {
 
     // Retrieve the plain backup codes that were generated in setupMfa
     const storedRaw = await this.redis.get(`mfa:backup:${userId}`);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const plainCodes: string[] = storedRaw ? JSON.parse(storedRaw) : this.generatePlainBackupCodes();
 
     // Hash backup codes before persisting

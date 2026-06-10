@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+
 import { api } from '@/lib/api';
 import { isFirebaseConfigured, requestFcmToken, onForegroundMessage } from '@/lib/firebase';
 
@@ -11,7 +12,7 @@ export function usePushNotifications() {
   const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {return;}
     if (!('Notification' in window) || !('serviceWorker' in navigator)) {
       setStatus('unsupported');
       return;
@@ -25,7 +26,7 @@ export function usePushNotifications() {
 
   // Listen for foreground messages and show them as native notifications
   useEffect(() => {
-    if (status !== 'granted') return;
+    if (status !== 'granted') {return;}
     const unsub = onForegroundMessage((payload) => {
       const title = payload.notification?.title ?? 'EduAI';
       const body = payload.notification?.body ?? '';
@@ -55,7 +56,7 @@ export function usePushNotifications() {
   }, []);
 
   const disable = useCallback(async () => {
-    if (!token) return;
+    if (!token) {return;}
     try {
       await api.delete('/notifications/fcm-token', { data: { token } });
     } finally {

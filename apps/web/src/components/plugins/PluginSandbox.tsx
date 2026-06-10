@@ -1,9 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
 import { ShieldCheck, AlertTriangle, Loader2, X } from 'lucide-react';
-import { PluginPermissionList, type PluginPermission } from './PluginPermissionBadge';
+import { useEffect, useRef, useState, useCallback } from 'react';
+
 import { cn } from '@/lib/utils';
+
+import { PluginPermissionList, type PluginPermission } from './PluginPermissionBadge';
+
 
 export interface PluginSandboxProps {
   pluginId: string;
@@ -52,14 +55,14 @@ export function PluginSandbox({
 
   // postMessage bridge — only forward allowlisted message types
   useEffect(() => {
-    if (phase !== 'running') return;
+    if (phase !== 'running') {return;}
 
     function listener(event: MessageEvent) {
       // Ignore messages not from our iframe
-      if (!iframeRef.current || event.source !== iframeRef.current.contentWindow) return;
+      if (!iframeRef.current || event.source !== iframeRef.current.contentWindow) {return;}
 
       const { type, payload } = (event.data ?? {}) as { type?: string; payload?: unknown };
-      if (!type || !ALLOWED_OUTBOUND_TYPES.has(type)) return;
+      if (!type || !ALLOWED_OUTBOUND_TYPES.has(type)) {return;}
 
       onMessage?.(type, payload);
     }

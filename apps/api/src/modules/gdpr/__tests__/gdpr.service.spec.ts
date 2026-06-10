@@ -1,8 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { ConsentType } from '@prisma/client';
-import { GdprService } from '../gdpr.service';
+
 import { PrismaService } from '../../database/prisma.service';
+import { GdprService } from '../gdpr.service';
 
 const mockPrisma = {
   user: {
@@ -180,15 +181,14 @@ describe('GdprService', () => {
       );
     });
 
-    it('should throw BadRequestException when a pending request already exists', async () => {
-      mockPrisma.dataDeletionRequest.findUnique.mockResolvedValueOnce({
-        id: 'req-1',
-        status: 'PENDING',
-      });
+    it('should return existing request when a pending request already exists', async () => {
+      const existingRequest = { id: 'req-1', status: 'PENDING' };
+      mockPrisma.dataDeletionRequest.findUnique.mockResolvedValueOnce(existingRequest);
 
-      await expect(
-        service.requestDeletion('user-1', 'tenant-1'),
-      ).rejects.toThrow(BadRequestException);
+      const result = await service.requestDeletion('user-1', 'tenant-1');
+
+      expect(result).toEqual(existingRequest);
+      expect(mockPrisma.dataDeletionRequest.upsert).not.toHaveBeenCalled();
     });
 
     it('should allow re-requesting deletion when previous request was cancelled', async () => {

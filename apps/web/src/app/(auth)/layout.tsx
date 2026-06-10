@@ -1,6 +1,6 @@
-import React from 'react';
-import Link from 'next/link';
 import { BookMarked, Sparkles, Shield, BarChart3 } from 'lucide-react';
+import Link from 'next/link';
+import React from 'react';
 
 const features = [
   {

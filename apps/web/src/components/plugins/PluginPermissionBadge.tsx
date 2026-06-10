@@ -1,6 +1,7 @@
 'use client';
 
 import { Shield, ShieldAlert, ShieldCheck, Info } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 
 export type PluginPermission =
@@ -39,7 +40,7 @@ interface Props {
 
 export function PluginPermissionBadge({ permission, className }: Props) {
   const meta = PERMISSION_META[permission];
-  if (!meta) return null;
+  if (!meta) {return null;}
 
   const { icon: Icon, bg, text, border } = RISK_CONFIG[meta.risk];
 

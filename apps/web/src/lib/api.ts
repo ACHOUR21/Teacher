@@ -77,7 +77,7 @@ api.interceptors.response.use(
         })
           .then((token) => {
             if (originalRequest.headers) {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
+              originalRequest.headers.Authorization = `Bearer ${String(token)}`;
             }
             return api(originalRequest);
           })
@@ -88,7 +88,7 @@ api.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        if (!refreshTokenFn) throw new Error('No refresh function');
+        if (!refreshTokenFn) {throw new Error('No refresh function');}
         const newToken = await refreshTokenFn();
         processQueue(null, newToken);
         if (originalRequest.headers) {

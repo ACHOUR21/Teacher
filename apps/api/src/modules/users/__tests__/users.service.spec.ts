@@ -1,9 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
-import { UsersService } from '../users.service';
-import { PrismaService } from '../../database/prisma.service';
-import { RedisService } from '../../cache/redis.service';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { UserRole } from '@prisma/client';
+
+import { RedisService } from '../../cache/redis.service';
+import { PrismaService } from '../../database/prisma.service';
+import { UsersService } from '../users.service';
+
 
 const mockPrisma = {
   user: {

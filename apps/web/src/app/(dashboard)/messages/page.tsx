@@ -1,13 +1,15 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Send, Search, Plus, Users, Lock, Hash } from 'lucide-react';
-import { api } from '@/lib/api';
-import { useSocket } from '@/hooks/useSocket';
-import { useAuthStore } from '@/stores/authStore';
-import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
+import { Send, Search, Plus, Users, Lock, Hash } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+
+import { useSocket } from '@/hooks/useSocket';
+import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/authStore';
+
 
 interface Message {
   id: string;
@@ -58,7 +60,7 @@ export default function MessagesPage() {
   });
 
   useEffect(() => {
-    if (!socket || !selectedId) return;
+    if (!socket || !selectedId) {return;}
     socket.emit('join-conversation', { conversationId: selectedId });
     socket.on('new-message', (msg: Message) => {
       qc.setQueryData(['messages', selectedId], (old: Message[] = []) => [...old, msg]);
@@ -74,7 +76,7 @@ export default function MessagesPage() {
   }, [messages]);
 
   const filteredConvos = (conversations ?? []).filter(c => {
-    if (!search) return true;
+    if (!search) {return true;}
     const name = c.name ?? c.participants.map(p => `${p.user.firstName} ${p.user.lastName}`).join(', ');
     return name.toLowerCase().includes(search.toLowerCase());
   });
@@ -83,7 +85,7 @@ export default function MessagesPage() {
   const convoName = selectedConvo?.name ?? selectedConvo?.participants.map(p => `${p.user.firstName} ${p.user.lastName}`).join(', ') ?? 'Chat';
 
   const handleSend = () => {
-    if (!draft.trim() || !selectedId) return;
+    if (!draft.trim() || !selectedId) {return;}
     sendMutation.mutate(draft.trim());
   };
 
@@ -206,7 +208,7 @@ export default function MessagesPage() {
                 ))}
               </div>
             )}
-            {(messages ?? []).map((msg: Message, i: number) => {
+            {(messages ?? []).map((msg: Message) => {
               const isOwn = msg.senderId === currentUserId;
               return (
                 <div key={msg.id} className={cn('flex items-end gap-2', isOwn ? 'justify-end' : 'justify-start')}>

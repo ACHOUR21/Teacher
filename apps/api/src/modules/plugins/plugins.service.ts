@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 
 import { PrismaService } from '../database/prisma.service';

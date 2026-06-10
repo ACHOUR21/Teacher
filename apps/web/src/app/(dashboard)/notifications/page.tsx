@@ -1,11 +1,12 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Bell, CheckCheck, BookOpen, ClipboardCheck, Star, Video, MessageSquare, Award, CreditCard, AlertCircle } from 'lucide-react';
-import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
-import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
+import { Bell, CheckCheck, BookOpen, ClipboardCheck, Star, Video, MessageSquare, Award, CreditCard, AlertCircle } from 'lucide-react';
+
+import { Button } from '@/components/ui/Button';
+import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 const TYPE_CONFIG: Record<string, { icon: React.ComponentType<any>; color: string; bg: string }> = {
   COURSE_ENROLLED:     { icon: BookOpen,      color: 'text-blue-600',   bg: 'bg-blue-50' },

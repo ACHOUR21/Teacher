@@ -1,6 +1,7 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { NotificationsService } from '../notifications.service';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../notifications.service';
 
 const mockPrisma = {
   notification: {
@@ -84,7 +85,7 @@ describe('NotificationsService', () => {
     it('should mark notification as read', async () => {
       mockPrisma.notification.updateMany.mockResolvedValueOnce({ count: 1 });
 
-      const result = await service.markRead('user-1', 'n-1');
+      await service.markRead('user-1', 'n-1');
 
       expect(mockPrisma.notification.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -99,7 +100,7 @@ describe('NotificationsService', () => {
     it('should mark all unread notifications for user as read', async () => {
       mockPrisma.notification.updateMany.mockResolvedValueOnce({ count: 5 });
 
-      const result = await service.markAllRead('user-1');
+      await service.markAllRead('user-1');
 
       expect(mockPrisma.notification.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({

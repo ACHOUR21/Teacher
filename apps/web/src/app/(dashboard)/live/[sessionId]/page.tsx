@@ -1,16 +1,17 @@
 'use client';
 
-import { useEffect, useRef, useState, memo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import {
   Mic, MicOff, Video, VideoOff, PhoneOff, MessageSquare,
   Hand, Share2, PenLine, Users,
 } from 'lucide-react';
-import { api } from '@/lib/api';
+import { useParams, useRouter } from 'next/navigation';
+import { useEffect, useRef, useState, memo } from 'react';
+
+import { LiveWhiteboard } from '@/components/live/LiveWhiteboard';
 import { useSocket } from '@/hooks/useSocket';
 import { useWebRTC } from '@/hooks/useWebRTC';
-import { LiveWhiteboard } from '@/components/live/LiveWhiteboard';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 // ------------------------------------------------------------------ types
@@ -108,16 +109,16 @@ export default function LiveSessionPage() {
   // ------------------------------------------------------------------ socket setup
 
   useEffect(() => {
-    if (!socket || !isConnected) return;
+    if (!socket || !isConnected) {return;}
 
     socket.emit('join-session', { sessionId }, (response: any) => {
-      if (response?.participants) setParticipants(response.participants);
+      if (response?.participants) {setParticipants(response.participants);}
     });
 
     socket.on('participant-joined', (data: any) => {
       setParticipants(prev => [...prev, data]);
       // Initiate WebRTC offer to the new peer
-      if (data.socketId) callPeer(data.socketId);
+      if (data.socketId) {callPeer(data.socketId);}
     });
 
     socket.on('participant-left', (data: any) => {
@@ -326,7 +327,7 @@ export default function LiveSessionPage() {
                   onChange={e => setChatInput(e.target.value)}
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
-                      if (!chatInput.trim()) return;
+                      if (!chatInput.trim()) {return;}
                       socket?.emit('send-message', { message: chatInput });
                       setChatInput('');
                     }
@@ -336,7 +337,7 @@ export default function LiveSessionPage() {
                 />
                 <button
                   onClick={() => {
-                    if (!chatInput.trim()) return;
+                    if (!chatInput.trim()) {return;}
                     socket?.emit('send-message', { message: chatInput });
                     setChatInput('');
                   }}

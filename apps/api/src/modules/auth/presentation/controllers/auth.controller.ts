@@ -132,7 +132,8 @@ export class AuthController {
     @CurrentUser() user: CurrentUserPayload,
     @Request() req: ExpressRequest & { body: { refreshToken?: string } },
   ) {
-    await this.authService.logout(user.id, req.body.refreshToken);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+    await this.authService.logout(user.id, (req as any).body.refreshToken);
     return { message: 'Logged out successfully' };
   }
 
@@ -140,7 +141,7 @@ export class AuthController {
   @Get('me')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get current authenticated user' })
-  async me(@CurrentUser() user: CurrentUserPayload) {
+  me(@CurrentUser() user: CurrentUserPayload) {
     return user;
   }
 

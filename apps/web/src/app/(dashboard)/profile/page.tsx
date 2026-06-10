@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { User, Lock, Bell, Smartphone, Shield, Camera, Save } from 'lucide-react';
-import { api } from '@/lib/api';
+import React, { useRef, useState } from 'react';
+
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { useAuthStore } from '@/stores/authStore';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/authStore';
 
 const TABS = [
   { id: 'profile', label: 'Profile', icon: User },
@@ -54,14 +55,14 @@ export default function ProfilePage() {
         timezone: profile.profile?.timezone ?? 'UTC',
         language: profile.profile?.language ?? 'en',
       });
-      if (profile.profile?.avatarUrl) setAvatarUrl(profile.profile.avatarUrl);
+      if (profile.profile?.avatarUrl) {setAvatarUrl(profile.profile.avatarUrl);}
     }
   }, [profile]);
 
   const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) return;
+    if (!file) {return;}
+    if (file.size > 5 * 1024 * 1024) {return;}
     setAvatarUploading(true);
     try {
       const { data: presigned } = await api.post('/storage/presigned-url', {
@@ -83,7 +84,7 @@ export default function ProfilePage() {
       qc.invalidateQueries({ queryKey: ['my-profile'] });
     } finally {
       setAvatarUploading(false);
-      if (avatarInputRef.current) avatarInputRef.current.value = '';
+      if (avatarInputRef.current) {avatarInputRef.current.value = '';}
     }
   };
 

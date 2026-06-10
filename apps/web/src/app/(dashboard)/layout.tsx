@@ -1,16 +1,16 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Sidebar } from '@/components/layout/Sidebar';
+import { useRouter } from 'next/navigation';
+import React, { useEffect } from 'react';
+
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Header } from '@/components/layout/Header';
+import { Sidebar } from '@/components/layout/Sidebar';
+import { CommandPalette } from '@/components/search/CommandPalette';
+import { useNotificationSocket } from '@/hooks/useNotificationSocket';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
-import { cn } from '@/lib/utils';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { useNotificationSocket } from '@/hooks/useNotificationSocket';
-import { CommandPalette } from '@/components/search/CommandPalette';
 
 export default function DashboardLayout({
   children,

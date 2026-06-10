@@ -13,6 +13,7 @@ export class AnalyticsService {
   async getPlatformStats(tenantId: string) {
     const cacheKey = `analytics:platform:${tenantId}`;
     const cached = await this.cache.get(cacheKey);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     if (cached) {return JSON.parse(cached);}
 
     const [totalUsers, totalCourses, activeSessions, totalRevenue] = await Promise.all([

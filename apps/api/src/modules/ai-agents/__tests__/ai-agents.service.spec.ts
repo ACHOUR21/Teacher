@@ -1,7 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
+/* eslint-disable @typescript-eslint/no-var-requires, @typescript-eslint/await-thenable */
 import { ConfigService } from '@nestjs/config';
-import { AiAgentsService } from '../ai-agents.service';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { PrismaService } from '../../database/prisma.service';
+import { AiAgentsService } from '../ai-agents.service';
 
 jest.mock('@anthropic-ai/sdk', () => {
   return {

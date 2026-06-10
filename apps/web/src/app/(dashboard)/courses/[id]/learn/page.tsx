@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, ChevronLeft, ChevronRight, CheckCircle, Circle,
   BookOpen, Video, FileText, Play, Volume2
 } from 'lucide-react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useState, useRef } from 'react';
+
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -84,14 +85,14 @@ interface AttemptResult {
 
 function QuizLesson({
   lesson,
-  courseId,
+  courseId: _courseId,
   onPassed,
 }: {
   lesson: { id: string; title: string };
   courseId: string;
   onPassed?: () => void;
 }) {
-  const qc = useQueryClient();
+  const _qc = useQueryClient();
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [result, setResult] = useState<AttemptResult | null>(null);
 
@@ -103,7 +104,7 @@ function QuizLesson({
         return (r.data?.data ?? r.data) as Quiz;
       } catch (err: unknown) {
         const e = err as { response?: { status?: number } };
-        if (e?.response?.status === 404) return null;
+        if (e?.response?.status === 404) {return null;}
         throw err;
       }
     },
@@ -127,7 +128,7 @@ function QuizLesson({
   };
 
   const handleSubmit = () => {
-    if (!quiz) return;
+    if (!quiz) {return;}
     const payload = quiz.questions.map(q => ({
       questionId: q.id,
       answer: answers[q.id] ?? '',
@@ -151,7 +152,7 @@ function QuizLesson({
   if (isError) {
     return (
       <div className="bg-white rounded-lg border border-red-200 p-6 text-red-500 text-sm">
-        Failed to load quiz: {(error as Error)?.message ?? 'Unknown error'}
+        Failed to load quiz: {(error)?.message ?? 'Unknown error'}
       </div>
     );
   }
@@ -305,8 +306,8 @@ function QuizLesson({
 }
 
 function LessonIcon({ type }: { type: string }) {
-  if (type === 'VIDEO') return <Video className="h-3.5 w-3.5 text-blue-500" />;
-  if (type === 'QUIZ') return <BookOpen className="h-3.5 w-3.5 text-purple-500" />;
+  if (type === 'VIDEO') {return <Video className="h-3.5 w-3.5 text-blue-500" />;}
+  if (type === 'QUIZ') {return <BookOpen className="h-3.5 w-3.5 text-purple-500" />;}
   return <FileText className="h-3.5 w-3.5 text-gray-400" />;
 }
 
@@ -341,12 +342,12 @@ export default function LearnPage() {
 
   const goNext = () => {
     const next = allLessons[currentIndex + 1];
-    if (next) goToLesson(next);
+    if (next) {goToLesson(next);}
   };
 
   const goPrev = () => {
     const prev = allLessons[currentIndex - 1];
-    if (prev) goToLesson(prev);
+    if (prev) {goToLesson(prev);}
   };
 
   if (isLoading) {
@@ -501,7 +502,7 @@ export default function LearnPage() {
 
             <button
               disabled={currentLesson?.completed || completeMutation.isPending}
-              onClick={() => completeMutation.mutate(currentLesson!.id)}
+              onClick={() => completeMutation.mutate(currentLesson.id)}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
                 currentLesson?.completed

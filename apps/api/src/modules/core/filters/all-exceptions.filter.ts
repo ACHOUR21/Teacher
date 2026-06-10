@@ -82,7 +82,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       requestId: request.headers['x-request-id'] as string,
     };
 
-    if (statusCode >= 500) {
+    if (Number(statusCode) >= 500) {
       const detail = process.env['NODE_ENV'] === 'production'
         ? (exception instanceof Error ? exception.message : String(exception))
         : (exception instanceof Error ? exception.stack : String(exception));

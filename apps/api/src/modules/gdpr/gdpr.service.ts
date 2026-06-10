@@ -48,6 +48,7 @@ export class GdprService {
     if (!user) {throw new NotFoundException('User not found');}
 
     // Strip sensitive fields
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const { passwordHash, mfaSecret, mfaBackupCodes, ...safeUser } = user as any;
     void passwordHash; void mfaSecret; void mfaBackupCodes;
 
@@ -113,7 +114,7 @@ export class GdprService {
 
     const scheduledFor = new Date(Date.now() + this.GRACE_DAYS * 24 * 60 * 60 * 1000);
 
-    const request = await this.prisma.dataDeletionRequest.upsert({
+    await this.prisma.dataDeletionRequest.upsert({
       where: { userId },
       update: { status: 'PENDING', scheduledFor, reason, requestedAt: new Date(), completedAt: null },
       create: { userId, tenantId, reason, scheduledFor },
@@ -169,7 +170,7 @@ export class GdprService {
         });
         processed++;
       } catch (err) {
-        this.logger.error(`Failed to anonymize user ${req.userId}: ${err}`);
+        this.logger.error(`Failed to anonymize user ${req.userId}: ${String(err)}`);
       }
     }
 

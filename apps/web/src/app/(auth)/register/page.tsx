@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import { BookOpen, GraduationCap, ArrowRight, School } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { BookOpen, GraduationCap, Users, ArrowRight, School } from 'lucide-react';
+import React, { useState } from 'react';
+
 import { cn } from '@/lib/utils';
 
 type Path = 'teacher' | 'student' | null;

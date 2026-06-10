@@ -191,7 +191,7 @@ export class SuperAdminService {
   }
 
   async getBillingOverview() {
-    const [totalRevenue, monthlyRevenue, planRevenue, recentInvoices, subscriptionStats] = await Promise.all([
+    const [totalRevenue, _monthlyRevenue, planRevenue, recentInvoices, subscriptionStats] = await Promise.all([
       this.prisma.invoice.aggregate({ where: { status: PaymentStatus.COMPLETED }, _sum: { amount: true }, _count: { id: true } }),
       this.prisma.invoice.groupBy({
         by: ['issuedAt'],

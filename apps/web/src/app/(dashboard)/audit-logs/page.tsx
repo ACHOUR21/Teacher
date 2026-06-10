@@ -1,11 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ShieldAlert, Lock, ChevronLeft, ChevronRight, Download } from 'lucide-react';
-import { api } from '@/lib/api';
+import React, { useState } from 'react';
+
 import { Button } from '@/components/ui/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Card, CardContent } from '@/components/ui/Card';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -45,7 +46,7 @@ function actionBadgeClass(action: string): string {
 }
 
 function truncate(str: string, max = 16): string {
-  if (!str) return '—';
+  if (!str) {return '—';}
   return str.length > max ? `${str.slice(0, max)}…` : str;
 }
 
@@ -68,11 +69,11 @@ export default function AuditLogsPage() {
     queryKey: ['audit-logs', filters],
     queryFn: () => {
       const params = new URLSearchParams();
-      if (search) params.set('search', search);
-      if (action !== 'ALL') params.set('action', action);
-      if (resource !== 'ALL') params.set('resource', resource);
-      if (dateFrom) params.set('from', dateFrom);
-      if (dateTo) params.set('to', dateTo);
+      if (search) {params.set('search', search);}
+      if (action !== 'ALL') {params.set('action', action);}
+      if (resource !== 'ALL') {params.set('resource', resource);}
+      if (dateFrom) {params.set('from', dateFrom);}
+      if (dateTo) {params.set('to', dateTo);}
       params.set('page', String(page));
       params.set('limit', String(PAGE_SIZE));
       return api.get(`/audit/logs?${params.toString()}`).then(r => r.data.data);
@@ -90,9 +91,9 @@ export default function AuditLogsPage() {
     try {
       setExporting(true);
       const params = new URLSearchParams();
-      if (action !== 'ALL') params.set('action', action);
-      if (dateFrom) params.set('startDate', dateFrom);
-      if (dateTo) params.set('endDate', dateTo);
+      if (action !== 'ALL') {params.set('action', action);}
+      if (dateFrom) {params.set('startDate', dateFrom);}
+      if (dateTo) {params.set('endDate', dateTo);}
       const response = await api.get(`/audit/export/csv?${params.toString()}`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data], { type: 'text/csv' }));
       const link = document.createElement('a');

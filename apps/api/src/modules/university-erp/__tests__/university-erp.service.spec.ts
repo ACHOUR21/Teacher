@@ -1,7 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { UniversityErpService } from '../university-erp.service';
-import { PrismaService } from '../../database/prisma.service';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { EnrollmentStatus } from '@prisma/client';
+
+import { PrismaService } from '../../database/prisma.service';
+import { UniversityErpService } from '../university-erp.service';
 
 const mockPrisma = {
   university: {

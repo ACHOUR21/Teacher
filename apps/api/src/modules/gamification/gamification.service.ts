@@ -62,6 +62,7 @@ export class GamificationService {
 
     // Record the event
     await this.prisma.gamificationEvent.create({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       data: { userId, eventType, xpAwarded: rule.xp, metadata: metadata as any },
     });
 

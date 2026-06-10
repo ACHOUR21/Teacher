@@ -6,6 +6,7 @@ import {
   useQueryClient,
   type UseQueryOptions,
 } from '@tanstack/react-query';
+
 import { api, apiGet, apiPost, apiPatch, apiDelete } from '@/lib/api';
 import { buildQueryString } from '@/lib/utils';
 
@@ -103,7 +104,7 @@ export function useCreateStudent() {
     mutationFn: (data: CreateStudentInput) =>
       apiPost<Student>('/students', data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: studentKeys.lists() });
+      void qc.invalidateQueries({ queryKey: studentKeys.lists() });
     },
   });
 }
@@ -114,8 +115,8 @@ export function useUpdateStudent() {
     mutationFn: ({ id, data }: { id: string; data: UpdateStudentInput }) =>
       apiPatch<Student>(`/students/${id}`, data),
     onSuccess: (_, { id }) => {
-      qc.invalidateQueries({ queryKey: studentKeys.detail(id) });
-      qc.invalidateQueries({ queryKey: studentKeys.lists() });
+      void qc.invalidateQueries({ queryKey: studentKeys.detail(id) });
+      void qc.invalidateQueries({ queryKey: studentKeys.lists() });
     },
   });
 }
@@ -125,7 +126,7 @@ export function useDeleteStudent() {
   return useMutation({
     mutationFn: (id: string) => apiDelete(`/students/${id}`),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: studentKeys.lists() });
+      void qc.invalidateQueries({ queryKey: studentKeys.lists() });
     },
   });
 }

@@ -1,7 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
-import { ParentsService } from '../parents.service';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { PrismaService } from '../../database/prisma.service';
+import { ParentsService } from '../parents.service';
 
 const mockPrisma = {
   parent: {

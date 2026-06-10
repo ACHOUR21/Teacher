@@ -1,4 +1,6 @@
-import { Test, TestingModule } from '@nestjs/testing';
+/* eslint-disable @typescript-eslint/no-var-requires */
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { StorageService } from '../storage.service';
 
 jest.mock('@aws-sdk/client-s3', () => ({

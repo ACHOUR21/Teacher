@@ -1,5 +1,5 @@
+import { ArrowRight, Brain, Users, BookOpen, Video, Award, Zap, BarChart } from 'lucide-react';
 import Link from 'next/link';
-import { ArrowRight, Brain, Users, BookOpen, Video, Award, Zap, Globe, Shield, BarChart } from 'lucide-react';
 
 const FEATURES = [
   { icon: Brain, title: 'AI-Powered Learning', description: 'Personalized AI tutors, automated exam generation, and intelligent content recommendations.' },

@@ -1,7 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { LiveService } from '../live.service';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../../notifications/notifications.service';
+import { LiveService } from '../live.service';
 
 const mockPrisma = {
   liveSession: {
@@ -15,7 +17,8 @@ const mockPrisma = {
     create: jest.fn(),
     findFirst: jest.fn(),
     update: jest.fn(),
-    findMany: jest.fn(),
+    updateMany: jest.fn().mockResolvedValue({}),
+    findMany: jest.fn().mockResolvedValue([]),
     count: jest.fn(),
     deleteMany: jest.fn(),
   },
@@ -30,6 +33,14 @@ describe('LiveService', () => {
       providers: [
         LiveService,
         { provide: PrismaService, useValue: mockPrisma },
+        {
+          provide: NotificationsService,
+          useValue: {
+            createNotification: jest.fn().mockResolvedValue({}),
+            sendToUser: jest.fn().mockResolvedValue({}),
+            notifyUser: jest.fn().mockResolvedValue({}),
+          },
+        },
       ],
     }).compile();
 

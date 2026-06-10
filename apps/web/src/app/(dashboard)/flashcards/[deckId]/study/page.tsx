@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
+import { ArrowLeft, CheckCircle, Loader2, RotateCcw } from 'lucide-react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, CheckCircle, Loader2, RotateCcw, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { useState } from 'react';
+
+import { Button } from '@/components/ui/Button';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 interface Card {

@@ -1,7 +1,8 @@
-import React from 'react';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
-import { cn, formatNumber } from '@/lib/utils';
+import React from 'react';
+
 import { Card } from '@/components/ui/Card';
+import { cn, formatNumber } from '@/lib/utils';
 
 type TrendProp = number | { value: number; direction: 'up' | 'down' };
 
@@ -27,7 +28,7 @@ export function StatsCard({
   icon: Icon,
   iconColor = 'text-primary',
   iconBgColor = 'bg-primary/10',
-  color,
+  color: _color,
   prefix,
   suffix,
   loading = false,

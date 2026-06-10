@@ -1,21 +1,23 @@
 'use client';
 
-import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import { useAuthStore } from '@/stores/authStore';
-import { useRouter } from 'next/navigation';
+import { format } from 'date-fns';
 import {
   Shield, Building2, Users, TrendingUp, DollarSign,
-  Activity, ChevronDown, Search, MoreHorizontal,
-  CheckCircle, XCircle, AlertCircle, Zap, RefreshCw,
-  LogIn, Trash2, Edit2, X, Check,
+  Activity, Search,
+  CheckCircle, XCircle, Zap,
+  LogIn, Trash2, Edit2, X,
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { useRouter } from 'next/navigation';
+import React, { useState } from 'react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   PieChart, Pie, Cell, ResponsiveContainer,
 } from 'recharts';
+
+import { api } from '@/lib/api';
+import { useAuthStore } from '@/stores/authStore';
+
 
 const PLAN_COLORS: Record<string, string> = {
   FREE_TRIAL: '#94a3b8',
@@ -78,8 +80,8 @@ function OverviewTab() {
     queryFn: () => api.get('/super-admin/overview').then(r => r.data.data),
   });
 
-  if (isLoading) return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
-  if (!data) return null;
+  if (isLoading) {return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;}
+  if (!data) {return null;}
 
   const { stats, recentTenants, planBreakdown, userGrowthChart } = data;
 
@@ -263,7 +265,7 @@ function TenantsTab() {
                       {t.isActive ? <XCircle className="h-3.5 w-3.5" /> : <CheckCircle className="h-3.5 w-3.5" />}
                     </button>
                     <button
-                      onClick={() => { if (confirm(`Delete tenant "${t.name}" and ALL its data?`)) deleteMut.mutate(t.id); }}
+                      onClick={() => { if (confirm(`Delete tenant "${t.name}" and ALL its data?`)) {deleteMut.mutate(t.id);} }}
                       className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors text-red-400 hover:text-red-600"
                       title="Delete"
                     >
@@ -500,8 +502,8 @@ function BillingTab() {
     queryFn: () => api.get('/super-admin/billing').then(r => r.data.data),
   });
 
-  if (isLoading) return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
-  if (!data) return null;
+  if (isLoading) {return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;}
+  if (!data) {return null;}
 
   const { totalRevenue, totalInvoices, planRevenue, subscriptionStats, recentInvoices } = data;
 

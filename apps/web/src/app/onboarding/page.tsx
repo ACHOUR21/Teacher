@@ -1,16 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import {
   BookOpen, Building2, CheckCircle2, ChevronRight, Copy, Check,
-  Globe, Image, ArrowRight, SkipForward, Sparkles, Users,
+  Globe, ArrowRight, SkipForward, Sparkles, Users,
 } from 'lucide-react';
-import { api } from '@/lib/api';
-import { useAuthStore } from '@/stores/authStore';
+import { useRouter } from 'next/navigation';
+import React, { useState, useEffect } from 'react';
+
 import { ImageUpload } from '@/components/ui/ImageUpload';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/stores/authStore';
 
 const STEPS = [
   { id: 0, label: 'School Profile', icon: Building2 },
@@ -59,7 +60,7 @@ export default function OnboardingPage() {
       if ((status.completedSteps?.length ?? 0) > 0) {
         setStep(Math.min(status.completedSteps.length, STEPS.length - 1));
       }
-      if (status.logoUrl) setLogoUrl(status.logoUrl);
+      if (status.logoUrl) {setLogoUrl(status.logoUrl);}
     }
   }, [status, router]);
 

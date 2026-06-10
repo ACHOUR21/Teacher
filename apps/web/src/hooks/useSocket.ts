@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { io, type Socket } from 'socket.io-client';
+
 import { useAuthStore } from '@/stores/authStore';
 
 const SOCKET_URL =
@@ -22,7 +23,7 @@ export function useSocket(options: UseSocketOptions = {}) {
   const accessToken = useAuthStore((s) => s.accessToken);
 
   useEffect(() => {
-    if (!autoConnect || !accessToken) return;
+    if (!autoConnect || !accessToken) {return;}
 
     const url = `${SOCKET_URL}${namespace === '/' ? '' : namespace}`;
 
@@ -60,7 +61,7 @@ export function useSocket(options: UseSocketOptions = {}) {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [accessToken, namespace, autoConnect]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [accessToken, namespace, autoConnect]); 
 
   const on = useCallback(
     <T = unknown>(event: string, handler: (data: T) => void) => {
@@ -123,7 +124,7 @@ export function useLiveClassSocket(sessionId: string) {
         socket.leaveRoom(sessionId);
       };
     }
-  }, [sessionId, socket.joinRoom, socket.leaveRoom]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sessionId, socket.joinRoom, socket.leaveRoom]); 
 
   return socket;
 }

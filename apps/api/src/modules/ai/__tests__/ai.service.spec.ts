@@ -1,6 +1,7 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AiService } from '../ai.service';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { PrismaService } from '../../database/prisma.service';
+import { AiService } from '../ai.service';
 
 const mockPrisma = {
   aIConversation: {
@@ -9,8 +10,11 @@ const mockPrisma = {
     update: jest.fn(),
   },
   aIMessage: { create: jest.fn() },
-  aIUsage: { create: jest.fn(), findFirst: jest.fn(), groupBy: jest.fn() },
+  aIUsage: { create: jest.fn(), findFirst: jest.fn(), groupBy: jest.fn(), aggregate: jest.fn().mockResolvedValue({ _sum: { tokens: 0 } }) },
   user: { findUnique: jest.fn() },
+  subscription: {
+    findFirst: jest.fn().mockResolvedValue({ plan: 'PROFESSIONAL', status: 'ACTIVE' }),
+  },
   $transaction: jest.fn((cb: any) => cb(mockPrisma)),
 };
 

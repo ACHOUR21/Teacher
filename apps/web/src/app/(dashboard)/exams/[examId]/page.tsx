@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
-import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Clock, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { useState } from 'react';
+
+import { Button } from '@/components/ui/Button';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 interface ExamQuestion {
@@ -68,7 +69,7 @@ export default function ExamTakingPage() {
     return <div className="flex items-center justify-center h-64"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
 
-  if (!exam) return null;
+  if (!exam) {return null;}
 
   // Show results screen
   if (result) {
@@ -85,7 +86,7 @@ export default function ExamTakingPage() {
           <p className="text-muted-foreground mt-1">{result.score} / {result.maxScore} points · {passed ? 'Passed' : 'Failed'}</p>
         </div>
         <div className="space-y-3">
-          {result.exam.questions.map((q, i) => {
+          {result.exam.questions.map((q) => {
             const given = result.answers[q.id] ?? '';
             const correct = q.correctAnswer;
             const isCorrect = given.trim().toLowerCase() === correct.trim().toLowerCase();
@@ -190,7 +191,7 @@ export default function ExamTakingPage() {
           <Button className="flex-1" onClick={() => setCurrentQ(i => i + 1)}>Next</Button>
         ) : (
           <Button className="flex-1 bg-green-600 hover:bg-green-700"
-            onClick={() => { if (confirm('Submit exam? You cannot change your answers.')) submitMutation.mutate(); }}
+            onClick={() => { if (confirm('Submit exam? You cannot change your answers.')) {submitMutation.mutate();} }}
             disabled={submitMutation.isPending}>
             {submitMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
             Submit Exam

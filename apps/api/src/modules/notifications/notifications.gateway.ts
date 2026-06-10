@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import {

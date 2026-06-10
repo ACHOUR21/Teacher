@@ -1,19 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import {
   BookOpen, Building2, GraduationCap, ArrowRight, ArrowLeft,
   CheckCircle2, Eye, EyeOff, Sparkles,
 } from 'lucide-react';
-import { apiPost } from '@/lib/api';
-import { useAuthStore } from '@/stores/authStore';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+
 import { toast } from '@/hooks/useToast';
+import { apiPost } from '@/lib/api';
 import { cn, parseErrorMessage } from '@/lib/utils';
+import { useAuthStore } from '@/stores/authStore';
 
 // ── Schemas ──────────────────────────────────────────────────────────────────
 const schoolSchema = z.object({
@@ -94,7 +95,7 @@ export default function StartPage() {
   };
 
   const onAdminSubmit = async (admin: AdminData) => {
-    if (!schoolData) return;
+    if (!schoolData) {return;}
     setIsSubmitting(true);
     try {
       const result = await apiPost<{ user: any; tokens: { accessToken: string } }>(

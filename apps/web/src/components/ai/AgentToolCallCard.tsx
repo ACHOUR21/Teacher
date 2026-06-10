@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
 import { Wrench, ChevronDown, ChevronRight, CheckCircle, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+
 import { cn } from '@/lib/utils';
+
 import type { ToolCallEvent } from '@/hooks/useAgentStream';
 
 const TOOL_LABELS: Record<string, string> = {

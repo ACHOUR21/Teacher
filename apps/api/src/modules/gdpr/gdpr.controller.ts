@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Put, Body, Request, HttpCode, HttpStatus, UseGuards, Ip, Headers } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Put, Body, HttpCode, HttpStatus, UseGuards, Ip, Headers } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { ConsentType } from '@prisma/client';
 

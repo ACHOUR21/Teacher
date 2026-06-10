@@ -1,17 +1,18 @@
-import { Test, TestingModule } from '@nestjs/testing';
+/* eslint-disable @typescript-eslint/require-await */
 import {
   ConflictException,
   UnauthorizedException,
   BadRequestException,
-  NotFoundException,
 } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { AuthService } from '../auth.service';
-import { PrismaService } from '../../database/prisma.service';
-import { RedisService } from '../../cache/redis.service';
-import { NotificationsService } from '../../notifications/notifications.service';
+import { JwtService } from '@nestjs/jwt';
+import { Test, type TestingModule } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
+
+import { RedisService } from '../../cache/redis.service';
+import { PrismaService } from '../../database/prisma.service';
+import { NotificationsService } from '../../notifications/notifications.service';
+import { AuthService } from '../auth.service';
 
 const mockPrisma = {
   tenant: { findUnique: jest.fn(), create: jest.fn() },

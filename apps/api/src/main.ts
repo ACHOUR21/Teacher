@@ -1,5 +1,7 @@
 // OpenTelemetry must be initialized before any other imports
+// eslint-disable-next-line import/order
 import { startTelemetry } from './instrumentation';
+
 startTelemetry();
 
 import { ValidationPipe, Logger } from '@nestjs/common';
@@ -7,17 +9,14 @@ import { NestFactory } from '@nestjs/core';
 import { type NestExpressApplication } from '@nestjs/platform-express';
 import { IoAdapter } from '@nestjs/platform-socket.io';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
+import compression from 'compression';
+import helmet from 'helmet';
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './modules/core/filters/all-exceptions.filter';
 import { LoggingInterceptor } from './modules/core/interceptors/logging.interceptor';
 import { TimeoutInterceptor } from './modules/core/interceptors/timeout.interceptor';
 import { TransformInterceptor } from './modules/core/interceptors/transform.interceptor';
-
-const compression = require('compression');
-const helmet = require('helmet');
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -207,11 +206,13 @@ This document describes **v1** of the EduAI API. All routes are prefixed with \`
 
   // Graceful shutdown
   app.enableShutdownHooks();
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   process.on('SIGTERM', async () => {
     logger.log('SIGTERM received, shutting down gracefully...');
     await app.close();
     process.exit(0);
   });
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   process.on('SIGINT', async () => {
     logger.log('SIGINT received, shutting down gracefully...');
     await app.close();

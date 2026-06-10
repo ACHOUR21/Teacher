@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
 import { CheckCircle, XCircle, Loader2, MailCheck } from 'lucide-react';
-import { api } from '@/lib/api';
 import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
+
+import { api } from '@/lib/api';
+
 
 type State = 'verifying' | 'success' | 'error' | 'no-token';
 
@@ -16,7 +18,7 @@ function VerifyEmailPageInner() {
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {return;}
     api.get(`/auth/verify-email?token=${token}`)
       .then(() => {
         setState('success');

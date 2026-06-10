@@ -1,4 +1,5 @@
-import { Test, TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { PrismaService } from '../prisma.service';
 
 // We need to mock PrismaClient as a proper class so that 'extends PrismaClient'

@@ -17,7 +17,6 @@ import { UserRole, CourseLevel } from '@prisma/client';
 import { IsInt, Min, Max, IsOptional, IsString } from 'class-validator';
 
 import { CurrentUser, CurrentUserPayload } from '../../../core/decorators/current-user.decorator';
-import { Public } from '../../../core/decorators/public.decorator';
 import { Roles } from '../../../core/decorators/roles.decorator';
 import { TenantId } from '../../../core/decorators/tenant.decorator';
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';

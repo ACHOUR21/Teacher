@@ -1,15 +1,15 @@
 'use client';
 
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   Check, CreditCard, FileText, Zap, Tag, TrendingUp,
   DollarSign, Users, BarChart3, AlertTriangle, CheckCircle,
 } from 'lucide-react';
-import { api } from '@/lib/api';
+import { useState } from 'react';
+
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 // ------------------------------------------------------------------ plan data
@@ -120,7 +120,6 @@ function CouponInput() {
 // ------------------------------------------------------------------ main page
 
 export default function BillingPage() {
-  const queryClient = useQueryClient();
   const [annualBilling, setAnnualBilling] = useState(false);
 
   const { data: subscription } = useQuery({
@@ -146,7 +145,7 @@ export default function BillingPage() {
         cancelUrl: window.location.href,
       }).then(r => r.data.data),
     onSuccess: (data) => {
-      if (data.checkoutUrl) window.location.href = data.checkoutUrl;
+      if (data.checkoutUrl) {window.location.href = data.checkoutUrl;}
     },
   });
 
@@ -154,7 +153,7 @@ export default function BillingPage() {
     mutationFn: () =>
       api.post('/billing/portal', { returnUrl: window.location.href }).then(r => r.data.data),
     onSuccess: (data) => {
-      if (data.url) window.location.href = data.url;
+      if (data.url) {window.location.href = data.url;}
     },
   });
 

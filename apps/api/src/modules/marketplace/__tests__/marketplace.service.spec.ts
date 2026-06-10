@@ -1,10 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
-import { MarketplaceService } from '../marketplace.service';
-import { PrismaService } from '../../database/prisma.service';
-import { SearchService } from '../../search/search.service';
+import { NotFoundException } from '@nestjs/common';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { BillingService } from '../../billing/billing.service';
+import { PrismaService } from '../../database/prisma.service';
 import { NotificationsService } from '../../notifications/notifications.service';
+import { SearchService } from '../../search/search.service';
+import { MarketplaceService } from '../marketplace.service';
 
 const mockPrisma = {
   course: { findMany: jest.fn(), findUnique: jest.fn(), count: jest.fn(), update: jest.fn() },
@@ -77,7 +78,7 @@ describe('MarketplaceService', () => {
       mockPrisma.course.update.mockResolvedValueOnce({ id: 'c-free' });
       mockPrisma.user.findUnique.mockResolvedValueOnce({ email: 'user@test.com', firstName: 'Jane' });
 
-      const result = await service.purchaseCourse('user-1', 'c-free');
+      await service.purchaseCourse('user-1', 'c-free');
 
       expect(mockPrisma.courseProgress.create).toHaveBeenCalled();
     });

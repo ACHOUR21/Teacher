@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback, type PointerEvent } from 'react';
-import type { Socket } from 'socket.io-client';
 import { Pen, Eraser, Trash2, Undo2, Minus, Plus } from 'lucide-react';
+import { useEffect, useRef, useState, useCallback, type PointerEvent } from 'react';
+
 import { cn } from '@/lib/utils';
+
+import type { Socket } from 'socket.io-client';
 
 // ------------------------------------------------------------------ types
 
@@ -60,7 +62,7 @@ export function LiveWhiteboard({ socket, className }: Props) {
   };
 
   const applyStroke = useCallback((ctx: CanvasRenderingContext2D, stroke: Stroke) => {
-    if (stroke.points.length < 2) return;
+    if (stroke.points.length < 2) {return;}
     ctx.save();
     ctx.beginPath();
     ctx.lineWidth = stroke.tool === 'eraser' ? stroke.width * 4 : stroke.width;
@@ -84,7 +86,7 @@ export function LiveWhiteboard({ socket, className }: Props) {
   const redrawAll = useCallback(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
+    if (!canvas || !ctx) {return;}
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     for (const s of strokesRef.current) {
       applyStroke(ctx, s);
@@ -96,7 +98,7 @@ export function LiveWhiteboard({ socket, className }: Props) {
   useEffect(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
-    if (!canvas || !container) return;
+    if (!canvas || !container) {return;}
 
     const resize = () => {
       const { width: w, height: h } = container.getBoundingClientRect();
@@ -115,7 +117,7 @@ export function LiveWhiteboard({ socket, className }: Props) {
 
   const applyRemoteEvent = useCallback((event: DrawEvent) => {
     const ctx = getCtx();
-    if (!ctx) return;
+    if (!ctx) {return;}
     if (event.type === 'clear') {
       strokesRef.current = [];
       redrawAll();
@@ -126,7 +128,7 @@ export function LiveWhiteboard({ socket, className }: Props) {
   }, [applyStroke, redrawAll]);
 
   useEffect(() => {
-    if (!socket) return;
+    if (!socket) {return;}
     const handler = ({ data }: { userId: string; data: DrawEvent }) => {
       applyRemoteEvent(data);
     };
@@ -143,7 +145,7 @@ export function LiveWhiteboard({ socket, className }: Props) {
   };
 
   const onPointerMove = (e: PointerEvent<HTMLCanvasElement>) => {
-    if (!isDrawing) return;
+    if (!isDrawing) {return;}
     const pt = relativePoint(e);
     currentStrokeRef.current.push(pt);
 
@@ -157,11 +159,11 @@ export function LiveWhiteboard({ socket, className }: Props) {
   };
 
   const onPointerUp = () => {
-    if (!isDrawing) return;
+    if (!isDrawing) {return;}
     setIsDrawing(false);
 
     const pts = currentStrokeRef.current;
-    if (pts.length < 2) return;
+    if (pts.length < 2) {return;}
 
     const stroke: Stroke = { tool, color, width, points: pts };
     strokesRef.current.push(stroke);
@@ -177,7 +179,7 @@ export function LiveWhiteboard({ socket, className }: Props) {
   // ------------------------------------------------------------------ actions
 
   const undo = () => {
-    if (!strokesRef.current.length) return;
+    if (!strokesRef.current.length) {return;}
     strokesRef.current.pop();
     redrawAll();
   };

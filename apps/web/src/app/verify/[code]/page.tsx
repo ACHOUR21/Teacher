@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
-import { Award, CheckCircle, XCircle, Loader2, Calendar, BookOpen, User } from 'lucide-react';
 import { format } from 'date-fns';
+import { Award, CheckCircle, XCircle, Loader2, Calendar, BookOpen, User } from 'lucide-react';
+import { useParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 interface VerifyResult {
   valid: boolean;

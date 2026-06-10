@@ -1,8 +1,5 @@
 'use client';
 
-import React, { useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bell,
@@ -18,12 +15,16 @@ import {
   Moon,
   Sun,
 } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useTheme } from 'next-themes';
+import React, { useState } from 'react';
+
+import { Avatar } from '@/components/ui/Avatar';
+import { useAuth } from '@/hooks/useAuth';
 import { cn, formatRelativeDate } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
 import { useUIStore } from '@/stores/uiStore';
-import { Avatar } from '@/components/ui/Avatar';
-import { useAuth } from '@/hooks/useAuth';
 
 export function Header() {
   const router = useRouter();
@@ -57,7 +58,7 @@ export function Header() {
   const handleNotifClick = (id: string, href?: string) => {
     markNotificationRead(id);
     setNotifOpen(false);
-    if (href) router.push(href);
+    if (href) {router.push(href);}
   };
 
   return (

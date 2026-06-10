@@ -1,8 +1,9 @@
 'use client';
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Building2, Users, BookOpen, Calendar, GraduationCap, Plus, ChevronRight, ClipboardList } from 'lucide-react';
 import { useState } from 'react';
-import { Building2, Users, BookOpen, Calendar, GraduationCap, Plus, ChevronRight, X, ClipboardList } from 'lucide-react';
+
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -18,7 +19,7 @@ export default function SchoolErpPage() {
     queryKey: ['school-erp-schools'],
     queryFn: () => api.get('/school-erp/schools').then(r => {
       const data = r.data.data as any[];
-      if (data?.length && !selectedSchoolId) setSelectedSchoolId(data[0].id);
+      if (data?.length && !selectedSchoolId) {setSelectedSchoolId(data[0].id);}
       return data;
     }),
   });
@@ -76,7 +77,7 @@ export default function SchoolErpPage() {
   ];
 
   const handleAssignStudent = async () => {
-    if (!assignStudentId.trim() || !classId) return;
+    if (!assignStudentId.trim() || !classId) {return;}
     setAssigning(true);
     try {
       await api.post(`/school-erp/classes/${classId}/students`, { studentId: assignStudentId.trim() });

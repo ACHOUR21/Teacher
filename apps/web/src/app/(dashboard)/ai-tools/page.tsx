@@ -1,14 +1,15 @@
 'use client';
 
-import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { api } from '@/lib/api';
-import { Button } from '@/components/ui/Button';
 import {
   BookOpen, Search, Mic, Volume2, Briefcase, TrendingUp, AlertTriangle,
   ChevronRight, Loader2, CheckCircle, Download,
   Brain, FileQuestion, GraduationCap, Layers, Network, Languages, SearchCheck, ShieldCheck,
 } from 'lucide-react';
+import { useState } from 'react';
+
+import { Button } from '@/components/ui/Button';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 type Tab =
@@ -158,7 +159,7 @@ function ResearchTab() {
     mutationFn: () => api.post('/ai/research/assist', { topic, depth, conversationId }).then(r => r.data.data),
     onSuccess: (data) => {
       setResult(data.result);
-      if (!conversationId) setConversationId(data.conversationId);
+      if (!conversationId) {setConversationId(data.conversationId);}
     },
   });
 
@@ -640,11 +641,11 @@ function ExamGeneratorTab() {
     setQuestionTypes(prev => prev.includes(value) ? prev.filter(t => t !== value) : [...prev, value]);
 
   const copyExam = () => {
-    if (!result) return;
+    if (!result) {return;}
     const lines: string[] = [`${result.title}\n`];
     result.questions?.forEach((q: any, i: number) => {
       lines.push(`${i + 1}. [${q.type}] ${q.question}`);
-      if (q.options) q.options.forEach((opt: string, oi: number) => lines.push(`   ${String.fromCharCode(65 + oi)}. ${opt}`));
+      if (q.options) {q.options.forEach((opt: string, oi: number) => lines.push(`   ${String.fromCharCode(65 + oi)}. ${opt}`));}
       lines.push('');
     });
     navigator.clipboard.writeText(lines.join('\n'));
@@ -1247,7 +1248,7 @@ function ContentModerationTab() {
               </div>
               <div className="divide-y divide-border">
                 {Object.entries(result.categories).map(([cat, flagged]) => {
-                  const score = (result.scores?.[cat] ?? 0) as number;
+                  const score = (result.scores?.[cat] ?? 0);
                   const pct = Math.round(score * 100);
                   return (
                     <div key={cat} className="p-3 flex items-center gap-3">
@@ -1256,15 +1257,15 @@ function ContentModerationTab() {
                       </div>
                       <div className="flex-1 bg-muted rounded-full h-2">
                         <div
-                          className={cn('h-2 rounded-full transition-all', (flagged as boolean) ? 'bg-red-500' : 'bg-green-400')}
+                          className={cn('h-2 rounded-full transition-all', (flagged) ? 'bg-red-500' : 'bg-green-400')}
                           style={{ width: `${Math.max(2, pct)}%` }}
                         />
                       </div>
                       <div className="w-16 text-right">
                         <span className="text-xs text-muted-foreground">{pct}%</span>
                       </div>
-                      <span className={cn('text-xs font-semibold px-1.5 py-0.5 rounded', (flagged as boolean) ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700')}>
-                        {(flagged as boolean) ? 'Flagged' : 'OK'}
+                      <span className={cn('text-xs font-semibold px-1.5 py-0.5 rounded', (flagged) ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700')}>
+                        {(flagged) ? 'Flagged' : 'OK'}
                       </span>
                     </div>
                   );

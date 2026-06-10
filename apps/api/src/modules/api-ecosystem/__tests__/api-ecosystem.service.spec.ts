@@ -1,8 +1,10 @@
-import { Test, TestingModule } from '@nestjs/testing';
+/* eslint-disable @typescript-eslint/no-var-requires */
 import { UnauthorizedException } from '@nestjs/common';
-import { ApiEcosystemService } from '../api-ecosystem.service';
-import { PrismaService } from '../../database/prisma.service';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { RedisService } from '../../cache/redis.service';
+import { PrismaService } from '../../database/prisma.service';
+import { ApiEcosystemService } from '../api-ecosystem.service';
 
 const mockPrisma = {
   apiKey: {

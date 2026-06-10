@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/require-await, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-floating-promises */
 import { Logger } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import {

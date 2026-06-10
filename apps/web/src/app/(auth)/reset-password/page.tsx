@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useState, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Lock, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
-import { apiPost } from '@/lib/api';
+
 import { toast } from '@/hooks/useToast';
+import { apiPost } from '@/lib/api';
 import { parseErrorMessage, cn } from '@/lib/utils';
 
 const schema = z

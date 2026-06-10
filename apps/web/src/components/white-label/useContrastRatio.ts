@@ -2,7 +2,7 @@
 
 function hexToRgb(hex: string): [number, number, number] | null {
   const clean = hex.replace('#', '');
-  if (clean.length !== 6) return null;
+  if (clean.length !== 6) {return null;}
   const n = parseInt(clean, 16);
   return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
 }
@@ -18,7 +18,7 @@ function relativeLuminance(r: number, g: number, b: number): number {
 export function getContrastRatio(hex1: string, hex2: string): number {
   const rgb1 = hexToRgb(hex1);
   const rgb2 = hexToRgb(hex2);
-  if (!rgb1 || !rgb2) return 0;
+  if (!rgb1 || !rgb2) {return 0;}
 
   const l1 = relativeLuminance(...rgb1);
   const l2 = relativeLuminance(...rgb2);
@@ -30,9 +30,9 @@ export function getContrastRatio(hex1: string, hex2: string): number {
 export type ContrastLevel = 'pass-aaa' | 'pass-aa' | 'pass-aa-large' | 'fail';
 
 export function wcagLevel(ratio: number): ContrastLevel {
-  if (ratio >= 7) return 'pass-aaa';
-  if (ratio >= 4.5) return 'pass-aa';
-  if (ratio >= 3) return 'pass-aa-large';
+  if (ratio >= 7) {return 'pass-aaa';}
+  if (ratio >= 4.5) {return 'pass-aa';}
+  if (ratio >= 3) {return 'pass-aa-large';}
   return 'fail';
 }
 

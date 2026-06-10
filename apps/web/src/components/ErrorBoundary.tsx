@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import React from 'react';
 
 interface State {
   hasError: boolean;
@@ -27,7 +27,7 @@ export class ErrorBoundary extends React.Component<
 
   render() {
     if (this.state.hasError) {
-      if (this.props.fallback) return this.props.fallback;
+      if (this.props.fallback) {return this.props.fallback;}
       return (
         <div className="min-h-[400px] flex flex-col items-center justify-center gap-4 p-8 text-center">
           <div className="h-14 w-14 rounded-full bg-destructive/10 flex items-center justify-center">

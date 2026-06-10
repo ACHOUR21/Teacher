@@ -1,8 +1,9 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect } from 'react';
 import { ClipboardList, Users, BarChart3, Check, X, Clock, BookOpen } from 'lucide-react';
+import { useState, useEffect } from 'react';
+
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -141,7 +142,7 @@ export default function AttendancePage() {
 
   // Pre-populate attendance map when roster loads
   useEffect(() => {
-    if (!roster) return;
+    if (!roster) {return;}
     setAttendanceMap((prev) => {
       const next: Record<string, AttendanceStatus> = {};
       for (const s of roster) {
@@ -162,7 +163,7 @@ export default function AttendancePage() {
   });
 
   useEffect(() => {
-    if (!existingAttendance?.length) return;
+    if (!existingAttendance?.length) {return;}
     setAttendanceMap((prev) => {
       const next = { ...prev };
       for (const rec of existingAttendance) {
@@ -173,7 +174,7 @@ export default function AttendancePage() {
     setNoteMap((prev) => {
       const next = { ...prev };
       for (const rec of existingAttendance) {
-        if (rec.note) next[rec.studentId] = rec.note;
+        if (rec.note) {next[rec.studentId] = rec.note;}
       }
       return next;
     });
@@ -202,7 +203,7 @@ export default function AttendancePage() {
   });
 
   const handleSave = () => {
-    if (!roster) return;
+    if (!roster) {return;}
     const records: AttendanceRecord[] = roster.map((s) => ({
       studentId: s.id,
       status: attendanceMap[s.id] ?? 'PRESENT',
@@ -212,9 +213,9 @@ export default function AttendancePage() {
   };
 
   const setAllStatus = (status: AttendanceStatus) => {
-    if (!roster) return;
+    if (!roster) {return;}
     const next: Record<string, AttendanceStatus> = {};
-    for (const s of roster) next[s.id] = status;
+    for (const s of roster) {next[s.id] = status;}
     setAttendanceMap(next);
   };
 

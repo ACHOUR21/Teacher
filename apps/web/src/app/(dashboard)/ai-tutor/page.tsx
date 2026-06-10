@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { Send, Plus, Bot, User } from 'lucide-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { useState, useRef, useEffect } from 'react';
+
 import { Button } from '@/components/ui/Button';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 interface Message {
@@ -29,14 +30,14 @@ export default function AITutorPage() {
     mutationFn: (message: string) =>
       api.post('/ai/tutor/chat', { message, subject, conversationId }).then(r => r.data.data),
     onSuccess: (data) => {
-      if (!conversationId) setConversationId(data.conversationId);
+      if (!conversationId) {setConversationId(data.conversationId);}
       setMessages(prev => [...prev, { role: 'assistant', content: data.answer }]);
     },
   });
 
   const handleSend = () => {
     const msg = input.trim();
-    if (!msg || sendMutation.isPending) return;
+    if (!msg || sendMutation.isPending) {return;}
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: msg }]);
     sendMutation.mutate(msg);

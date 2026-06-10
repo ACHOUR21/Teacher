@@ -1,17 +1,18 @@
 'use client';
 
-import React, { useEffect } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
-import { queryClient } from '@/lib/queryClient';
-import { initApiInterceptors } from '@/lib/api';
-import { useAuthStore } from '@/stores/authStore';
-import { Toaster } from '@/components/ui/Toaster';
 import { ThemeProvider } from 'next-themes';
+import React, { useEffect } from 'react';
+
+import { Toaster } from '@/components/ui/Toaster';
 import { I18nProvider } from '@/i18n/provider';
+import { initApiInterceptors } from '@/lib/api';
+import { queryClient } from '@/lib/queryClient';
+import { useAuthStore } from '@/stores/authStore';
 
 function ApiInterceptorInit() {
-  const { accessToken, logout } = useAuthStore();
+  const { accessToken: _accessToken, logout: _logout } = useAuthStore();
 
   useEffect(() => {
     initApiInterceptors(
@@ -22,13 +23,13 @@ function ApiInterceptorInit() {
           `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/auth/refresh`,
           { method: 'POST', credentials: 'include' }
         );
-        if (!res.ok) throw new Error('Refresh failed');
+        if (!res.ok) {throw new Error('Refresh failed');}
         const data = await res.json();
         useAuthStore.getState().setAccessToken(data.accessToken);
         return data.accessToken;
       }
     );
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   return null;
 }

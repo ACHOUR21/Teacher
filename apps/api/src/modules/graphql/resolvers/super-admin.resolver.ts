@@ -1,13 +1,12 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return */
 import { UseGuards } from '@nestjs/common';
 import { Resolver, Query, Mutation, Args, ID, Int , InputType, Field } from '@nestjs/graphql';
 import { UserRole } from '@prisma/client';
 
-import { CurrentUser } from '../../core/decorators/current-user.decorator';
 import { Roles } from '../../core/decorators/roles.decorator';
 import { RolesGuard } from '../../core/guards/roles.guard';
 import { SuperAdminService } from '../../super-admin/super-admin.service';
 import { GqlAuthGuard } from '../guards/gql-auth.guard';
-import { UserBrief } from '../types/common.types';
 import { PlatformOverview, TenantPage, BillingOverview, TenantSummary } from '../types/super-admin.types';
 
 @InputType()

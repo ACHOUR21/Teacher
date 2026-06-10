@@ -2,11 +2,9 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
-  ConflictException,
   Logger,
 } from '@nestjs/common';
 import { UserRole, Prisma } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
 
 import { RedisService } from '../cache/redis.service';
 import { PaginationDto, paginate } from '../core/pagination/pagination.dto';
@@ -294,7 +292,7 @@ export class UsersService {
     };
   }
 
-  async exportUserData(userId: string, tenantId: string): Promise<Record<string, unknown>> {
+  async exportUserData(userId: string, _tenantId: string): Promise<Record<string, unknown>> {
     const [user, profile, sessions, devices, submissions, progress, certificates, notifications, messages, achievements] = await Promise.all([
       this.prisma.user.findUnique({
         where: { id: userId },

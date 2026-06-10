@@ -1,7 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AnalyticsService } from '../analytics.service';
-import { PrismaService } from '../../database/prisma.service';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { RedisService } from '../../cache/redis.service';
+import { PrismaService } from '../../database/prisma.service';
+import { AnalyticsService } from '../analytics.service';
 
 const mockPrisma = {
   user: { count: jest.fn() },

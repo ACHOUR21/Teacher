@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
 import { Upload, X, CheckCircle2, Film, AlertCircle } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -23,7 +24,7 @@ export function VideoUpload({ value, onChange, folder = 'lessons', className }: 
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {return;}
 
     const maxSize = 2 * 1024 * 1024 * 1024; // 2 GB
     if (file.size > maxSize) {
@@ -57,7 +58,7 @@ export function VideoUpload({ value, onChange, folder = 'lessons', className }: 
       setError(err?.response?.data?.message ?? err?.message ?? 'Upload failed');
     } finally {
       // reset input so same file can be re-selected after error
-      if (inputRef.current) inputRef.current.value = '';
+      if (inputRef.current) {inputRef.current.value = '';}
     }
   };
 

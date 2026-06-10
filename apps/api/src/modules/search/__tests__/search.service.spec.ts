@@ -1,5 +1,6 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { ElasticsearchService } from '@nestjs/elasticsearch';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { SearchService } from '../search.service';
 
 const mockEs = {

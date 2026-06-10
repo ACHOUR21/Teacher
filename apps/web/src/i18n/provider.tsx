@@ -2,19 +2,21 @@
 
 import { NextIntlClientProvider } from 'next-intl';
 import { useEffect, useState } from 'react';
-import { defaultLocale, isValidLocale, localeDirections, type Locale } from './config';
 
+import ar from '../../messages/ar.json';
 import en from '../../messages/en.json';
 import fr from '../../messages/fr.json';
-import ar from '../../messages/ar.json';
+
+import { defaultLocale, isValidLocale, localeDirections, type Locale } from './config';
+
 
 const allMessages = { en, fr, ar } as const;
 
 function getStoredLocale(): Locale {
-  if (typeof window === 'undefined') return defaultLocale;
+  if (typeof window === 'undefined') {return defaultLocale;}
   try {
     const stored = localStorage.getItem('eduai-locale');
-    if (stored && isValidLocale(stored)) return stored;
+    if (stored && isValidLocale(stored)) {return stored;}
   } catch {
     // localStorage unavailable
   }
@@ -64,7 +66,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
 
 /** Call this to switch locale at runtime (e.g. from settings page) */
 export function setLocale(locale: Locale) {
-  if (typeof window === 'undefined') return;
+  if (typeof window === 'undefined') {return;}
   try {
     localStorage.setItem('eduai-locale', locale);
   } catch {

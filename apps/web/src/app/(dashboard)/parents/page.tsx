@@ -1,15 +1,17 @@
 'use client';
 
-import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { format } from 'date-fns';
 import {
   Users, BookOpen, ClipboardList, BarChart2, MessageSquare, Bell,
   ArrowLeft, GraduationCap, TrendingUp, Clock, CheckCircle,
   AlertCircle, Send, ChevronRight, ShieldAlert, Award, TrendingUp as Progress,
 } from 'lucide-react';
+import { useState } from 'react';
+
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -150,7 +152,7 @@ function ChildCard({ child, onClick }: { child: ChildSummary; onClick: () => voi
       )}
 
       <div className="grid grid-cols-2 gap-3">
-        <StatPill label="GPA" value={child.gpa != null ? child.gpa.toFixed(2) : '—'} color="blue" />
+        <StatPill label="GPA" value={child.gpa !== null && child.gpa !== undefined ? child.gpa.toFixed(2) : '—'} color="blue" />
         <StatPill label="Courses" value={String(child.coursesEnrolled ?? 0)} color="purple" />
       </div>
 
@@ -249,25 +251,25 @@ function ChildDetailView({ child, onBack }: { child: ChildSummary; onBack: () =>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="GPA"
-          value={stats.gpa != null ? stats.gpa.toFixed(2) : '—'}
+          value={stats.gpa !== null && stats.gpa !== undefined ? stats.gpa.toFixed(2) : '—'}
           icon={<TrendingUp className="h-5 w-5" />}
           color="blue"
         />
         <StatCard
           label="Courses Enrolled"
-          value={stats.coursesEnrolled != null ? String(stats.coursesEnrolled) : '—'}
+          value={stats.coursesEnrolled !== null && stats.coursesEnrolled !== undefined ? String(stats.coursesEnrolled) : '—'}
           icon={<BookOpen className="h-5 w-5" />}
           color="purple"
         />
         <StatCard
           label="Assignments Pending"
-          value={stats.assignmentsPending != null ? String(stats.assignmentsPending) : '—'}
+          value={stats.assignmentsPending !== null && stats.assignmentsPending !== undefined ? String(stats.assignmentsPending) : '—'}
           icon={<ClipboardList className="h-5 w-5" />}
           color="orange"
         />
         <StatCard
           label="Attendance"
-          value={stats.attendancePercent != null ? `${stats.attendancePercent}%` : '—'}
+          value={stats.attendancePercent !== null && stats.attendancePercent !== undefined ? `${stats.attendancePercent}%` : '—'}
           icon={<CheckCircle className="h-5 w-5" />}
           color="green"
         />
@@ -344,7 +346,7 @@ function CoursesTab({ studentId }: { studentId: string }) {
 
   const courses: CourseProgress[] = (data as CourseProgress[]) ?? [];
 
-  if (isLoading) return <LoadingSkeleton rows={4} />;
+  if (isLoading) {return <LoadingSkeleton rows={4} />;}
 
   if (courses.length === 0) {
     return (
@@ -394,7 +396,7 @@ function AssignmentsTab({ studentId }: { studentId: string }) {
 
   const assignments: Assignment[] = (data as Assignment[]) ?? [];
 
-  if (isLoading) return <LoadingSkeleton rows={5} />;
+  if (isLoading) {return <LoadingSkeleton rows={5} />;}
 
   if (assignments.length === 0) {
     return (
@@ -432,7 +434,7 @@ function AssignmentsTab({ studentId }: { studentId: string }) {
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  {a.grade != null ? (
+                  {a.grade !== null && a.grade !== undefined ? (
                     <span className={cn(
                       'font-semibold',
                       a.grade >= 90 ? 'text-green-600' : a.grade >= 70 ? 'text-yellow-600' : 'text-red-600',
@@ -485,7 +487,7 @@ function GradesTab({ studentId }: { studentId: string }) {
       completedAt: undefined,
     }));
 
-  if (isLoading) return <LoadingSkeleton rows={4} />;
+  if (isLoading) {return <LoadingSkeleton rows={4} />;}
 
   if (rows.length === 0) {
     return (
@@ -639,7 +641,7 @@ function NotificationsTab() {
     mutationFn: (id: string) => api.patch(`/notifications/${id}/read`),
   });
 
-  if (isLoading) return <LoadingSkeleton rows={5} />;
+  if (isLoading) {return <LoadingSkeleton rows={5} />;}
 
   if (!notifications.length) {
     return (

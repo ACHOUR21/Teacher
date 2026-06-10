@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/require-await */
 import {
   Injectable,
   Logger,
@@ -5,6 +6,7 @@ import {
   BadRequestException,
   ConflictException,
   Optional,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SubscriptionPlan, SubscriptionStatus } from '@prisma/client';
@@ -556,14 +558,74 @@ export class BillingService {
     this.logger.log(`Trial ending in ${daysLeft} days for tenant ${subscription.tenantId}`);
   }
 
-  // ------------------------------------------------------------------ PayPal stub
+  // ------------------------------------------------------------------ PayPal
 
   async createPayPalOrder(tenantId: string, plan: SubscriptionPlan): Promise<{ orderId: string; approvalUrl: string }> {
-    this.logger.log(`PayPal order creation for tenant ${tenantId}, plan ${plan}`);
-    return {
-      orderId: 'PAYPAL_ORDER_PLACEHOLDER',
-      approvalUrl: 'https://www.paypal.com/checkoutnow?token=PAYPAL_ORDER_PLACEHOLDER',
+    const clientId = this.configService.get<string>('PAYPAL_CLIENT_ID');
+    const clientSecret = this.configService.get<string>('PAYPAL_CLIENT_SECRET');
+    const baseUrl = this.configService.get<string>('PAYPAL_API_URL') ?? 'https://api-m.paypal.com';
+
+    if (!clientId || !clientSecret) {
+      throw new ServiceUnavailableException('PayPal is not configured on this server');
+    }
+
+    // Obtain an OAuth 2.0 access token from PayPal
+    const authResponse = await fetch(`${baseUrl}/v1/oauth2/token`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+      },
+      body: 'grant_type=client_credentials',
+    });
+
+    if (!authResponse.ok) {
+      this.logger.error(`PayPal auth failed: ${authResponse.status} ${await authResponse.text()}`);
+      throw new ServiceUnavailableException('Failed to authenticate with PayPal');
+    }
+
+    const { access_token } = (await authResponse.json()) as { access_token: string };
+
+    // Determine the order amount from the plan price
+    const amountCents = PLAN_PRICE_CENTS[plan] ?? 0;
+    const amountValue = (amountCents / 100).toFixed(2);
+
+    // Create a PayPal order via the Orders v2 API
+    const orderResponse = await fetch(`${baseUrl}/v2/checkout/orders`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${access_token}`,
+      },
+      body: JSON.stringify({
+        intent: 'CAPTURE',
+        purchase_units: [
+          {
+            reference_id: `${tenantId}-${plan}`,
+            amount: { currency_code: 'USD', value: amountValue },
+            description: `EduAI ${plan} plan subscription`,
+          },
+        ],
+      }),
+    });
+
+    if (!orderResponse.ok) {
+      this.logger.error(`PayPal order creation failed: ${orderResponse.status} ${await orderResponse.text()}`);
+      throw new ServiceUnavailableException('Failed to create PayPal order');
+    }
+
+    const order = (await orderResponse.json()) as {
+      id: string;
+      links: Array<{ rel: string; href: string }>;
     };
+
+    const approvalLink = order.links.find(l => l.rel === 'approve');
+    if (!approvalLink) {
+      throw new ServiceUnavailableException('PayPal did not return an approval URL');
+    }
+
+    this.logger.log(`PayPal order ${order.id} created for tenant ${tenantId}, plan ${plan}`);
+    return { orderId: order.id, approvalUrl: approvalLink.href };
   }
 
   async capturePayPalOrder(tenantId: string, orderId: string, plan: SubscriptionPlan): Promise<void> {

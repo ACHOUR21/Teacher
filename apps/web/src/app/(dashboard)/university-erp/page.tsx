@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   GraduationCap, BookOpen, Users, Building2, Award, Plus, X,
   ChevronDown, ChevronRight, Search, TrendingUp, FileText,
 } from 'lucide-react';
+import { useState } from 'react';
+
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -53,7 +54,7 @@ const SECTIONS = [
 // Modal component
 // ---------------------------------------------------------------------------
 function Modal({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
-  if (!open) return null;
+  if (!open) {return null;}
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
@@ -137,7 +138,7 @@ function EnrollmentStatsPanel({ programId, programName, onClose }: { programId: 
 // ---------------------------------------------------------------------------
 function FacultyCard({
   faculty,
-  universityId,
+  universityId: _universityId,
   onAddDepartment,
   onDeleteFaculty,
 }: {
@@ -256,7 +257,7 @@ export default function UniversityErpPage() {
     queryKey: ['university-erp-universities'],
     queryFn: () => api.get('/university-erp/universities').then(r => {
       const data = r.data.data as University[];
-      if (data?.length && !selectedUniversityId) setSelectedUniversityId(data[0].id);
+      if (data?.length && !selectedUniversityId) {setSelectedUniversityId(data[0].id);}
       return data;
     }),
   });
@@ -368,7 +369,7 @@ export default function UniversityErpPage() {
   const activeStudents = univDetail?.activeStudents ?? 0;
 
   const filteredEnrollments = (allEnrollments ?? []).filter(e => {
-    if (enrollFilterStatus !== 'ALL' && e.status !== enrollFilterStatus) return false;
+    if (enrollFilterStatus !== 'ALL' && e.status !== enrollFilterStatus) {return false;}
     return true;
   });
 
@@ -764,7 +765,7 @@ export default function UniversityErpPage() {
                   </div>
                   {academicRecord.gpa !== undefined && academicRecord.gpa !== null && (
                     <div className="ml-auto text-right">
-                      <p className="text-3xl font-bold text-purple-600">{(academicRecord.gpa as number).toFixed(2)}</p>
+                      <p className="text-3xl font-bold text-purple-600">{(academicRecord.gpa).toFixed(2)}</p>
                       <p className="text-xs text-gray-500">Overall GPA</p>
                     </div>
                   )}

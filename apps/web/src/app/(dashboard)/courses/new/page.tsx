@@ -1,16 +1,17 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useMutation } from '@tanstack/react-query';
 import { Plus, Trash2, ArrowLeft, GripVertical, ChevronDown, ChevronUp } from 'lucide-react';
-import { api } from '@/lib/api';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { z } from 'zod';
+
 import { Button } from '@/components/ui/Button';
-import { VideoUpload } from '@/components/ui/VideoUpload';
 import { ImageUpload } from '@/components/ui/ImageUpload';
+import { VideoUpload } from '@/components/ui/VideoUpload';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 const lessonSchema = z.object({

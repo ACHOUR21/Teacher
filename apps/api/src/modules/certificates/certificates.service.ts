@@ -1,6 +1,6 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
-
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { type Prisma } from '@prisma/client';
 import PDFDocument from 'pdfkit';
 import * as QRCode from 'qrcode';
 
@@ -52,7 +52,7 @@ export class CertificatesService {
         templateId,
         studentId,
         userId: student.userId,
-        metadata: metadata as import('@prisma/client').Prisma.InputJsonValue,
+        metadata: metadata as Prisma.InputJsonValue,
       },
     });
 
@@ -74,6 +74,7 @@ export class CertificatesService {
         mimetype: 'application/pdf',
         buffer: pdfBuffer,
         size: pdfBuffer.length,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         stream: null as any,
         destination: '',
         filename: '',
@@ -84,7 +85,7 @@ export class CertificatesService {
 
     return this.prisma.issuedCertificate.update({
       where: { id: cert.id },
-      data: { metadata: { ...metadata, pdfUrl: url } as import('@prisma/client').Prisma.InputJsonValue },
+      data: { metadata: { ...metadata, pdfUrl: url } as Prisma.InputJsonValue },
     });
   }
 
@@ -272,7 +273,7 @@ export class CertificatesService {
         name,
         tenantId: tenantId ?? null,
         courseId: courseId ?? null,
-        design: designFields as import('@prisma/client').Prisma.InputJsonValue,
+        design: designFields as Prisma.InputJsonValue,
         fields: [],
       },
     });

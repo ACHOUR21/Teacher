@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
 import { Search, BookOpen, FileQuestion, Users, ArrowRight, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState, useRef, useCallback } from 'react';
+
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 interface Suggestion {
@@ -37,7 +38,7 @@ export function CommandPalette() {
         e.preventDefault();
         setOpen(o => !o);
       }
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') {setOpen(false);}
     };
     document.addEventListener('keydown', down);
     return () => document.removeEventListener('keydown', down);
@@ -75,12 +76,12 @@ export function CommandPalette() {
     if (e.key === 'ArrowUp') { e.preventDefault(); setSelected(s => Math.max(s - 1, 0)); }
     if (e.key === 'Enter' && items[selected]) {
       const item = items[selected];
-      if (item.type === 'action') navigate(item.href);
-      else navigate(HREF[item.type](item.id));
+      if (item.type === 'action') {navigate(item.href);}
+      else {navigate(HREF[item.type](item.id));}
     }
   };
 
-  if (!open) return null;
+  if (!open) {return null;}
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[20vh] px-4" onClick={() => setOpen(false)}>

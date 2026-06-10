@@ -1,8 +1,11 @@
-import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+
 import './globals.css';
-import { Providers } from './providers';
 import { CookieConsentBanner } from '@/components/CookieConsentBanner';
+
+import { Providers } from './providers';
+
+import type { Metadata, Viewport } from 'next';
 
 const inter = Inter({
   subsets: ['latin'],

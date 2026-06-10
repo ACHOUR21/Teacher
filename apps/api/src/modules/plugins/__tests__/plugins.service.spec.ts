@@ -1,7 +1,9 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, ConflictException } from '@nestjs/common';
-import { PluginsService } from '../plugins.service';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { PrismaService } from '../../database/prisma.service';
+import { PluginSandboxService } from '../application/plugin-sandbox.service';
+import { PluginsService } from '../plugins.service';
 
 const mockPrisma = {
   plugin: {
@@ -28,6 +30,16 @@ describe('PluginsService', () => {
       providers: [
         PluginsService,
         { provide: PrismaService, useValue: mockPrisma },
+        {
+          provide: PluginSandboxService,
+          useValue: {
+            execute: jest.fn().mockResolvedValue({ result: {} }),
+            validate: jest.fn().mockResolvedValue(true),
+            validateManifest: jest.fn().mockReturnValue({ version: '1.0', entrypoint: '/index.html', permissions: [] }),
+            buildSandboxAttribute: jest.fn().mockReturnValue('allow-scripts'),
+            buildCsp: jest.fn().mockReturnValue("default-src 'none'"),
+          },
+        },
       ],
     }).compile();
 

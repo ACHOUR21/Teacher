@@ -1,7 +1,8 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { AuditService } from '../audit.service';
-import { PrismaService } from '../../database/prisma.service';
+import { Test, type TestingModule } from '@nestjs/testing';
 import { AuditAction } from '@prisma/client';
+
+import { PrismaService } from '../../database/prisma.service';
+import { AuditService } from '../audit.service';
 
 const mockPrisma = {
   auditLog: {

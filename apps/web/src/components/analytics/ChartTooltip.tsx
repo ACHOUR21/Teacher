@@ -25,7 +25,7 @@ export function ChartTooltip({
   labelFormatter,
   valueFormatter,
 }: Props) {
-  if (!active || !payload?.length) return null;
+  if (!active || !payload?.length) {return null;}
 
   const displayLabel = labelFormatter ? labelFormatter(label ?? '') : label;
 

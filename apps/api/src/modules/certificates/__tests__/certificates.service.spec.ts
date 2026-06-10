@@ -1,8 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
-import { CertificatesService } from '../certificates.service';
+import { ConfigService } from '@nestjs/config';
+import { Test, type TestingModule } from '@nestjs/testing';
+
 import { PrismaService } from '../../database/prisma.service';
 import { StorageService } from '../../storage/storage.service';
+import { CertificatesService } from '../certificates.service';
+
 
 const mockPrisma = {
   certificateTemplate: {
@@ -17,6 +20,7 @@ const mockPrisma = {
     findMany: jest.fn(),
     count: jest.fn(),
     findUnique: jest.fn(),
+    update: jest.fn(),
   },
   student: {
     findUnique: jest.fn(),
@@ -35,13 +39,13 @@ const mockStorage = {
 };
 
 jest.mock('pdfkit', () => {
-  const chunks: Buffer[] = [Buffer.from('mock-pdf')];
   const mockDoc: any = {
     pipe: jest.fn().mockReturnThis(),
     end: jest.fn(),
+    // eslint-disable-next-line @typescript-eslint/ban-types
     on: jest.fn((event: string, cb: Function) => {
-      if (event === 'data') cb(Buffer.from('mock-pdf'));
-      if (event === 'end') cb();
+      if (event === 'data') {cb(Buffer.from('mock-pdf'));}
+      if (event === 'end') {cb();}
       return mockDoc;
     }),
     fontSize: jest.fn().mockReturnThis(),
@@ -70,6 +74,10 @@ describe('CertificatesService', () => {
         CertificatesService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: StorageService, useValue: mockStorage },
+        {
+          provide: ConfigService,
+          useValue: { get: jest.fn().mockReturnValue('http://localhost:3001') },
+        },
       ],
     }).compile();
 
@@ -102,6 +110,7 @@ describe('CertificatesService', () => {
       mockPrisma.certificateTemplate.findUnique.mockResolvedValueOnce(mockTemplate);
       mockPrisma.student.findUnique.mockResolvedValueOnce(mockStudent);
       mockPrisma.issuedCertificate.create.mockResolvedValueOnce(mockIssuedCert);
+      mockPrisma.issuedCertificate.update.mockResolvedValueOnce(mockIssuedCert);
 
       const result = await service.issueCertificate('student-1', 'tmpl-1');
 

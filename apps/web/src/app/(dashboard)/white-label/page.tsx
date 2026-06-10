@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Palette, Eye } from 'lucide-react';
-import { api } from '@/lib/api';
-import { toast } from '@/hooks/useToast';
+import React, { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { WhiteLabelPreview } from '@/components/white-label/WhiteLabelPreview';
+import { toast } from '@/hooks/useToast';
+import { api } from '@/lib/api';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -141,7 +142,6 @@ export default function WhiteLabelPage() {
                   <input {...register('logoUrl')} type="text" className={inputClass} placeholder="https://cdn.example.com/logo.png" />
                   {watchedValues.logoUrl && isValidUrl(watchedValues.logoUrl) && (
                     <div className="mt-2 p-2 border border-gray-100 rounded-lg inline-block bg-gray-50">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={watchedValues.logoUrl}
                         alt="Logo preview"

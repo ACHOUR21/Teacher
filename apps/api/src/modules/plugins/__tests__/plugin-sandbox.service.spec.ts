@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
+
 import { PluginSandboxService } from '../application/plugin-sandbox.service';
-import { PluginManifest } from '../domain/plugin-permissions';
+import { type PluginManifest } from '../domain/plugin-permissions';
 
 const validManifest: PluginManifest = {
   version: '1.0.0',

@@ -1,7 +1,8 @@
 'use client';
 
+import { ImageIcon, AlertCircle } from 'lucide-react';
 import React, { useRef, useState } from 'react';
-import { Upload, X, ImageIcon, AlertCircle } from 'lucide-react';
+
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -35,7 +36,7 @@ export function ImageUpload({
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {return;}
 
     if (file.size > maxSizeMB * 1024 * 1024) {
       setError(`File exceeds ${maxSizeMB} MB`);
@@ -63,7 +64,7 @@ export function ImageUpload({
       setState('error');
       setError(err?.response?.data?.message ?? err?.message ?? 'Upload failed');
     } finally {
-      if (inputRef.current) inputRef.current.value = '';
+      if (inputRef.current) {inputRef.current.value = '';}
     }
   };
 
@@ -137,11 +138,11 @@ function uploadWithProgress(file: File, uploadUrl: string, onProgress: (pct: num
     xhr.open('PUT', uploadUrl, true);
     xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
     xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+      if (e.lengthComputable) {onProgress(Math.round((e.loaded / e.total) * 100));}
     };
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) { onProgress(100); resolve(); }
-      else reject(new Error(`Upload failed: ${xhr.statusText}`));
+      else {reject(new Error(`Upload failed: ${xhr.statusText}`));}
     };
     xhr.onerror = () => reject(new Error('Network error during upload'));
     xhr.send(file);

@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Key, Webhook, Plus, Copy, Check, Trash2, ToggleLeft, ToggleRight, ShieldCheck } from 'lucide-react';
-import { api } from '@/lib/api';
-import { toast } from '@/hooks/useToast';
+import React, { useState } from 'react';
+
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import {
@@ -15,6 +14,8 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/Dialog';
+import { toast } from '@/hooks/useToast';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -87,7 +88,7 @@ function toggleArrayItem(arr: string[], item: string): string[] {
 }
 
 function formatDate(str: string | null): string {
-  if (!str) return '—';
+  if (!str) {return '—';}
   return new Date(str).toLocaleDateString();
 }
 

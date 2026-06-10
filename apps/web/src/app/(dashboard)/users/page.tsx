@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Search, UserPlus, MoreHorizontal, Shield, ShieldCheck, ShieldOff } from 'lucide-react';
-import { api } from '@/lib/api';
+import { useState } from 'react';
+
 import { Button } from '@/components/ui/Button';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 const ROLES = ['All', 'SUPER_ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN', 'TEACHER', 'STUDENT', 'PARENT'];

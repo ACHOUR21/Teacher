@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 import Anthropic from '@anthropic-ai/sdk';
 import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
 import { AIModuleType } from '@prisma/client';

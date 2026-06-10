@@ -1,16 +1,18 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { Users, BookOpen, Video, DollarSign, Link2, Copy, Check, Play, CheckCircle, Target, Trophy, Rocket, ChevronRight, X } from 'lucide-react';
-import { api } from '@/lib/api';
+import Link from 'next/link';
+import { useState } from 'react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+
 import { StatsCard } from '@/components/dashboard/StatsCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { useAuth } from '@/hooks/useAuth';
+import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
-import { useAuth } from '@/hooks/useAuth';
-import { useState } from 'react';
-import Link from 'next/link';
+
 
 function SetupBanner() {
   const { isAdmin } = useAuth();
@@ -22,7 +24,7 @@ function SetupBanner() {
     enabled: isAdmin,
   });
 
-  if (!isAdmin || dismissed || !onboarding || onboarding.completed) return null;
+  if (!isAdmin || dismissed || !onboarding || onboarding.completed) {return null;}
 
   const done = (onboarding.completedSteps?.length ?? 0);
   const total = 3;
@@ -56,7 +58,7 @@ function InviteCard() {
   const user = useAuthStore((s) => s.user);
   const [copied, setCopied] = useState(false);
 
-  if (!user?.tenantSlug) return null;
+  if (!user?.tenantSlug) {return null;}
 
   const joinUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/join/${user.tenantSlug}`;
 
@@ -93,7 +95,7 @@ function InviteCard() {
 
 function InviteCardWrapper() {
   const { isStudent, isParent } = useAuth();
-  if (isStudent || isParent) return null;
+  if (isStudent || isParent) {return null;}
   return <InviteCard />;
 }
 
@@ -239,7 +241,7 @@ function StudentDashboard() {
         {[
           { label: 'Enrolled', value: performance?.totalCourses ?? '—', icon: BookOpen, color: 'text-blue-500 bg-blue-50' },
           { label: 'Completed', value: performance?.completedCourses ?? '—', icon: CheckCircle, color: 'text-green-500 bg-green-50' },
-          { label: 'Completion Rate', value: performance?.completionRate != null ? `${performance.completionRate}%` : '—', icon: Target, color: 'text-purple-500 bg-purple-50' },
+          { label: 'Completion Rate', value: performance?.completionRate !== null && performance?.completionRate !== undefined ? `${performance.completionRate}%` : '—', icon: Target, color: 'text-purple-500 bg-purple-50' },
           { label: 'Points', value: performance?.points ?? '—', icon: Trophy, color: 'text-amber-500 bg-amber-50' },
         ].map(stat => (
           <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-5">
@@ -346,8 +348,8 @@ export default function DashboardClient() {
     enabled: !isStudent && !isTeacher,
   });
 
-  if (isStudent) return <StudentDashboard />;
-  if (isTeacher) return <TeacherDashboard />;
+  if (isStudent) {return <StudentDashboard />;}
+  if (isTeacher) {return <TeacherDashboard />;}
 
   return (
     <div className="space-y-6">

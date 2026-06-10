@@ -6,6 +6,7 @@ import {
   useQueryClient,
   type UseQueryOptions,
 } from '@tanstack/react-query';
+
 import { api, apiGet, apiPost, apiPatch, apiDelete } from '@/lib/api';
 import { buildQueryString } from '@/lib/utils';
 
@@ -133,7 +134,7 @@ export function useCreateCourse() {
     mutationFn: (data: CreateCourseInput) =>
       apiPost<Course>('/courses', data),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: courseKeys.lists() });
+      void qc.invalidateQueries({ queryKey: courseKeys.lists() });
     },
   });
 }
@@ -144,8 +145,8 @@ export function useUpdateCourse() {
     mutationFn: ({ id, data }: { id: string; data: UpdateCourseInput }) =>
       apiPatch<Course>(`/courses/${id}`, data),
     onSuccess: (_, { id }) => {
-      qc.invalidateQueries({ queryKey: courseKeys.detail(id) });
-      qc.invalidateQueries({ queryKey: courseKeys.lists() });
+      void qc.invalidateQueries({ queryKey: courseKeys.detail(id) });
+      void qc.invalidateQueries({ queryKey: courseKeys.lists() });
     },
   });
 }
@@ -155,7 +156,7 @@ export function useDeleteCourse() {
   return useMutation({
     mutationFn: (id: string) => apiDelete(`/courses/${id}`),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: courseKeys.lists() });
+      void qc.invalidateQueries({ queryKey: courseKeys.lists() });
     },
   });
 }
@@ -166,8 +167,8 @@ export function usePublishCourse() {
     mutationFn: (id: string) =>
       apiPatch<Course>(`/courses/${id}/publish`),
     onSuccess: (_, id) => {
-      qc.invalidateQueries({ queryKey: courseKeys.detail(id) });
-      qc.invalidateQueries({ queryKey: courseKeys.lists() });
+      void qc.invalidateQueries({ queryKey: courseKeys.detail(id) });
+      void qc.invalidateQueries({ queryKey: courseKeys.lists() });
     },
   });
 }

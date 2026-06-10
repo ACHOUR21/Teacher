@@ -1,12 +1,13 @@
 'use client';
 
-import { Suspense, useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { CheckCircle, BookOpen, ShoppingBag, Loader2 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { CheckCircle, BookOpen, ShoppingBag, Loader2 } from 'lucide-react';
+import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
+
 import { Button } from '@/components/ui/Button';
+import { api } from '@/lib/api';
 
 const REDIRECT_SECONDS = 5;
 

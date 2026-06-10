@@ -1,8 +1,9 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import Link from 'next/link';
 import { BookOpen, Clock, Trophy, Target, CheckCircle, Play, BarChart2, Star } from 'lucide-react';
+import Link from 'next/link';
+
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -32,7 +33,7 @@ export default function MyLearningPage() {
         {[
           { label: 'Enrolled', value: performance?.totalCourses ?? '—', icon: BookOpen, color: 'text-blue-500 bg-blue-50' },
           { label: 'Completed', value: performance?.completedCourses ?? '—', icon: CheckCircle, color: 'text-green-500 bg-green-50' },
-          { label: 'Completion Rate', value: performance?.completionRate != null ? `${performance.completionRate}%` : '—', icon: Target, color: 'text-purple-500 bg-purple-50' },
+          { label: 'Completion Rate', value: performance?.completionRate !== null && performance?.completionRate !== undefined ? `${performance.completionRate}%` : '—', icon: Target, color: 'text-purple-500 bg-purple-50' },
           { label: 'Points', value: performance?.points ?? '—', icon: Trophy, color: 'text-amber-500 bg-amber-50' },
         ].map(stat => (
           <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-5">

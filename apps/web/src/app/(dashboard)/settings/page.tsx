@@ -1,21 +1,23 @@
 'use client';
 
-import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   User, Palette, Bell, Shield, Key, Building, Eye, EyeOff, Check,
   AlertTriangle, BellRing, BellOff, Smartphone, Copy, Download, RefreshCw,
   Trash2, Lock, FileText, AlertOctagon,
 } from 'lucide-react';
-import { api } from '@/lib/api';
-import { toast } from '@/hooks/useToast';
+import { useTranslations } from 'next-intl';
+import React, { useState } from 'react';
+
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { cn } from '@/lib/utils';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
-import { useAuthStore } from '@/stores/authStore';
-import { useTranslations } from 'next-intl';
+import { toast } from '@/hooks/useToast';
 import { setLocale } from '@/i18n/provider';
+import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
+
+
 import type { Locale } from '@/i18n/config';
 
 type Tab = 'profile' | 'general' | 'security' | 'notifications' | 'branding' | 'api';
@@ -190,7 +192,7 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
   }
 
   // Backup codes display (used after setup and after regen)
-  const displayCodes = regenCodes.length > 0 ? regenCodes : backupCodes;
+  const _displayCodes = regenCodes.length > 0 ? regenCodes : backupCodes;
 
   if (step === 'qr' && qrData) {
     return (
@@ -202,7 +204,6 @@ function MfaSection({ mfaEnabled }: { mfaEnabled: boolean }) {
         <div className="flex flex-col sm:flex-row gap-6 items-start">
           {/* QR Code */}
           <div className="bg-white border border-gray-200 rounded-xl p-3 flex-shrink-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={qrData.qrCodeUrl} alt="MFA QR code" className="w-48 h-48" />
           </div>
           <div className="flex-1 space-y-3">
@@ -404,7 +405,7 @@ function TrustedDevicesSection() {
 
   const trusted = devices.filter((d) => d.mfaTrusted && d.mfaTrustedUntil && new Date(d.mfaTrustedUntil) > new Date());
 
-  if (trusted.length === 0) return null;
+  if (trusted.length === 0) {return null;}
 
   return (
     <Card>
@@ -667,8 +668,8 @@ export default function SettingsPage() {
         bio: d.bio ?? '',
         phone: d.phone ?? '',
       });
-      if (d.language) setLanguage(d.language);
-      if (d.timezone) setTimezone(d.timezone);
+      if (d.language) {setLanguage(d.language);}
+      if (d.timezone) {setTimezone(d.timezone);}
       return d;
     }),
   });
@@ -677,7 +678,7 @@ export default function SettingsPage() {
     queryKey: ['white-label'],
     queryFn: () => api.get('/white-label/settings').then(r => {
       const d = r.data.data;
-      if (d) setBrandForm({ brandName: d.brandName ?? '', primaryColor: d.primaryColor ?? '#2563EB', secondaryColor: d.secondaryColor ?? '#7C3AED' });
+      if (d) {setBrandForm({ brandName: d.brandName ?? '', primaryColor: d.primaryColor ?? '#2563EB', secondaryColor: d.secondaryColor ?? '#7C3AED' });}
       return d;
     }),
   });

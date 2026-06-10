@@ -1,6 +1,6 @@
 import * as crypto from 'crypto';
 
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 
 import { RedisService } from '../cache/redis.service';
 import { PrismaService } from '../database/prisma.service';
@@ -45,6 +45,7 @@ export class ApiEcosystemService {
     const cached = await this.cache.get(cacheKey);
     if (cached) {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return JSON.parse(cached);
       } catch {
         // fall through to DB
@@ -86,6 +87,7 @@ export class ApiEcosystemService {
     const cached = await this.cache.get(cacheKey);
     if (cached) {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return JSON.parse(cached);
       } catch {
         // fall through to DB
@@ -106,6 +108,7 @@ export class ApiEcosystemService {
     const cached = await this.cache.get(cacheKey);
     if (cached) {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return
         return JSON.parse(cached);
       } catch {
         // fall through to DB
