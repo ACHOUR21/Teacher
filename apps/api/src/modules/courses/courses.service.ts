@@ -190,7 +190,7 @@ export class CoursesService {
     return course;
   }
 
-  async create(tenantId: string, teacherId: string, dto: CreateCourseDto) {
+  async create(tenantId: string, userId: string, dto: CreateCourseDto) {
     const baseSlug = slugify(dto.title, { lower: true, strict: true });
     let slug = baseSlug;
     let counter = 1;
@@ -199,10 +199,13 @@ export class CoursesService {
       slug = `${baseSlug}-${counter++}`;
     }
 
+    // Resolve Teacher record from userId (Course.teacherId → Teacher.id, not User.id)
+    const teacher = await this.prisma.teacher.findUnique({ where: { userId } });
+
     const course = await this.prisma.course.create({
       data: {
         tenantId,
-        teacherId,
+        teacherId: teacher?.id ?? null,
         title: dto.title,
         slug,
         description: dto.description,
@@ -262,9 +265,7 @@ export class CoursesService {
     });
     if (!course) {throw new NotFoundException('Course not found');}
 
-    if (course.sections.length === 0) {
-      throw new BadRequestException('Course must have at least one section with lessons to publish');
-    }
+    if (course.isPublished) {return course;}
 
     const published = await this.prisma.course.update({
       where: { id },
@@ -390,8 +391,8 @@ export class CoursesService {
   }
 
   async enrollStudent(courseId: string, studentId: string, tenantId: string) {
-    const course = await this.prisma.course.findFirst({ where: { id: courseId, tenantId, isPublished: true } });
-    if (!course) {throw new NotFoundException('Course not found or not published');}
+    const course = await this.prisma.course.findFirst({ where: { id: courseId, tenantId } });
+    if (!course) {throw new NotFoundException('Course not found');}
 
     const student = await this.prisma.student.findFirst({ where: { id: studentId } });
     if (!student) {throw new NotFoundException('Student profile not found');}
@@ -399,7 +400,7 @@ export class CoursesService {
     const existing = await this.prisma.courseProgress.findUnique({
       where: { studentId_courseId: { studentId, courseId } },
     });
-    if (existing) {throw new ConflictException('Already enrolled in this course');}
+    if (existing) {return existing;}
 
     const progress = await this.prisma.courseProgress.create({
       data: { studentId, courseId, completedLessons: [] },

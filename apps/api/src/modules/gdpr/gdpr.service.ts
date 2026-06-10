@@ -108,7 +108,7 @@ export class GdprService {
   async requestDeletion(userId: string, tenantId: string, reason?: string) {
     const existing = await this.prisma.dataDeletionRequest.findUnique({ where: { userId } });
     if (existing && existing.status === 'PENDING') {
-      throw new BadRequestException('A deletion request is already pending for this account');
+      return existing;
     }
 
     const scheduledFor = new Date(Date.now() + this.GRACE_DAYS * 24 * 60 * 60 * 1000);
