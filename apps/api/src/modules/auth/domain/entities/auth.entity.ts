@@ -32,6 +32,7 @@ export class AuthUser {
 
 export class JwtPayload {
   sub: string;
+  id?: string;
   email: string;
   tenantId: string;
   role: UserRole;

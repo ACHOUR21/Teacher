@@ -7,7 +7,7 @@ export interface CreateDeckDto {
   subject?: string;
   topic?: string;
   isPublic?: boolean;
-  cards: { front: string; back: string; hint?: string }[];
+  cards?: { front: string; back: string; hint?: string }[];
 }
 
 export interface ReviewCardDto {
@@ -54,14 +54,16 @@ export class FlashcardsService {
         subject: dto.subject,
         topic: dto.topic,
         isPublic: dto.isPublic ?? false,
-        cards: {
-          create: dto.cards.map((c, i) => ({
-            front: c.front,
-            back: c.back,
-            hint: c.hint,
-            order: i + 1,
-          })),
-        },
+        ...(dto.cards?.length && {
+          cards: {
+            create: dto.cards.map((c, i) => ({
+              front: c.front,
+              back: c.back,
+              hint: c.hint,
+              order: i + 1,
+            })),
+          },
+        }),
       },
       include: { cards: { orderBy: { order: 'asc' } } },
     });

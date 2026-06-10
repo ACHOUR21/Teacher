@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { CourseLevel, ContentType, UserRole } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
+import { IsString, IsOptional, IsArray, IsNumber, IsBoolean, IsEnum, IsInt, Min } from 'class-validator';
 import slugify from 'slugify';
 
 import { ApiEcosystemService } from '../api-ecosystem/api-ecosystem.service';
@@ -18,40 +19,88 @@ import { SearchService } from '../search/search.service';
 
 
 export class CreateCourseDto {
+  @IsString()
   title: string;
+
+  @IsOptional() @IsString()
   description?: string;
+
+  @IsOptional() @IsString()
   category?: string;
+
+  @IsOptional() @IsArray() @IsString({ each: true })
   tags?: string[];
+
+  @IsOptional() @IsEnum(CourseLevel)
   level?: CourseLevel;
+
+  @IsOptional() @IsString()
   language?: string;
+
+  @IsOptional() @IsNumber()
   price?: number;
+
+  @IsOptional() @IsString()
   thumbnailUrl?: string;
 }
 
 export class UpdateCourseDto {
+  @IsOptional() @IsString()
   title?: string;
+
+  @IsOptional() @IsString()
   description?: string;
+
+  @IsOptional() @IsString()
   category?: string;
+
+  @IsOptional() @IsArray() @IsString({ each: true })
   tags?: string[];
+
+  @IsOptional() @IsEnum(CourseLevel)
   level?: CourseLevel;
+
+  @IsOptional() @IsString()
   language?: string;
+
+  @IsOptional() @IsNumber()
   price?: number;
+
+  @IsOptional() @IsString()
   thumbnailUrl?: string;
+
+  @IsOptional() @IsBoolean()
   isFeatured?: boolean;
 }
 
 export class CreateSectionDto {
+  @IsString()
   title: string;
+
+  @IsInt() @Min(0)
   position: number;
 }
 
 export class CreateLessonDto {
+  @IsString()
   title: string;
+
+  @IsOptional() @IsString()
   description?: string;
+
+  @IsEnum(ContentType)
   contentType: ContentType;
+
+  @IsOptional() @IsString()
   contentUrl?: string;
+
+  @IsOptional() @IsNumber()
   duration?: number;
+
+  @IsInt() @Min(0)
   position: number;
+
+  @IsOptional() @IsBoolean()
   isPreview?: boolean;
 }
 

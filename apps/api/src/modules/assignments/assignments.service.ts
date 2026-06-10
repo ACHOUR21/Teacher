@@ -6,27 +6,45 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { AssignmentStatus } from '@prisma/client';
+import { IsString, IsOptional, IsArray, IsNumber, IsInt, Min, Max } from 'class-validator';
 
 import { ApiEcosystemService } from '../api-ecosystem/api-ecosystem.service';
 import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
 export class CreateAssignmentDto {
+  @IsString()
   title: string;
+
+  @IsOptional() @IsString()
   description?: string;
+
+  @IsOptional() @IsString()
   lessonId?: string;
+
+  @IsOptional() @IsString()
   dueDate?: string;
+
+  @IsOptional() @IsNumber()
   maxScore?: number;
+
+  @IsOptional() @IsArray() @IsString({ each: true })
   attachments?: string[];
 }
 
 export class SubmitAssignmentDto {
+  @IsOptional() @IsString()
   content?: string;
+
+  @IsOptional() @IsArray() @IsString({ each: true })
   attachments?: string[];
 }
 
 export class GradeSubmissionDto {
+  @IsInt() @Min(0) @Max(100)
   score: number;
+
+  @IsOptional() @IsString()
   feedback?: string;
 }
 
