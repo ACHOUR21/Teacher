@@ -4,6 +4,7 @@ import { Injectable, Logger, ForbiddenException } from '@nestjs/common';
 import { AIModuleType } from '@prisma/client';
 import OpenAI from 'openai';
 
+import { ResilienceService } from '../core/services/resilience.service';
 import { PrismaService } from '../database/prisma.service';
 
 
@@ -22,9 +23,36 @@ export class AiService {
     LIFETIME: Infinity,
   };
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly resilience: ResilienceService,
+  ) {
     this.anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? 'placeholder-key' });
     this.openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY ?? 'placeholder-key' });
+  }
+
+  private openAiFallbackCompletion(message: string): OpenAI.Chat.ChatCompletion {
+    return {
+      id: 'fallback',
+      object: 'chat.completion',
+      created: Math.floor(Date.now() / 1000),
+      model: 'fallback',
+      choices: [{ index: 0, message: { role: 'assistant', content: message, refusal: null }, finish_reason: 'stop', logprobs: null }],
+      usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+    };
+  }
+
+  private anthropicFallbackMessage(text: string): Anthropic.Message {
+    return {
+      id: 'fallback',
+      type: 'message',
+      role: 'assistant',
+      content: [{ type: 'text', text }],
+      model: 'fallback',
+      stop_reason: 'end_turn',
+      stop_sequence: null,
+      usage: { input_tokens: 0, output_tokens: 0 },
+    };
   }
 
   private async trackUsage(tenantId: string, userId: string, module: AIModuleType, tokens: number) {
@@ -108,12 +136,17 @@ export class AiService {
 
     const history = (conversation!.messages as any[] ?? []).map((m: any) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
 
-    const response = await this.anthropic.messages.create({
-      model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',
-      max_tokens: 1024,
-      system: `You are an expert AI tutor specializing in ${subject}. Explain concepts clearly using examples. Break down complex topics step by step. Be encouraging and adapt to the student's level.`,
-      messages: [...history, { role: 'user', content: message }],
-    });
+    const response = await this.resilience.withResilience(
+      'anthropic',
+      () => this.anthropic.messages.create({
+        model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',
+        max_tokens: 1024,
+        system: `You are an expert AI tutor specializing in ${subject}. Explain concepts clearly using examples. Break down complex topics step by step. Be encouraging and adapt to the student's level.`,
+        messages: [...history, { role: 'user', content: message }],
+      }),
+      () => this.anthropicFallbackMessage('AI tutor is temporarily unavailable. Please try again shortly.'),
+      { maxAttempts: 3, baseDelayMs: 1000 },
+    );
 
     const answer = (response.content[0]).text;
     const tokens = response.usage.input_tokens + response.usage.output_tokens;
@@ -125,12 +158,17 @@ export class AiService {
 
   async solveHomework(userId: string, tenantId: string, problem: string, subject: string) {
     await this.checkUsageLimit(tenantId);
-    const response = await this.anthropic.messages.create({
-      model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',
-      max_tokens: 2048,
-      system: `You are a homework assistant for ${subject}. Provide step-by-step solutions. Show all working. Explain why each step is taken. Do not just give the answer — teach the method.`,
-      messages: [{ role: 'user', content: problem }],
-    });
+    const response = await this.resilience.withResilience(
+      'anthropic',
+      () => this.anthropic.messages.create({
+        model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',
+        max_tokens: 2048,
+        system: `You are a homework assistant for ${subject}. Provide step-by-step solutions. Show all working. Explain why each step is taken. Do not just give the answer — teach the method.`,
+        messages: [{ role: 'user', content: problem }],
+      }),
+      () => this.anthropicFallbackMessage('AI homework assistant is temporarily unavailable. Please try again shortly.'),
+      { maxAttempts: 3, baseDelayMs: 1000 },
+    );
 
     const solution = (response.content[0]).text;
     const tokens = response.usage.input_tokens + response.usage.output_tokens;
@@ -144,12 +182,17 @@ export class AiService {
 Include question types: ${questionTypes.join(', ')}.
 Return valid JSON: { "title": string, "questions": [{ "id": number, "type": "multiple_choice"|"short_answer"|"essay"|"true_false", "question": string, "options": string[]|null, "answer": string, "explanation": string, "points": number }] }`;
 
-    const response = await this.openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL ?? 'gpt-4o',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-      max_tokens: 4096,
-    });
+    const response = await this.resilience.withResilience(
+      'openai',
+      () => this.openai.chat.completions.create({
+        model: process.env.OPENAI_MODEL ?? 'gpt-4o',
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+        max_tokens: 4096,
+      }),
+      () => this.openAiFallbackCompletion('{"title":"Unavailable","questions":[]}'),
+      { maxAttempts: 3, baseDelayMs: 1000 },
+    );
 
     const tokens = response.usage?.total_tokens ?? 0;
     await this.trackUsage(tenantId, userId, AIModuleType.EXAM_GENERATOR, tokens);
@@ -161,12 +204,17 @@ Return valid JSON: { "title": string, "questions": [{ "id": number, "type": "mul
     const prompt = `Create a complete lesson plan for "${topic}" for grade level "${gradeLevel}" with a ${duration}-minute duration.
 Return JSON: { "title": string, "objectives": string[], "materials": string[], "introduction": string, "mainContent": { "sections": [{ "title": string, "content": string, "activity": string, "duration": number }] }, "assessment": string, "homework": string, "differentiation": { "advanced": string, "support": string } }`;
 
-    const response = await this.openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL ?? 'gpt-4o',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-      max_tokens: 3000,
-    });
+    const response = await this.resilience.withResilience(
+      'openai',
+      () => this.openai.chat.completions.create({
+        model: process.env.OPENAI_MODEL ?? 'gpt-4o',
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+        max_tokens: 3000,
+      }),
+      () => this.openAiFallbackCompletion('{"title":"Unavailable","objectives":[],"mainContent":{"sections":[]}}'),
+      { maxAttempts: 3, baseDelayMs: 1000 },
+    );
 
     const tokens = response.usage?.total_tokens ?? 0;
     await this.trackUsage(tenantId, userId, AIModuleType.LESSON_GENERATOR, tokens);
@@ -178,12 +226,17 @@ Return JSON: { "title": string, "objectives": string[], "materials": string[], "
     const prompt = `Create ${numCards} flashcards for studying "${topic}".
 Return JSON: { "cards": [{ "front": string, "back": string, "hint": string|null, "difficulty": "easy"|"medium"|"hard" }] }`;
 
-    const response = await this.openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL ?? 'gpt-4o',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-      max_tokens: 2000,
-    });
+    const response = await this.resilience.withResilience(
+      'openai',
+      () => this.openai.chat.completions.create({
+        model: process.env.OPENAI_MODEL ?? 'gpt-4o',
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+        max_tokens: 2000,
+      }),
+      () => this.openAiFallbackCompletion('{"cards":[]}'),
+      { maxAttempts: 3, baseDelayMs: 1000 },
+    );
 
     const tokens = response.usage?.total_tokens ?? 0;
     await this.trackUsage(tenantId, userId, AIModuleType.FLASHCARDS, tokens);
@@ -195,12 +248,17 @@ Return JSON: { "cards": [{ "front": string, "back": string, "hint": string|null,
     const prompt = `Create a comprehensive mind map for "${topic}".
 Return JSON: { "central": string, "branches": [{ "label": string, "color": string, "children": [{ "label": string, "children": [{ "label": string }]|null }] }] }`;
 
-    const response = await this.openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL ?? 'gpt-4o',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-      max_tokens: 2000,
-    });
+    const response = await this.resilience.withResilience(
+      'openai',
+      () => this.openai.chat.completions.create({
+        model: process.env.OPENAI_MODEL ?? 'gpt-4o',
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+        max_tokens: 2000,
+      }),
+      () => this.openAiFallbackCompletion('{"central":"Unavailable","branches":[]}'),
+      { maxAttempts: 3, baseDelayMs: 1000 },
+    );
 
     const tokens = response.usage?.total_tokens ?? 0;
     await this.trackUsage(tenantId, userId, AIModuleType.MIND_MAP, tokens);
@@ -209,12 +267,17 @@ Return JSON: { "central": string, "branches": [{ "label": string, "color": strin
 
   async translate(userId: string, tenantId: string, text: string, targetLanguage: string, sourceLanguage = 'auto') {
     await this.checkUsageLimit(tenantId);
-    const response = await this.anthropic.messages.create({
-      model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',
-      max_tokens: 2000,
-      system: 'You are a professional translator. Provide accurate, natural-sounding translations that preserve meaning and context.',
-      messages: [{ role: 'user', content: `Translate the following from ${sourceLanguage} to ${targetLanguage}:\n\n${text}` }],
-    });
+    const response = await this.resilience.withResilience(
+      'anthropic',
+      () => this.anthropic.messages.create({
+        model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',
+        max_tokens: 2000,
+        system: 'You are a professional translator. Provide accurate, natural-sounding translations that preserve meaning and context.',
+        messages: [{ role: 'user', content: `Translate the following from ${sourceLanguage} to ${targetLanguage}:\n\n${text}` }],
+      }),
+      () => this.anthropicFallbackMessage('Translation service is temporarily unavailable. Please try again shortly.'),
+      { maxAttempts: 3, baseDelayMs: 1000 },
+    );
 
     const translation = (response.content[0]).text;
     const tokens = response.usage.input_tokens + response.usage.output_tokens;
@@ -223,15 +286,20 @@ Return JSON: { "central": string, "branches": [{ "label": string, "color": strin
   }
 
   async checkPlagiarism(userId: string, tenantId: string, content: string) {
-    const response = await this.anthropic.messages.create({
-      model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',
-      max_tokens: 1000,
-      system: 'You are an academic integrity checker. Analyze text for signs of plagiarism, AI generation, and unusual writing patterns. Return a JSON analysis.',
-      messages: [{
-        role: 'user',
-        content: `Analyze this text for plagiarism indicators: "${content.substring(0, 3000)}"\nReturn JSON: { "overallScore": number (0-100, 100=likely plagiarized), "aiGenerated": boolean, "flags": string[], "summary": string }`,
-      }],
-    });
+    const response = await this.resilience.withResilience(
+      'anthropic',
+      () => this.anthropic.messages.create({
+        model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',
+        max_tokens: 1000,
+        system: 'You are an academic integrity checker. Analyze text for signs of plagiarism, AI generation, and unusual writing patterns. Return a JSON analysis.',
+        messages: [{
+          role: 'user',
+          content: `Analyze this text for plagiarism indicators: "${content.substring(0, 3000)}"\nReturn JSON: { "overallScore": number (0-100, 100=likely plagiarized), "aiGenerated": boolean, "flags": string[], "summary": string }`,
+        }],
+      }),
+      () => this.anthropicFallbackMessage('{"overallScore":0,"aiGenerated":false,"flags":[],"summary":"Plagiarism detection temporarily unavailable. Please try again shortly."}'),
+      { maxAttempts: 3, baseDelayMs: 1000 },
+    );
 
     const result = (response.content[0]).text;
     const tokens = response.usage.input_tokens + response.usage.output_tokens;
@@ -244,7 +312,12 @@ Return JSON: { "central": string, "branches": [{ "label": string, "color": strin
   }
 
   async moderateContent(tenantId: string, content: string) {
-    const response = await this.openai.moderations.create({ input: content });
+    const response = await this.resilience.withResilience(
+      'openai',
+      () => this.openai.moderations.create({ input: content }),
+      () => ({ results: [{ flagged: false, categories: {} as any, category_scores: {} as any }], id: 'fallback', model: 'fallback' }),
+      { maxAttempts: 3, baseDelayMs: 1000 },
+    );
     const result = response.results[0];
     return {
       flagged: result.flagged,
@@ -264,12 +337,17 @@ Return JSON: { "central": string, "branches": [{ "label": string, "color": strin
     const recentCourses = user?.studentProfile?.courseProgress.map(p => p.course.title) ?? [];
     const prompt = `Based on these recently studied courses: ${recentCourses.join(', ')}, recommend 5 courses for continued learning. Return JSON: { "recommendations": [{ "title": string, "reason": string, "estimatedLevel": string }] }`;
 
-    const response = await this.openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL ?? 'gpt-4o',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-      max_tokens: 1000,
-    });
+    const response = await this.resilience.withResilience(
+      'openai',
+      () => this.openai.chat.completions.create({
+        model: process.env.OPENAI_MODEL ?? 'gpt-4o',
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+        max_tokens: 1000,
+      }),
+      () => this.openAiFallbackCompletion('{"recommendations":[]}'),
+      { maxAttempts: 3, baseDelayMs: 1000 },
+    );
 
     const tokens = response.usage?.total_tokens ?? 0;
     await this.trackUsage(tenantId, userId, AIModuleType.RECOMMENDATION, tokens);
@@ -282,14 +360,19 @@ Return JSON: { "central": string, "branches": [{ "label": string, "color": strin
 Learning objectives: ${objectives.join('; ')}.
 Return valid JSON: { "title": string, "subject": string, "gradeLevel": string, "totalWeeks": number, "weeks": [{ "week": number, "theme": string, "topics": string[], "activities": string[], "assessment": string, "resources": string[] }] }`;
 
-    const response = await this.openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL ?? 'gpt-4o',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-      max_tokens: 4096,
-    });
+    const response = await this.resilience.withResilience(
+      'openai',
+      () => this.openai.chat.completions.create({
+        model: process.env.OPENAI_MODEL ?? 'gpt-4o',
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+        max_tokens: 4096,
+      }),
+      () => this.openAiFallbackCompletion('{"title":"Unavailable","weeks":[]}'),
+      { maxAttempts: 3, baseDelayMs: 1000 },
+    );
 
-    const curriculum = JSON.parse(response.choices[0].message.content!);
+    const curriculum = JSON.parse(response.choices[0].message.content ?? '{}');
     const tokens = response.usage?.total_tokens ?? 0;
     await this.trackUsage(tenantId, userId, AIModuleType.CURRICULUM_GENERATOR, tokens);
     return { curriculum, tokens };
@@ -306,12 +389,17 @@ Return valid JSON: { "title": string, "subject": string, "gradeLevel": string, "
       academic: 'Provide an academic-level analysis with methodology, literature review pointers, critical analysis, and 10-15 peer-reviewed sources.',
     };
 
-    const response = await this.anthropic.messages.create({
-      model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',
-      max_tokens: 3000,
-      system: `You are an expert research assistant. ${depthInstructions[depth]} Always cite sources and distinguish between fact and inference.`,
-      messages: [{ role: 'user', content: `Research topic: ${topic}` }],
-    });
+    const response = await this.resilience.withResilience(
+      'anthropic',
+      () => this.anthropic.messages.create({
+        model: process.env.ANTHROPIC_MODEL ?? 'claude-sonnet-4-6',
+        max_tokens: 3000,
+        system: `You are an expert research assistant. ${depthInstructions[depth]} Always cite sources and distinguish between fact and inference.`,
+        messages: [{ role: 'user', content: `Research topic: ${topic}` }],
+      }),
+      () => this.anthropicFallbackMessage('Research assistant is temporarily unavailable. Please try again shortly.'),
+      { maxAttempts: 3, baseDelayMs: 1000 },
+    );
 
     const result = (response.content[0]).text;
     const tokens = response.usage.input_tokens + response.usage.output_tokens;
@@ -326,22 +414,32 @@ Return valid JSON: { "title": string, "subject": string, "gradeLevel": string, "
     const stream = Readable.from(audioBuffer) as any;
     stream.path = 'audio.webm';
 
-    const transcription = await this.openai.audio.transcriptions.create({
-      file: stream,
-      model: 'whisper-1',
-      language,
-    });
+    const transcription = await this.resilience.withResilience(
+      'openai',
+      () => this.openai.audio.transcriptions.create({
+        file: stream,
+        model: 'whisper-1',
+        language,
+      }),
+      () => ({ text: 'Speech-to-text service temporarily unavailable. Please try again shortly.' }),
+      { maxAttempts: 2, baseDelayMs: 1000 },
+    );
 
     await this.trackUsage(tenantId, userId, AIModuleType.SPEECH_TO_TEXT, Math.ceil(transcription.text.length / 4));
     return { transcript: transcription.text, language };
   }
 
   async textToSpeech(userId: string, tenantId: string, text: string, voice: 'alloy' | 'echo' | 'fable' | 'onyx' | 'nova' | 'shimmer' = 'nova') {
-    const mp3 = await this.openai.audio.speech.create({
-      model: 'tts-1',
-      voice,
-      input: text,
-    });
+    const mp3 = await this.resilience.withResilience(
+      'openai',
+      () => this.openai.audio.speech.create({
+        model: 'tts-1',
+        voice,
+        input: text,
+      }),
+      undefined,
+      { maxAttempts: 2, baseDelayMs: 1000 },
+    );
 
     const buffer = Buffer.from(await mp3.arrayBuffer());
     const tokens = Math.ceil(text.length / 4);
@@ -359,14 +457,19 @@ ${targetRole ? `Target role: ${targetRole}` : 'No specific target role'}
 Provide: 1) Top 5 career paths with match percentage, 2) Required skills gap analysis, 3) 6-month action plan, 4) Relevant certifications/courses.
 Return valid JSON: { "careerPaths": [{ "title": string, "match": number, "description": string, "avgSalary": string, "growth": string }], "skillGaps": string[], "actionPlan": [{ "month": number, "goal": string, "actions": string[] }], "certifications": [{ "name": string, "provider": string, "relevance": string }] }`;
 
-    const response = await this.openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL ?? 'gpt-4o',
-      messages: [{ role: 'user', content: prompt }],
-      response_format: { type: 'json_object' },
-      max_tokens: 2048,
-    });
+    const response = await this.resilience.withResilience(
+      'openai',
+      () => this.openai.chat.completions.create({
+        model: process.env.OPENAI_MODEL ?? 'gpt-4o',
+        messages: [{ role: 'user', content: prompt }],
+        response_format: { type: 'json_object' },
+        max_tokens: 2048,
+      }),
+      () => this.openAiFallbackCompletion('{"careerPaths":[],"skillGaps":[],"actionPlan":[],"certifications":[]}'),
+      { maxAttempts: 3, baseDelayMs: 1000 },
+    );
 
-    const advice = JSON.parse(response.choices[0].message.content!);
+    const advice = JSON.parse(response.choices[0].message.content ?? '{}');
     const tokens = response.usage?.total_tokens ?? 0;
     await this.trackUsage(tenantId, userId, AIModuleType.CAREER_ADVISOR, tokens);
     return { advice, tokens };

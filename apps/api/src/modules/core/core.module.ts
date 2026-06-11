@@ -2,6 +2,8 @@ import { Module, Global } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 
+import { ResilienceService } from './services/resilience.service';
+
 @Global()
 @Module({
   imports: [
@@ -14,6 +16,7 @@ import { JwtModule } from '@nestjs/jwt';
       inject: [ConfigService],
     }),
   ],
-  exports: [JwtModule],
+  providers: [ResilienceService],
+  exports: [JwtModule, ResilienceService],
 })
 export class CoreModule {}

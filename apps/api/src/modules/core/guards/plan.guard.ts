@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
 import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { SubscriptionPlan } from '@prisma/client';
+import { SubscriptionPlan, SubscriptionStatus } from '@prisma/client';
 
 import { planHasFeature, PlanFeatureKey } from '../../billing/domain/plan-features';
 import { PrismaService } from '../../database/prisma.service';
@@ -34,6 +34,17 @@ export class PlanGuard implements CanActivate {
     const plan: SubscriptionPlan = request.tenant?.plan
       ?? (await this.prisma.tenant.findUnique({ where: { id: tenantId }, select: { plan: true } }))?.plan
       ?? SubscriptionPlan.FREE_TRIAL;
+
+    // Check if the subscription is suspended due to failed payments
+    const subscription = await this.prisma.subscription.findUnique({
+      where: { tenantId },
+      select: { status: true },
+    });
+    if (subscription?.status === SubscriptionStatus.SUSPENDED) {
+      throw new ForbiddenException(
+        'Account suspended due to payment failure. Please update your payment method.',
+      );
+    }
 
     if (!planHasFeature(plan, feature)) {
       throw new ForbiddenException(

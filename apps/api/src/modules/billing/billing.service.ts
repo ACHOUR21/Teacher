@@ -462,6 +462,11 @@ export class BillingService {
       where: { id: subscription.id },
       data: { status: SubscriptionStatus.ACTIVE },
     });
+
+    // Clear any active dunning state on successful payment
+    if (invoice.customer) {
+      await this.clearDunning(invoice.customer as string);
+    }
   }
 
   private async handlePaymentFailed(invoice: Stripe.Invoice): Promise<void> {
@@ -489,6 +494,15 @@ export class BillingService {
     }
 
     this.logger.warn(`Payment failed for subscription ${subscription.id}`);
+
+    // Apply dunning schedule based on attempt count
+    if (invoice.customer) {
+      await this.applyDunning(
+        invoice.customer as string,
+        invoice.id,
+        invoice.attempt_count ?? 1,
+      );
+    }
   }
 
   private async handleSubscriptionUpdated(stripeSubscription: Stripe.Subscription): Promise<void> {
@@ -638,5 +652,92 @@ export class BillingService {
     });
     await this.prisma.tenant.update({ where: { id: tenantId }, data: { plan } });
     await this.redis.delPattern(`tenant:${tenantId}*`);
+  }
+
+  // ─── Dunning Management ────────────────────────────────────────────────────
+
+  async applyDunning(stripeCustomerId: string, invoiceId: string, attemptCount: number) {
+    const subscription = await this.prisma.subscription.findFirst({
+      where: { stripeCustomerId },
+      include: { tenant: { select: { id: true, name: true } } },
+    });
+    if (!subscription) { return; }
+
+    // Dunning schedule: warn on attempt 1, 2; suspend on attempt 3+
+    const gracePeriodDays = [3, 5, 7][Math.min(attemptCount - 1, 2)];
+    const gracePeriodEnd = new Date(Date.now() + gracePeriodDays * 24 * 60 * 60 * 1000);
+
+    await this.prisma.subscription.update({
+      where: { id: subscription.id },
+      data: {
+        status: attemptCount >= 3 ? SubscriptionStatus.PAST_DUE : subscription.status,
+        settings: {
+          ...(subscription.settings as Record<string, unknown> ?? {}),
+          dunningAttempt: attemptCount,
+          gracePeriodEnd: gracePeriodEnd.toISOString(),
+          lastFailedInvoiceId: invoiceId,
+        },
+      },
+    });
+
+    this.logger.warn(
+      `Payment failed for tenant ${subscription.tenant?.id ?? 'unknown'} ` +
+      `(attempt ${attemptCount}). Grace period ends ${gracePeriodEnd.toISOString()}`,
+    );
+
+    return {
+      tenantId: subscription.tenant?.id,
+      attemptCount,
+      gracePeriodEnd,
+      willSuspend: attemptCount >= 3,
+    };
+  }
+
+  async clearDunning(stripeCustomerId: string) {
+    const subscription = await this.prisma.subscription.findFirst({
+      where: { stripeCustomerId },
+    });
+    if (!subscription) { return; }
+
+    await this.prisma.subscription.update({
+      where: { id: subscription.id },
+      data: {
+        status: SubscriptionStatus.ACTIVE,
+        settings: {
+          ...(subscription.settings as Record<string, unknown> ?? {}),
+          dunningAttempt: 0,
+          gracePeriodEnd: null,
+          lastFailedInvoiceId: null,
+        },
+      },
+    });
+
+    this.logger.log(`Payment recovered for customer ${stripeCustomerId}`);
+  }
+
+  async processExpiredGracePeriods(): Promise<number> {
+    const now = new Date();
+    // Find subscriptions in PAST_DUE where grace period has expired
+    const overdue = await this.prisma.subscription.findMany({
+      where: { status: SubscriptionStatus.PAST_DUE },
+    });
+
+    let suspended = 0;
+    for (const sub of overdue) {
+      const settings = sub.settings as Record<string, unknown> | null;
+      const gracePeriodEnd = settings?.gracePeriodEnd as string | undefined;
+      if (gracePeriodEnd && new Date(gracePeriodEnd) < now) {
+        await this.prisma.subscription.update({
+          where: { id: sub.id },
+          data: { status: SubscriptionStatus.SUSPENDED },
+        });
+        suspended++;
+      }
+    }
+
+    if (suspended > 0) {
+      this.logger.warn(`Suspended ${suspended} accounts with expired grace periods`);
+    }
+    return suspended;
   }
 }
