@@ -32,6 +32,8 @@ import { MarketplaceModule } from './modules/marketplace/marketplace.module';
 import { MessagingModule } from './modules/messaging/messaging.module';
 import { MetricsMiddleware } from './modules/metrics/metrics.middleware';
 import { MetricsModule } from './modules/metrics/metrics.module';
+import { CorrelationMiddleware } from './modules/observability/correlation.middleware';
+import { ObservabilityModule } from './modules/observability/observability.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ParentsModule } from './modules/parents/parents.module';
 import { PluginsModule } from './modules/plugins/plugins.module';
@@ -78,6 +80,7 @@ import { WhiteLabelModule } from './modules/white-label/white-label.module';
     AuditModule,
     HealthModule,
     MetricsModule,
+    ObservabilityModule,
     SchoolErpModule,
     UniversityErpModule,
     TeachersModule,
@@ -110,6 +113,9 @@ import { WhiteLabelModule } from './modules/white-label/white-label.module';
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(CorrelationMiddleware)
+      .forRoutes('*');
     consumer
       .apply(MetricsMiddleware)
       .forRoutes('*');

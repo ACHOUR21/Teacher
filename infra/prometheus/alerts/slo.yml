@@ -1,0 +1,54 @@
+groups:
+  - name: eduai_slo
+    interval: 30s
+    rules:
+      # API availability SLO: 99.9% uptime
+      - alert: APIAvailabilityBelowSLO
+        expr: |
+          (
+            sum(rate(eduai_http_request_duration_seconds_count{status_code!~"5.."}[5m]))
+            /
+            sum(rate(eduai_http_request_duration_seconds_count[5m]))
+          ) < 0.999
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "API availability below 99.9% SLO"
+          description: "Error rate over last 5m is {{ $value | humanizePercentage }}"
+
+      # P95 latency SLO: < 500ms
+      - alert: APILatencyP95AboveSLO
+        expr: |
+          histogram_quantile(0.95,
+            sum by (le) (rate(eduai_http_request_duration_seconds_bucket[5m]))
+          ) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "P95 API latency above 500ms SLO"
+          description: "P95 latency is {{ $value | humanizeDuration }}"
+
+      # AI cost burn rate
+      - alert: AICostBurnRateHigh
+        expr: increase(eduai_ai_cost_usd_total[1h]) > 100
+        for: 0m
+        labels:
+          severity: warning
+          team: ai
+        annotations:
+          summary: "AI cost exceeding $100/hour"
+          description: "AI spend in last hour: ${{ $value }}"
+
+      # Zero registrations anomaly
+      - alert: NoNewRegistrations
+        expr: increase(eduai_user_registrations_total[6h]) == 0
+        for: 0m
+        labels:
+          severity: warning
+          team: growth
+        annotations:
+          summary: "No new user registrations in 6 hours"

@@ -1,13 +1,18 @@
+import * as dns from 'dns';
+
 import {
   Injectable,
   NotFoundException,
   BadRequestException,
   Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma } from '@prisma/client';
 
 import { RedisService } from '../cache/redis.service';
 import { PrismaService } from '../database/prisma.service';
+import { type TenantBranding, DEFAULT_TENANT_BRANDING } from './dto/tenant-branding.interface';
+import { type UpdateBrandingDto } from './dto/update-branding.dto';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -22,7 +27,7 @@ export interface BrandingConfig {
   brandName?: string;
 }
 
-export interface UpdateBrandingDto {
+export interface UpdateBrandingLegacyDto {
   logoUrl?: string;
   primaryColor?: string;
   secondaryColor?: string;
