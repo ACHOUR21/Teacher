@@ -90,6 +90,7 @@ export default function DashboardLayout({
           </motion.div>
         </main>
       </div>
+      </div>
     </div>
   );
 }

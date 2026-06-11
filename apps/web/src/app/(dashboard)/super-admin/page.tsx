@@ -7,12 +7,15 @@ import {
   Activity, Search,
   CheckCircle, XCircle, Zap,
   LogIn, Trash2, Edit2, X,
+  ExternalLink, Database, Radio, Cpu,
 } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   PieChart, Pie, Cell, ResponsiveContainer,
+  BarChart, Bar,
 } from 'recharts';
 
 import { api } from '@/lib/api';
