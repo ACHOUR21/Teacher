@@ -187,6 +187,9 @@ This document describes **v1** of the EduAI API. All routes are prefixed with \`
   const document = SwaggerModule.createDocument(app, config, {
     operationIdFactory: (_controllerKey: string, methodKey: string) => methodKey,
   });
+  // Serve raw OpenAPI JSON at /api/openapi.json for SDK generation and tooling
+  app.use('/api/openapi.json', (_req: unknown, res: { json: (d: unknown) => void }) => res.json(document));
+
   SwaggerModule.setup('api/docs', app, document, {
     swaggerOptions: {
       persistAuthorization: true,
