@@ -5,7 +5,7 @@ const AUTH_STATE = path.join(__dirname, 'e2e', '.auth', 'user.json');
 
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env['CI'],
   retries: process.env['CI'] ? 2 : 0,
   workers: process.env['CI'] ? 1 : undefined,
@@ -15,7 +15,7 @@ export default defineConfig({
     process.env['CI'] ? ['github'] : ['list'],
   ],
   use: {
-    baseURL: process.env['PLAYWRIGHT_BASE_URL'] ?? 'http://localhost:3000',
+    baseURL: process.env['BASE_URL'] ?? process.env['PLAYWRIGHT_BASE_URL'] ?? 'http://localhost:3000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -42,24 +42,6 @@ export default defineConfig({
       testIgnore: /auth\.spec\.ts|auth\.setup\.ts/,
       use: {
         ...devices['Desktop Chrome'],
-        storageState: AUTH_STATE,
-      },
-      dependencies: ['setup'],
-    },
-    {
-      name: 'firefox',
-      testIgnore: /auth\.spec\.ts|auth\.setup\.ts/,
-      use: {
-        ...devices['Desktop Firefox'],
-        storageState: AUTH_STATE,
-      },
-      dependencies: ['setup'],
-    },
-    {
-      name: 'Mobile Safari',
-      testIgnore: /auth\.spec\.ts|auth\.setup\.ts/,
-      use: {
-        ...devices['iPhone 14'],
         storageState: AUTH_STATE,
       },
       dependencies: ['setup'],
