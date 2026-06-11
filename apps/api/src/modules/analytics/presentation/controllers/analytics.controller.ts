@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access */
-import { Controller, Get, Query, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Request, Param } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 import { Roles } from '../../../core/decorators/roles.decorator';
@@ -60,5 +60,79 @@ export class AnalyticsController {
   @ApiOperation({ summary: 'Top courses with completion rates' })
   topCourses(@Request() req: any) {
     return this.analyticsService.getTopCourses(req.tenant?.id);
+  }
+
+  @Get('teacher/overview')
+  @ApiOperation({ summary: 'Teacher analytics overview' })
+  @Roles('TEACHER', 'ADMIN', 'SUPER_ADMIN')
+  teacherOverview(@Request() req: any) {
+    const teacherId = req.user?.teacherProfileId ?? req.user?.sub;
+    return this.analyticsService.getTeacherOverview(teacherId);
+  }
+
+  @Get('teacher/courses')
+  @ApiOperation({ summary: 'Teacher course performance' })
+  @Roles('TEACHER', 'ADMIN', 'SUPER_ADMIN')
+  teacherCourses(@Request() req: any) {
+    const teacherId = req.user?.teacherProfileId ?? req.user?.sub;
+    return this.analyticsService.getTeacherCoursePerformance(teacherId);
+  }
+
+  @Get('teacher/enrollment-trend')
+  @ApiOperation({ summary: 'Teacher enrollment trend over time' })
+  @Roles('TEACHER', 'ADMIN', 'SUPER_ADMIN')
+  teacherEnrollmentTrend(@Request() req: any, @Query('days') days = 30) {
+    const teacherId = req.user?.teacherProfileId ?? req.user?.sub;
+    return this.analyticsService.getTeacherEnrollmentTrend(teacherId, +days);
+  }
+
+  @Get('teacher/top-students')
+  @ApiOperation({ summary: 'Top performing students for a teacher' })
+  @Roles('TEACHER', 'ADMIN', 'SUPER_ADMIN')
+  teacherTopStudents(@Request() req: any) {
+    const teacherId = req.user?.teacherProfileId ?? req.user?.sub;
+    return this.analyticsService.getTeacherTopStudents(teacherId);
+  }
+
+  @Get('student/overview')
+  @ApiOperation({ summary: 'Student analytics overview' })
+  studentOverview(@Request() req: any) {
+    const studentId = req.user?.studentProfileId ?? req.user?.sub;
+    return this.analyticsService.getStudentOverview(studentId);
+  }
+
+  @Get('student/performance')
+  @ApiOperation({ summary: 'Student performance by subject' })
+  studentPerformance(@Request() req: any) {
+    const studentId = req.user?.studentProfileId ?? req.user?.sub;
+    return this.analyticsService.getStudentPerformance(studentId);
+  }
+
+  @Get('student/activity')
+  @ApiOperation({ summary: 'Student activity heatmap data' })
+  studentActivity2(@Request() req: any) {
+    const studentId = req.user?.studentProfileId ?? req.user?.sub;
+    return this.analyticsService.getStudentActivityHeatmap(studentId);
+  }
+
+  @Get('admin/platform')
+  @ApiOperation({ summary: 'Admin platform overview KPIs' })
+  @Roles('ADMIN', 'SUPER_ADMIN', 'SCHOOL_ADMIN')
+  adminPlatform(@Request() req: any) {
+    return this.analyticsService.getAdminPlatformOverview(req.tenant?.id);
+  }
+
+  @Get('admin/cohort')
+  @ApiOperation({ summary: 'Cohort retention analysis' })
+  @Roles('ADMIN', 'SUPER_ADMIN', 'SCHOOL_ADMIN')
+  adminCohort(@Request() req: any) {
+    return this.analyticsService.getCohortRetention(req.tenant?.id);
+  }
+
+  @Get('admin/top-tenants')
+  @ApiOperation({ summary: 'Top tenants by users and revenue' })
+  @Roles('SUPER_ADMIN')
+  adminTopTenants() {
+    return this.analyticsService.getTopTenants();
   }
 }

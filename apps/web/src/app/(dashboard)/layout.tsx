@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import React, { useEffect } from 'react';
 
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { ImpersonationBanner } from '@/components/ImpersonationBanner';
 import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { CommandPalette } from '@/components/search/CommandPalette';
@@ -41,7 +42,9 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
+    <div className="flex flex-col h-screen overflow-hidden bg-background">
+      <ImpersonationBanner />
+      <div className="flex flex-1 overflow-hidden">
       <CommandPalette />
       {/* Desktop sidebar */}
       <div className="hidden lg:block relative">

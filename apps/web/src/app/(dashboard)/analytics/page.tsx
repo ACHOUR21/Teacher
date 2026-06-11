@@ -2,7 +2,10 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { Users, BookOpen, TrendingUp, DollarSign, Zap, Activity, Star, Award } from 'lucide-react';
-import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
+import { useAuthStore } from '@/stores/authStore';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   ComposedChart, Line,
@@ -36,8 +39,19 @@ const RANGES = [
 ];
 
 export default function AnalyticsPage() {
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
   const [tab, setTab] = useState<Tab>('overview');
   const [range, setRange] = useState(30);
+
+  useEffect(() => {
+    if (!user) return;
+    if (user.role === 'TEACHER') {
+      router.push('/analytics/teacher');
+    } else if (user.role === 'STUDENT') {
+      router.push('/analytics/student');
+    }
+  }, [user, router]);
 
   const { data: overview, isLoading: overviewLoading } = useQuery({
     queryKey: ['analytics', 'overview'],

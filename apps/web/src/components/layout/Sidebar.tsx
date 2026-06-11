@@ -102,7 +102,7 @@ const navSections: NavSectionDef[] = [
     titleKey: 'admin',
     items: [
       { labelKey: 'superAdmin', href: '/super-admin', icon: Shield, roles: ['SUPER_ADMIN'], badge: 'SA' },
-      { labelKey: 'analytics', href: '/analytics', icon: BarChart3, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'TEACHER'] },
+      { labelKey: 'analytics', href: '/analytics', icon: BarChart3, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'TEACHER', 'STUDENT'] },
       { labelKey: 'auditLogs', href: '/audit-logs', icon: FileText, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN'] },
       { labelKey: 'whiteLabel', href: '/white-label', icon: Palette, roles: ['SUPER_ADMIN', 'ADMIN', 'SCHOOL_ADMIN', 'UNIVERSITY_ADMIN'] },
       { labelKey: 'apiKeys', href: '/api-keys', icon: Key, roles: ['SUPER_ADMIN', 'ADMIN'] },

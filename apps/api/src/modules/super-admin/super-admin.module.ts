@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { DatabaseModule } from '../database/database.module';
 
 import { SuperAdminController } from './super-admin.controller';
+import { SuperAdminGuard } from './super-admin.guard';
 import { SuperAdminService } from './super-admin.service';
 
 
@@ -21,7 +22,7 @@ import { SuperAdminService } from './super-admin.service';
     }),
   ],
   controllers: [SuperAdminController],
-  providers: [SuperAdminService],
-  exports: [SuperAdminService],
+  providers: [SuperAdminService, SuperAdminGuard],
+  exports: [SuperAdminService, SuperAdminGuard],
 })
 export class SuperAdminModule {}

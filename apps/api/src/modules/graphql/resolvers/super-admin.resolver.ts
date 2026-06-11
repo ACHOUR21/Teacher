@@ -82,7 +82,7 @@ export class SuperAdminResolver {
     @Args('id', { type: () => ID }) id: string,
     @Args('input') input: UpdateTenantInput,
   ): Promise<TenantSummary> {
-    const result = await this.superAdminService.updateTenant(id, input as any) as any;
+    const result = await this.superAdminService.updateTenantLegacy(id, input as any, 'system') as any;
     return { ...result, userCount: 0, courseCount: 0 };
   }
 
@@ -90,7 +90,7 @@ export class SuperAdminResolver {
   @UseGuards(GqlAuthGuard, RolesGuard)
   @Roles(UserRole.SUPER_ADMIN)
   async deleteTenant(@Args('id', { type: () => ID }) id: string): Promise<boolean> {
-    await this.superAdminService.deleteTenant(id);
+    await this.superAdminService.deleteTenant(id, 'system');
     return true;
   }
 
