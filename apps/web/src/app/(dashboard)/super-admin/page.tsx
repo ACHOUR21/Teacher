@@ -76,6 +76,18 @@ function KpiCard({ icon: Icon, label, value, sub, color = 'text-primary' }: any)
   );
 }
 
+// ─── Health Dot ────────────────────────────────────────────────────────────────
+function HealthDot({ status }: { status: string }) {
+  const isHealthy = status === 'healthy';
+  const isUnknown = status === 'unknown';
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${isHealthy ? 'text-green-600 dark:text-green-400' : isUnknown ? 'text-muted-foreground' : 'text-red-500'}`}>
+      <span className={`h-2 w-2 rounded-full ${isHealthy ? 'bg-green-500 animate-pulse' : isUnknown ? 'bg-muted-foreground' : 'bg-red-500 animate-pulse'}`} />
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
+  );
+}
+
 // ─── Overview Tab ─────────────────────────────────────────────────────────────
 function OverviewTab() {
   const { data, isLoading } = useQuery<any>({
@@ -83,42 +95,87 @@ function OverviewTab() {
     queryFn: () => api.get('/super-admin/overview').then(r => r.data.data),
   });
 
+  const { data: health } = useQuery<any>({
+    queryKey: ['sa-system-health'],
+    queryFn: () => api.get('/super-admin/system-health').then(r => r.data.data),
+    refetchInterval: 60000,
+  });
+
   if (isLoading) {return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;}
   if (!data) {return null;}
 
-  const { stats, recentTenants, planBreakdown, userGrowthChart } = data;
+  const { stats, recentTenants, planBreakdown, userGrowthChart, tenantGrowthChart } = data;
 
   return (
     <div className="space-y-6">
-      {/* KPI grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* 6 KPI cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         <KpiCard icon={Building2} label="Total Tenants" value={stats.totalTenants}
           sub={`${stats.activeTenants} active`} color="from-blue-500 to-blue-600" />
         <KpiCard icon={Users} label="Total Users" value={stats.totalUsers.toLocaleString()}
           sub={`${stats.activeUsers.toLocaleString()} active`} color="from-violet-500 to-violet-600" />
-        <KpiCard icon={TrendingUp} label="Courses" value={stats.totalCourses}
-          sub={`${stats.publishedCourses} published`} color="from-amber-500 to-orange-500" />
         <KpiCard icon={DollarSign} label="Total Revenue" value={`$${stats.totalRevenue.toLocaleString()}`}
           sub={`${stats.totalEnrollments.toLocaleString()} enrollments`} color="from-green-500 to-emerald-600" />
+        <KpiCard icon={TrendingUp} label="Monthly Revenue (MRR)" value={`$${(stats.mrr ?? 0).toLocaleString()}`}
+          sub="Estimated MRR" color="from-amber-500 to-orange-500" />
+        <KpiCard icon={Zap} label="AI Cost Today" value={`$${(stats.aiCostToday ?? 0).toFixed(2)}`}
+          sub="All tenants combined" color="from-rose-500 to-pink-600" />
+        <KpiCard icon={Activity} label="Platform Uptime" value={`${stats.uptimePercent ?? 99.9}%`}
+          sub={`${stats.pendingSupportTickets ?? 0} pending tickets`} color="from-cyan-500 to-cyan-600" />
       </div>
 
+      {/* System Health Indicators */}
+      {health && (
+        <div className="bg-card border border-border rounded-xl p-5">
+          <h3 className="font-semibold text-foreground mb-3">System Health</h3>
+          <div className="flex flex-wrap gap-6">
+            <div className="flex items-center gap-2">
+              <Cpu className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">API:</span>
+              <HealthDot status={health.services?.api ?? 'unknown'} />
+            </div>
+            <div className="flex items-center gap-2">
+              <Database className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Database:</span>
+              <HealthDot status={health.services?.database ?? health.database ?? 'unknown'} />
+            </div>
+            <div className="flex items-center gap-2">
+              <Radio className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Redis:</span>
+              <HealthDot status={health.services?.redis ?? 'unknown'} />
+            </div>
+            <div className="flex items-center gap-2">
+              <Activity className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Queue:</span>
+              <HealthDot status={health.services?.queue ?? 'unknown'} />
+            </div>
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">AI:</span>
+              <HealthDot status={health.services?.ai ?? 'unknown'} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* User growth chart */}
+        {/* Tenant growth chart (12 months) */}
         <div className="lg:col-span-2 bg-card border border-border rounded-xl p-5">
-          <h3 className="font-semibold text-foreground mb-4">User Growth (30 days)</h3>
+          <h3 className="font-semibold text-foreground mb-4">Tenant Growth (12 months)</h3>
           <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={userGrowthChart}>
+            <AreaChart data={tenantGrowthChart ?? userGrowthChart}>
               <defs>
-                <linearGradient id="ug" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                <linearGradient id="tg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-              <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={d => d.slice(5)} />
+              <XAxis dataKey={tenantGrowthChart ? 'month' : 'date'} tick={{ fontSize: 10 }} tickFormatter={d => d.slice(0, 7)} />
               <YAxis tick={{ fontSize: 10 }} />
               <Tooltip />
-              <Area type="monotone" dataKey="users" stroke="#6366f1" fill="url(#ug)" strokeWidth={2} />
+              <Area type="monotone" dataKey={tenantGrowthChart ? 'tenants' : 'users'} stroke="#3b82f6" fill="url(#tg)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -154,10 +211,30 @@ function OverviewTab() {
         </div>
       </div>
 
-      {/* Recent tenants */}
+      {/* Quick Links */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {[
+          { href: '/super-admin/tenants', label: 'Manage Tenants', sub: 'View all tenants, plans, status', icon: Building2, color: 'text-blue-500' },
+          { href: '/super-admin/users', label: 'Manage Users', sub: 'Search & manage cross-tenant users', icon: Users, color: 'text-violet-500' },
+          { href: '/super-admin/ai-usage', label: 'AI Usage', sub: 'Cost & usage by tenant and model', icon: Zap, color: 'text-rose-500' },
+        ].map(({ href, label, sub, icon: Icon, color }) => (
+          <Link key={href} href={href}
+            className="bg-card border border-border rounded-xl p-4 flex items-center gap-3 hover:bg-accent/40 transition-colors group">
+            <Icon className={`h-8 w-8 ${color}`} />
+            <div className="min-w-0">
+              <p className="font-medium text-sm text-foreground group-hover:text-primary transition-colors">{label}</p>
+              <p className="text-xs text-muted-foreground truncate">{sub}</p>
+            </div>
+            <ExternalLink className="h-3.5 w-3.5 text-muted-foreground ml-auto shrink-0" />
+          </Link>
+        ))}
+      </div>
+
+      {/* Recent tenants (last 10) */}
       <div className="bg-card border border-border rounded-xl">
-        <div className="px-5 py-4 border-b border-border">
-          <h3 className="font-semibold text-foreground">Recent Tenants</h3>
+        <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+          <h3 className="font-semibold text-foreground">Recent Tenant Signups</h3>
+          <Link href="/super-admin/tenants" className="text-xs text-primary hover:underline">View all</Link>
         </div>
         <div className="divide-y divide-border">
           {recentTenants.map((t: any) => (
@@ -607,12 +684,6 @@ export default function SuperAdminPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('overview');
 
-  const { data: health } = useQuery<any>({
-    queryKey: ['sa-health'],
-    queryFn: () => api.get('/super-admin/health').then(r => r.data.data),
-    refetchInterval: 60000,
-  });
-
   if (user?.role !== 'SUPER_ADMIN') {
     return (
       <div className="flex flex-col items-center justify-center h-[60vh] gap-4">
@@ -637,12 +708,6 @@ export default function SuperAdminPage() {
             <p className="text-sm text-muted-foreground">Platform-wide management console</p>
           </div>
         </div>
-        {health && (
-          <div className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full ${health.database === 'healthy' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700'}`}>
-            <span className={`h-1.5 w-1.5 rounded-full ${health.database === 'healthy' ? 'bg-green-500' : 'bg-red-500'} animate-pulse`} />
-            DB {health.database}
-          </div>
-        )}
       </div>
 
       {/* Tabs */}

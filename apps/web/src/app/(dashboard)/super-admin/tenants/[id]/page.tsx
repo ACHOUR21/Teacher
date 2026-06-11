@@ -252,10 +252,10 @@ export default function TenantDetailPage() {
           )}
 
           {/* Next billing date indicator */}
-          {subscription?.currentPeriodEnd && (
+          {Boolean(subscription?.currentPeriodEnd) && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground mt-2 pt-2 border-t border-border">
               <Calendar className="h-3.5 w-3.5" />
-              Renews {format(new Date(subscription.currentPeriodEnd as string), 'MMM d, yyyy')}
+              Renews {format(new Date(subscription!.currentPeriodEnd as string), 'MMM d, yyyy')}
             </div>
           )}
         </div>
