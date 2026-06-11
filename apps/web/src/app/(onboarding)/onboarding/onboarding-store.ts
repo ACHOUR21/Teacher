@@ -50,11 +50,16 @@ export const useOnboardingStore = create<OnboardingState & OnboardingActions>()(
     {
       name: 'onboarding',
       storage: createJSONStorage(() =>
-        typeof window !== 'undefined' ? localStorage : ({
-          getItem: () => null,
-          setItem: () => {},
-          removeItem: () => {},
-        } as Storage)
+        typeof window !== 'undefined'
+          ? localStorage
+          : ({
+              getItem: () => null,
+              setItem: () => {},
+              removeItem: () => {},
+              length: 0,
+              clear: () => {},
+              key: () => null,
+            } as unknown as Storage)
       ),
     }
   )

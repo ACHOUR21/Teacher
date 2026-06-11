@@ -251,3 +251,19 @@
 .prose-ai blockquote {
   @apply border-l-4 border-primary pl-3 italic text-muted-foreground;
 }
+
+/* Onboarding confetti animation */
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(-10px) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+.animate-confetti {
+  animation: confetti-fall 2s ease-in forwards;
+}

@@ -90,6 +90,7 @@ export class WhiteLabelService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cache: RedisService,
+    private readonly config: ConfigService,
   ) {}
 
   // ─── Private helpers ───────────────────────────────────────────────────────
@@ -122,18 +123,85 @@ export class WhiteLabelService {
     return {};
   }
 
+  // ─── recordToTenantBranding ────────────────────────────────────────────────
+
+  private recordToTenantBranding(
+    tenantId: string,
+    record: {
+      logoUrl: string | null;
+      faviconUrl: string | null;
+      primaryColor: string;
+      secondaryColor: string;
+      customCss: string | null;
+      domain: string | null;
+      settings: Prisma.JsonValue;
+    },
+  ): TenantBranding {
+    const settings = this.extractSettings(record);
+    return {
+      tenantId,
+      logoUrl: record.logoUrl ?? DEFAULT_TENANT_BRANDING.logoUrl,
+      faviconUrl: record.faviconUrl ?? DEFAULT_TENANT_BRANDING.faviconUrl,
+      primaryColor: record.primaryColor ?? DEFAULT_TENANT_BRANDING.primaryColor,
+      secondaryColor: record.secondaryColor ?? DEFAULT_TENANT_BRANDING.secondaryColor,
+      accentColor: (settings.accentColor as string | undefined) ?? DEFAULT_TENANT_BRANDING.accentColor,
+      fontFamily: (settings.fontFamily as string | undefined) ?? DEFAULT_TENANT_BRANDING.fontFamily,
+      tagline: (settings.tagline as string | undefined) ?? DEFAULT_TENANT_BRANDING.tagline,
+      customCss: record.customCss ?? DEFAULT_TENANT_BRANDING.customCss,
+      customDomain: record.domain ?? null,
+    };
+  }
+
   // ─── getBranding ───────────────────────────────────────────────────────────
 
   /**
-   * Fetch the tenant's full branding configuration.
+   * Fetch the tenant's full branding configuration (TenantBranding shape).
    * Serves from Redis cache when available.
    */
-  async getBranding(tenantId: string): Promise<BrandingConfig> {
+  async getBranding(tenantId: string): Promise<TenantBranding> {
     const cacheKey = this.brandingCacheKey(tenantId);
     const cached = await this.cache.get(cacheKey);
     if (cached) {
       try {
-        return JSON.parse(cached) as BrandingConfig;
+        return JSON.parse(cached) as TenantBranding;
+      } catch {
+        // fall through to DB
+      }
+    }
+
+    const record = await this.getWhiteLabelRecord(tenantId);
+    if (!record) {
+      const defaults: TenantBranding = {
+        tenantId,
+        ...DEFAULT_TENANT_BRANDING,
+        customDomain: null,
+      };
+      return defaults;
+    }
+
+    const branding = this.recordToTenantBranding(tenantId, record);
+    await this.cache.set(cacheKey, JSON.stringify(branding), BRANDING_TTL);
+    return branding;
+  }
+
+  // ─── getBrandingLegacy ─────────────────────────────────────────────────────
+
+  /** @deprecated Use getBranding() which now returns TenantBranding. */
+  async getBrandingLegacy(tenantId: string): Promise<BrandingConfig> {
+    const cacheKey = this.brandingCacheKey(tenantId);
+    const cached = await this.cache.get(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as TenantBranding;
+        // Convert TenantBranding back to BrandingConfig for compatibility
+        return {
+          logoUrl: parsed.logoUrl || undefined,
+          faviconUrl: parsed.faviconUrl || undefined,
+          primaryColor: parsed.primaryColor,
+          secondaryColor: parsed.secondaryColor,
+          fontFamily: parsed.fontFamily,
+          customCss: parsed.customCss || undefined,
+        };
       } catch {
         // fall through to DB
       }
@@ -162,8 +230,41 @@ export class WhiteLabelService {
 
   /**
    * Update logo URL, colors, font family, and custom CSS for the tenant.
+   * Accepts the new UpdateBrandingDto (which includes accentColor, tagline).
    */
-  async updateBranding(tenantId: string, dto: UpdateBrandingDto): Promise<BrandingConfig> {
+  async updateBranding(tenantId: string, dto: UpdateBrandingDto): Promise<TenantBranding> {
+    const record = await this.getOrCreateRecord(tenantId);
+    const existingSettings = this.extractSettings(record);
+
+    const newSettings: Prisma.InputJsonValue = {
+      ...existingSettings,
+      ...(dto.fontFamily !== undefined && { fontFamily: dto.fontFamily }),
+      ...(dto.accentColor !== undefined && { accentColor: dto.accentColor }),
+      ...(dto.tagline !== undefined && { tagline: dto.tagline }),
+    };
+
+    const updated = await this.prisma.whiteLabel.update({
+      where: { tenantId },
+      data: {
+        ...(dto.logoUrl !== undefined && { logoUrl: dto.logoUrl }),
+        ...(dto.faviconUrl !== undefined && { faviconUrl: dto.faviconUrl }),
+        ...(dto.primaryColor !== undefined && { primaryColor: dto.primaryColor }),
+        ...(dto.secondaryColor !== undefined && { secondaryColor: dto.secondaryColor }),
+        ...(dto.customCss !== undefined && { customCss: dto.customCss }),
+        settings: newSettings,
+      },
+    });
+
+    await this.cache.del(this.brandingCacheKey(tenantId));
+    this.logger.log(`Branding updated for tenant ${tenantId}`);
+
+    return this.recordToTenantBranding(tenantId, updated);
+  }
+
+  // ─── updateBrandingLegacy ──────────────────────────────────────────────────
+
+  /** @deprecated Use updateBranding() with UpdateBrandingDto instead. */
+  async updateBrandingLegacy(tenantId: string, dto: UpdateBrandingLegacyDto): Promise<BrandingConfig> {
     const record = await this.getOrCreateRecord(tenantId);
     const existingSettings = this.extractSettings(record);
 
@@ -187,7 +288,7 @@ export class WhiteLabelService {
     });
 
     await this.cache.del(this.brandingCacheKey(tenantId));
-    this.logger.log(`Branding updated for tenant ${tenantId}`);
+    this.logger.log(`Branding updated (legacy) for tenant ${tenantId}`);
 
     const settings = this.extractSettings(updated);
     return {
@@ -365,16 +466,17 @@ export class WhiteLabelService {
     const branding = await this.getBranding(tenantId);
 
     const variables: Record<string, string> = {
-      '--color-primary': branding.primaryColor ?? DEFAULT_BRANDING.primaryColor!,
-      '--color-secondary': branding.secondaryColor ?? DEFAULT_BRANDING.secondaryColor!,
-      '--font-family': branding.fontFamily ?? DEFAULT_BRANDING.fontFamily!,
+      '--color-primary': branding.primaryColor,
+      '--color-secondary': branding.secondaryColor,
+      '--color-accent': branding.accentColor,
+      '--font-family': branding.fontFamily,
     };
 
     const rootBlock = Object.entries(variables)
       .map(([k, v]) => `  ${k}: ${v};`)
       .join('\n');
 
-    const css = `:root {\n${rootBlock}\n}\n${branding.customCss ?? ''}`.trim();
+    const css = `:root {\n${rootBlock}\n}\n${branding.customCss}`.trim();
 
     return { css, variables };
   }
@@ -385,11 +487,21 @@ export class WhiteLabelService {
    * Export the full branding configuration as a portable JSON snapshot.
    */
   async exportBrandingConfig(tenantId: string): Promise<FullBrandingExport> {
-    const [branding, customDomain, emailTemplates] = await Promise.all([
+    const [tenantBranding, customDomain, emailTemplates] = await Promise.all([
       this.getBranding(tenantId),
       this.getCustomDomain(tenantId),
       this.getEmailTemplates(tenantId),
     ]);
+
+    // Map TenantBranding to BrandingConfig for the export snapshot
+    const branding: BrandingConfig = {
+      logoUrl: tenantBranding.logoUrl || undefined,
+      faviconUrl: tenantBranding.faviconUrl || undefined,
+      primaryColor: tenantBranding.primaryColor,
+      secondaryColor: tenantBranding.secondaryColor,
+      fontFamily: tenantBranding.fontFamily,
+      customCss: tenantBranding.customCss || undefined,
+    };
 
     return {
       branding,
@@ -412,7 +524,7 @@ export class WhiteLabelService {
     const imported: string[] = [];
 
     if (config.branding) {
-      await this.updateBranding(tenantId, config.branding);
+      await this.updateBrandingLegacy(tenantId, config.branding);
       imported.push('branding');
     }
 
@@ -491,5 +603,85 @@ export class WhiteLabelService {
   async generateThemeCSS(tenantId: string): Promise<string> {
     const { css } = await this.previewBranding(tenantId);
     return css;
+  }
+
+  // ─── generateCssVariables ─────────────────────────────────────────────────
+
+  /**
+   * Generate a CSS :root block string from a TenantBranding object.
+   * This is a pure synchronous utility — no DB or cache access.
+   */
+  generateCssVariables(branding: TenantBranding): string {
+    const lines = [
+      `  --color-primary: ${branding.primaryColor};`,
+      `  --color-secondary: ${branding.secondaryColor};`,
+      `  --color-accent: ${branding.accentColor};`,
+      `  --font-family: ${branding.fontFamily};`,
+    ];
+    return `:root {\n${lines.join('\n')}\n}`;
+  }
+
+  // ─── getAssetUrl ──────────────────────────────────────────────────────────
+
+  /**
+   * Return the CDN URL for a per-tenant asset (logo, favicon, banner).
+   * Format: {CDN_BASE_URL}/tenants/{tenantId}/{assetType}
+   */
+  getAssetUrl(tenantId: string, assetType: 'logo' | 'favicon' | 'banner'): string {
+    const base = this.config.get<string>('CDN_BASE_URL', 'https://cdn.eduai.example.com');
+    return `${base}/tenants/${tenantId}/${assetType}`;
+  }
+
+  // ─── validateCustomDomain ─────────────────────────────────────────────────
+
+  /**
+   * Validate that the tenant has added the expected DNS TXT record for
+   * domain ownership verification.
+   *
+   * Returns { valid: boolean; txtRecord: string } where txtRecord is the
+   * expected value the tenant must add.
+   */
+  async validateCustomDomain(
+    tenantId: string,
+    domain: string,
+  ): Promise<{ valid: boolean; txtRecord: string }> {
+    const normalized = domain.trim().toLowerCase();
+
+    if (!DOMAIN_REGEX.test(normalized)) {
+      throw new BadRequestException(
+        `"${domain}" is not a valid domain name. Use the format: example.com`,
+      );
+    }
+
+    const txtRecord = `eduai-verify=${tenantId.substring(0, 8)}`;
+
+    try {
+      const records = await dns.promises.resolveTxt(normalized);
+      // resolveTxt returns string[][] — each entry is an array of chunks
+      const flat = records.map((chunks) => chunks.join('')).flat();
+      const valid = flat.includes(txtRecord);
+      return { valid, txtRecord };
+    } catch (err) {
+      this.logger.warn(
+        `DNS TXT lookup failed for domain "${normalized}": ${(err as Error).message}`,
+      );
+      return { valid: false, txtRecord };
+    }
+  }
+
+  // ─── registerCustomDomain ─────────────────────────────────────────────────
+
+  /**
+   * Persist the custom domain for a tenant and mark it as pending verification.
+   * The cert-manager ClusterIssuer (infra/k8s/cert-manager/cluster-issuer.yaml)
+   * will automatically provision a TLS certificate once the domain is verified
+   * and a matching Ingress/Certificate resource is created.
+   */
+  async registerCustomDomain(tenantId: string, domain: string): Promise<void> {
+    await this.updateCustomDomain(tenantId, domain);
+    this.logger.log(
+      `Custom domain "${domain}" registered for tenant ${tenantId}. ` +
+      'Awaiting DNS TXT verification before cert provisioning.',
+    );
   }
 }
