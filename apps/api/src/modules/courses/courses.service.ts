@@ -16,6 +16,7 @@ import { ApiEcosystemService } from '../api-ecosystem/api-ecosystem.service';
 import { RedisService } from '../cache/redis.service';
 import { PaginationDto, paginate } from '../core/pagination/pagination.dto';
 import { PrismaService } from '../database/prisma.service';
+import { EmailService } from '../notifications/email/email.service';
 import { SearchService } from '../search/search.service';
 
 
@@ -114,6 +115,7 @@ export class CoursesService {
     private redis: RedisService,
     private searchService: SearchService,
     private apiEcosystem: ApiEcosystemService,
+    private emailService: EmailService,
   ) {}
 
   async findAll(tenantId: string, pagination: PaginationDto, filters?: {
@@ -411,6 +413,28 @@ export class CoursesService {
       where: { id: courseId },
       data: { enrollCount: { increment: 1 } },
     });
+
+    // Fire-and-forget enrollment email
+    this.prisma.student.findUnique({
+      where: { id: studentId },
+      include: { user: { select: { email: true, firstName: true, lastName: true } } },
+    }).then(async (s) => {
+      if (!s?.user?.email) { return; }
+      const instructor = await this.prisma.teacher.findFirst({
+        where: { courses: { some: { id: courseId } } },
+        include: { user: { select: { firstName: true, lastName: true } } },
+      });
+      const instructorName = instructor?.user
+        ? `${instructor.user.firstName} ${instructor.user.lastName}`
+        : 'EduAI';
+      const courseUrl = `${process.env['APP_URL'] ?? 'http://localhost:3000'}/courses/${courseId}`;
+      await this.emailService.sendCourseEnrollment(s.user.email, {
+        name: s.user.firstName,
+        courseName: course.title,
+        courseUrl,
+        instructorName,
+      }).catch(() => null);
+    }).catch(() => null);
 
     // Fire-and-forget webhook
     this.apiEcosystem

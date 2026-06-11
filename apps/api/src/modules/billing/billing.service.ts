@@ -16,6 +16,7 @@ import Stripe from 'stripe';
 import { ApiEcosystemService } from '../api-ecosystem/api-ecosystem.service';
 import { RedisService } from '../cache/redis.service';
 import { PrismaService } from '../database/prisma.service';
+import { EmailService } from '../notifications/email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
 
@@ -41,6 +42,7 @@ export class BillingService {
     private readonly configService: ConfigService,
     private readonly apiEcosystem: ApiEcosystemService,
     @Optional() private readonly notifications?: NotificationsService,
+    @Optional() private readonly emailService?: EmailService,
   ) {
     this.stripe = new Stripe(
       this.configService.get<string>('STRIPE_SECRET_KEY', 'sk_test_placeholder'),
@@ -463,6 +465,26 @@ export class BillingService {
       data: { status: SubscriptionStatus.ACTIVE },
     });
 
+    // Send payment succeeded email to tenant admin
+    if (this.emailService) {
+      const adminUser = await this.prisma.user.findFirst({
+        where: { tenantId: subscription.tenantId, role: 'ADMIN' },
+        select: { email: true, firstName: true },
+      });
+      if (adminUser?.email) {
+        const nextBillingDate = subscription.currentPeriodEnd
+          ? new Date(subscription.currentPeriodEnd).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+          : 'N/A';
+        this.emailService.sendPaymentSucceeded(adminUser.email, {
+          name: adminUser.firstName,
+          plan: subscription.plan,
+          amount: `$${(invoice.amount_paid / 100).toFixed(2)}`,
+          invoiceUrl: invoice.invoice_pdf ?? `${this.configService.get<string>('APP_URL', 'http://localhost:3000')}/billing/invoices`,
+          nextBillingDate,
+        }).catch(() => null);
+      }
+    }
+
     // Clear any active dunning state on successful payment
     if (invoice.customer) {
       await this.clearDunning(invoice.customer as string);
@@ -491,6 +513,20 @@ export class BillingService {
         'Your last payment could not be processed. Please update your payment method to avoid service interruption.',
         { type: 'PAYMENT_FAILED', href: '/billing' },
       ).catch(() => {});
+    }
+
+    // Send payment failed email
+    if (this.emailService) {
+      const adminUser = (subscription as any).tenant?.users?.[0] as { email?: string; firstName?: string } | undefined;
+      if (adminUser?.email) {
+        const retryDate = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        this.emailService.sendPaymentFailed(adminUser.email, {
+          name: adminUser.firstName ?? 'Admin',
+          plan: subscription.plan,
+          retryDate,
+          updatePaymentUrl: `${this.configService.get<string>('APP_URL', 'http://localhost:3000')}/billing/payment-method`,
+        }).catch(() => null);
+      }
     }
 
     this.logger.warn(`Payment failed for subscription ${subscription.id}`);

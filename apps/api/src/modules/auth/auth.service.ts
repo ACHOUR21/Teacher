@@ -17,6 +17,7 @@ import * as speakeasy from 'speakeasy';
 
 import { RedisService } from '../cache/redis.service';
 import { PrismaService } from '../database/prisma.service';
+import { EmailService } from '../notifications/email/email.service';
 import { NotificationsService } from '../notifications/notifications.service';
 
 import { LoginCommand } from './application/commands/login.command';
@@ -41,6 +42,7 @@ export class AuthService {
     private configService: ConfigService,
     private redis: RedisService,
     private notifications: NotificationsService,
+    private emailService: EmailService,
   ) {}
 
   async createTenantAndAdmin(cmd: CreateTenantAndAdminCommand): Promise<{ user: AuthUser; tokens: AuthTokens }> {
@@ -112,6 +114,11 @@ export class AuthService {
 
     this.logger.log(`New tenant created: ${cmd.tenantSlug} by ${cmd.adminEmail}`);
     this.notifications.sendWelcomeEmail(cmd.adminEmail, cmd.adminFirstName, result.tenant.name).catch(() => {});
+    this.emailService.sendWelcome(cmd.adminEmail, {
+      name: cmd.adminFirstName,
+      tenantName: result.tenant.name,
+      loginUrl: `${this.configService.get<string>('APP_URL', 'http://localhost:3000')}/login`,
+    }).catch(() => null);
     return { user: authUser, tokens };
   }
 
@@ -145,6 +152,11 @@ export class AuthService {
 
     const tenant = await this.prisma.tenant.findUnique({ where: { id: cmd.tenantId }, select: { name: true, slug: true } });
     this.notifications.sendWelcomeEmail(user.email, user.firstName, tenant?.name ?? 'EduAI').catch(() => {});
+    this.emailService.sendWelcome(user.email, {
+      name: user.firstName,
+      tenantName: tenant?.name ?? 'EduAI',
+      loginUrl: `${this.configService.get<string>('APP_URL', 'http://localhost:3000')}/login`,
+    }).catch(() => null);
     // Send email verification link (fire-and-forget)
     this.sendVerificationEmail(user.id).catch(() => {});
 
@@ -489,6 +501,12 @@ export class AuthService {
 
     this.logger.log(`Password reset token generated for ${email}`);
     this.notifications.sendPasswordResetEmail(user.email, user.firstName, resetToken).catch(() => {});
+    const resetUrl = `${this.configService.get<string>('APP_URL', 'http://localhost:3000')}/reset-password?token=${resetToken}`;
+    this.emailService.sendPasswordReset(user.email, {
+      name: user.firstName,
+      resetUrl,
+      expiresIn: '1 hour',
+    }).catch(() => null);
   }
 
   async sendVerificationEmail(userId: string): Promise<void> {
@@ -499,6 +517,8 @@ export class AuthService {
     const verificationToken = randomUUID();
     await this.redis.set(`email:verify:${verificationToken}`, userId, 24 * 3600); // 24 hours
     await this.notifications.sendEmailVerification(user.email, user.firstName, verificationToken).catch(() => {});
+    const verifyUrl = `${this.configService.get<string>('APP_URL', 'http://localhost:3000')}/verify-email?token=${verificationToken}`;
+    this.emailService.sendEmailVerification(user.email, { name: user.firstName, verifyUrl }).catch(() => null);
     this.logger.log(`Email verification token sent to ${user.email}`);
   }
 
