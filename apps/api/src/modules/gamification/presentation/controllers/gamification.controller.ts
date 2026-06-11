@@ -3,13 +3,16 @@ import { Controller, Get, Post, Body, Query, UseGuards, Request } from '@nestjs/
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { FEATURE_FLAGS } from '../../../feature-flags/feature-flags.constants';
+import { FeatureFlagGuard, RequireFeature } from '../../../feature-flags/feature-flag.guard';
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
 import { GamificationEventType } from '../../domain/gamification-rules';
 import { GamificationService } from '../../gamification.service';
 
 @ApiTags('Gamification')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, FeatureFlagGuard)
+@RequireFeature(FEATURE_FLAGS.GAMIFICATION)
 @Controller('gamification')
 export class GamificationController {
   constructor(private readonly gamificationService: GamificationService) {}

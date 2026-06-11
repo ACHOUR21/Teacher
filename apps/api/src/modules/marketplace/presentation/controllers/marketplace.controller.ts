@@ -5,6 +5,8 @@ import { IsInt, IsOptional, IsString, Min, Max } from 'class-validator';
 
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
 import { Public } from '../../../core/decorators/public.decorator';
+import { FEATURE_FLAGS } from '../../../feature-flags/feature-flags.constants';
+import { FeatureFlagGuard, RequireFeature } from '../../../feature-flags/feature-flag.guard';
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
 import { MarketplaceService } from '../../marketplace.service';
 
@@ -19,6 +21,8 @@ class PurchaseCourseDto {
 }
 
 @ApiTags('Marketplace')
+@UseGuards(FeatureFlagGuard)
+@RequireFeature(FEATURE_FLAGS.MARKETPLACE)
 @Controller('marketplace')
 export class MarketplaceController {
   constructor(private readonly marketplaceService: MarketplaceService) {}

@@ -6,6 +6,7 @@ import {
   Body,
   Param,
   Request,
+  Res,
   HttpCode,
   HttpStatus,
   UseGuards,
@@ -19,7 +20,8 @@ import {
   ApiBearerAuth,
   ApiResponse,
 } from '@nestjs/swagger';
-import { Request as ExpressRequest } from 'express';
+import { AuthGuard } from '@nestjs/passport';
+import { Request as ExpressRequest, Response } from 'express';
 
 import { CurrentUser, CurrentUserPayload } from '../../../core/decorators/current-user.decorator';
 import { Public } from '../../../core/decorators/public.decorator';
@@ -280,5 +282,51 @@ export class AuthController {
   @ApiOperation({ summary: 'Verify email address with token' })
   async verifyEmail(@Query('token') token: string) {
     return this.authService.verifyEmail(token);
+  }
+
+  // ── SSO ────────────────────────────────────────────────────────────────────
+
+  @Public()
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  @ApiOperation({ summary: 'Initiate Google OAuth login' })
+  googleAuth() {
+    // Passport redirects automatically
+  }
+
+  @Public()
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  @ApiOperation({ summary: 'Google OAuth callback' })
+  async googleCallback(
+    @Request() req: ExpressRequest & { user: any },
+    @Res() res: Response,
+  ) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const tokens = await this.authService.generateTokensForUser(req.user);
+    const redirectUrl = `${process.env['APP_URL'] ?? 'http://localhost:3000'}/auth/sso-callback?token=${tokens.accessToken}`;
+    res.redirect(redirectUrl);
+  }
+
+  @Public()
+  @Get('microsoft')
+  @UseGuards(AuthGuard('microsoft'))
+  @ApiOperation({ summary: 'Initiate Microsoft OAuth login' })
+  microsoftAuth() {
+    // Passport redirects automatically
+  }
+
+  @Public()
+  @Get('microsoft/callback')
+  @UseGuards(AuthGuard('microsoft'))
+  @ApiOperation({ summary: 'Microsoft OAuth callback' })
+  async microsoftCallback(
+    @Request() req: ExpressRequest & { user: any },
+    @Res() res: Response,
+  ) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const tokens = await this.authService.generateTokensForUser(req.user);
+    const redirectUrl = `${process.env['APP_URL'] ?? 'http://localhost:3000'}/auth/sso-callback?token=${tokens.accessToken}`;
+    res.redirect(redirectUrl);
   }
 }

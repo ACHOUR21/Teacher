@@ -11,9 +11,11 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { TenantsModule } from '../tenants/tenants.module';
 
 import { AuthService } from './auth.service';
+import { GoogleStrategy } from './infrastructure/strategies/google.strategy';
 import { JwtRefreshStrategy } from './infrastructure/strategies/jwt-refresh.strategy';
 import { JwtStrategy } from './infrastructure/strategies/jwt.strategy';
 import { LocalStrategy } from './infrastructure/strategies/local.strategy';
+import { MicrosoftStrategy } from './infrastructure/strategies/microsoft.strategy';
 import { AuthController } from './presentation/controllers/auth.controller';
 
 @Module({
@@ -36,6 +38,8 @@ import { AuthController } from './presentation/controllers/auth.controller';
     JwtStrategy,
     LocalStrategy,
     JwtRefreshStrategy,
+    GoogleStrategy,
+    MicrosoftStrategy,
     Reflector,
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },

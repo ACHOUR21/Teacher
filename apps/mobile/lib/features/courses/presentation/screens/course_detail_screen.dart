@@ -48,7 +48,7 @@ class CourseDetailScreen extends ConsumerWidget {
                         children: [
                           _Stat(icon: Icons.star, value: course.rating.toStringAsFixed(1), color: Colors.amber),
                           const SizedBox(width: 16),
-                          _Stat(icon: Icons.people, value: '${course.enrollCount}', color: Colors.blue),
+                          _Stat(icon: Icons.people, value: '${course.enrollmentCount}', color: Colors.blue),
                           const SizedBox(width: 16),
                           _Stat(icon: Icons.bar_chart, value: course.level, color: Colors.purple),
                         ],

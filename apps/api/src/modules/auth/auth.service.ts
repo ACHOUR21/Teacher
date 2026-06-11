@@ -552,6 +552,18 @@ export class AuthService {
     return false;
   }
 
+  async generateTokensForUser(user: {
+    id: string;
+    email: string;
+    role: UserRole;
+    tenantId: string;
+    firstName: string;
+    lastName: string;
+    mfaEnabled: boolean;
+  }): Promise<AuthTokens> {
+    return this.generateTokens(user);
+  }
+
   private async generateTokens(user: {
     id: string;
     email: string;

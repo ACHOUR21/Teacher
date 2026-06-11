@@ -30,6 +30,8 @@ import '../../features/courses/presentation/screens/my_learning_screen.dart';
 import '../../features/parents/presentation/screens/parents_screen.dart';
 import '../../features/analytics/presentation/screens/analytics_screen.dart';
 import '../../features/search/presentation/screens/search_screen.dart';
+import '../../features/flashcards/presentation/screens/flashcards_screen.dart';
+import '../../features/flashcards/presentation/screens/study_session_screen.dart';
 import 'splash_screen.dart';
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -205,6 +207,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/home/analytics',
             builder: (context, state) => const AnalyticsScreen(),
+          ),
+          GoRoute(
+            path: '/home/flashcards',
+            builder: (context, state) => const FlashcardsScreen(),
+            routes: [
+              GoRoute(
+                path: ':deckId',
+                builder: (context, state) {
+                  final deckId = state.pathParameters['deckId']!;
+                  return StudySessionScreen(deckId: deckId);
+                },
+              ),
+            ],
           ),
         ],
       ),

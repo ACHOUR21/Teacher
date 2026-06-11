@@ -4,6 +4,8 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { IsString, IsDateString, IsOptional, IsInt, Min, Max } from 'class-validator';
 
 import { CurrentUser } from '../../../core/decorators/current-user.decorator';
+import { FEATURE_FLAGS } from '../../../feature-flags/feature-flags.constants';
+import { FeatureFlagGuard, RequireFeature } from '../../../feature-flags/feature-flag.guard';
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
 import { LiveService } from '../../live.service';
 
@@ -16,7 +18,8 @@ class CreateSessionDto {
 
 @ApiTags('Live')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, FeatureFlagGuard)
+@RequireFeature(FEATURE_FLAGS.LIVE_SESSIONS)
 @Controller('live')
 export class LiveController {
   constructor(private readonly liveService: LiveService) {}

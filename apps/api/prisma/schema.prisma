@@ -54,6 +54,12 @@ model User {
   mfaSecret         String?
   mfaBackupCodes    String[]  @default([])
   lastLoginAt       DateTime?
+  provider          String?
+  providerId        String?
+  dateOfBirth       DateTime?
+  parentalConsent   Boolean   @default(false)
+  parentEmail       String?
+  directoryRestriction Boolean @default(false)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   tenant            Tenant    @relation(fields: [tenantId], references: [id])

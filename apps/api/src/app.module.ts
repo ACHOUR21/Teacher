@@ -4,6 +4,8 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 
 import { AiModule } from './modules/ai/ai.module';
+import { ComplianceModule } from './modules/compliance/compliance.module';
+import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module';
 import { AiAgentsModule } from './modules/ai-agents/ai-agents.module';
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { ApiEcosystemModule } from './modules/api-ecosystem/api-ecosystem.module';
@@ -95,7 +97,9 @@ import { WhiteLabelModule } from './modules/white-label/white-label.module';
     ExamsModule,
     FlashcardsModule,
     GdprModule,
+    ComplianceModule,
     AppGraphQLModule,
+    FeatureFlagsModule,
   ],
   providers: [
     {

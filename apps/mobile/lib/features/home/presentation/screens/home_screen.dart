@@ -112,6 +112,7 @@ class _AppDrawer extends StatelessWidget {
         _drawerItem(context, Icons.emoji_events_outlined, 'Gamification', '/home/gamification'),
         _drawerItem(context, Icons.chat_outlined, 'Messages', '/home/messages'),
         _drawerItem(context, Icons.notifications_outlined, 'Notifications', '/home/notifications'),
+        _drawerItem(context, Icons.style_outlined, 'Flashcards', '/home/flashcards'),
         _drawerItem(context, Icons.calendar_month_outlined, 'Timetable', '/home/timetable'),
         const Divider(),
         _drawerItem(context, Icons.credit_card_outlined, 'Billing', '/home/billing'),

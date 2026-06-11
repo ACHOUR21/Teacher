@@ -121,6 +121,15 @@ class Endpoints {
   static String conversationMessages(String id) =>
       '/messages/conversations/$id/messages';
 
+  // Flashcards
+  static const String flashcardDecks = '/flashcards/decks';
+  static String flashcardDeckById(String id) => '/flashcards/decks/$id';
+  static String flashcardsInDeck(String id) => '/flashcards/decks/$id/cards';
+  static String flashcardById(String deckId, String cardId) =>
+      '/flashcards/decks/$deckId/cards/$cardId';
+  static String flashcardMarkKnown(String deckId, String cardId) =>
+      '/flashcards/decks/$deckId/cards/$cardId/known';
+
   // Parents
   static const String myChildren = '/parents/my-children';
   static String childCourses(String id) => '/students/$id/courses';
