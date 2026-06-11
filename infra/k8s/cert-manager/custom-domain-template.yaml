@@ -1,0 +1,98 @@
+# Custom Domain Certificate Template
+#
+# This file is a TEMPLATE — do NOT apply it directly to the cluster.
+#
+# When a tenant registers a custom domain via:
+#   POST /white-label/domain/register  { "domain": "school.acme.org" }
+#
+# The platform's domain controller (or a Kubernetes operator) should:
+#   1. Create an Ingress resource for the custom domain (see below).
+#   2. Create a Certificate resource for the custom domain (see below).
+#   3. cert-manager will then automatically provision a TLS certificate
+#      via Let's Encrypt HTTP-01 challenge using the nginx Ingress controller.
+#
+# The tenant must first add a CNAME DNS record:
+#   school.acme.org → ingress.eduai.example.com
+#
+# After DNS propagation, cert-manager completes the HTTP-01 challenge and
+# the certificate is stored in the secret referenced by the Ingress.
+#
+# Variables to substitute at runtime:
+#   ${TENANT_ID}     — e.g. "clx1234abcd"
+#   ${TENANT_SLUG}   — e.g. "acme-school"
+#   ${CUSTOM_DOMAIN} — e.g. "school.acme.org"
+
+---
+# 1. Ingress for the custom domain
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  # Name pattern: tenant-{TENANT_SLUG}-custom-domain
+  name: tenant-${TENANT_SLUG}-custom-domain
+  namespace: eduai
+  labels:
+    app.kubernetes.io/name: custom-domain-ingress
+    app.kubernetes.io/component: ingress
+    app.kubernetes.io/part-of: eduai
+    eduai/tenant-id: "${TENANT_ID}"
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    # Tells cert-manager which ClusterIssuer to use for HTTP-01 challenge
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    # Pass the original host so the app can resolve the tenant
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header X-Custom-Domain $host;
+      proxy_set_header X-Tenant-ID "${TENANT_ID}";
+spec:
+  tls:
+    - hosts:
+        - "${CUSTOM_DOMAIN}"
+      # cert-manager will create and populate this secret automatically
+      secretName: "custom-domain-${TENANT_SLUG}-tls"
+  rules:
+    - host: "${CUSTOM_DOMAIN}"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: eduai-web
+                port:
+                  number: 3000
+
+---
+# 2. Certificate resource (cert-manager creates the TLS secret)
+#
+# cert-manager watches for Certificate resources and provisions certs.
+# When the Ingress above has the cert-manager annotation, cert-manager
+# automatically creates a Certificate resource — this explicit Certificate
+# resource is optional but provides more control over renewal and duration.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: "custom-domain-${TENANT_SLUG}"
+  namespace: eduai
+  labels:
+    app.kubernetes.io/name: custom-domain-cert
+    app.kubernetes.io/component: cert-manager
+    app.kubernetes.io/part-of: eduai
+    eduai/tenant-id: "${TENANT_ID}"
+spec:
+  # Must match the secretName in the Ingress TLS block above
+  secretName: "custom-domain-${TENANT_SLUG}-tls"
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  commonName: "${CUSTOM_DOMAIN}"
+  dnsNames:
+    - "${CUSTOM_DOMAIN}"
+  # Renew 30 days before expiry
+  renewBefore: 720h   # 30 days
+  duration: 2160h      # 90 days (Let's Encrypt maximum)
+  privateKey:
+    algorithm: RSA
+    size: 2048
