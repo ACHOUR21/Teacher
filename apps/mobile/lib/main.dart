@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'app.dart';
 import 'core/notifications/fcm_service.dart';
+import 'core/offline/offline_storage.dart';
 
 // firebase_options.dart must exist before running.
 // Copy firebase_options.dart.example → firebase_options.dart and fill in values,
@@ -13,6 +14,7 @@ import 'core/notifications/fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await OfflineStorage.init();
   await Firebase.initializeApp();
 
   final container = ProviderContainer();

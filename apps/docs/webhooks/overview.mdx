@@ -1,0 +1,35 @@
+---
+title: Webhooks Overview
+description: Receive real-time events from EduAI
+---
+
+# Webhooks
+
+Webhooks let your application receive real-time notifications when events occur in EduAI.
+
+## Register an endpoint
+
+```bash
+curl -X POST https://api.eduai.example.com/webhooks/endpoints \
+  -H "Authorization: Bearer TOKEN" \
+  -H "X-Tenant-ID: TENANT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://yourapp.com/webhooks/eduai",
+    "events": ["user.enrolled", "payment.succeeded", "certificate.issued"]
+  }'
+```
+
+## Retry policy
+
+EduAI retries failed deliveries 3 times with exponential backoff: 5s, 15s, 30s.
+
+## Payload format
+
+```json
+{
+  "event": "user.enrolled",
+  "payload": { ... },
+  "timestamp": "2026-06-11T10:00:00.000Z"
+}
+```

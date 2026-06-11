@@ -49,6 +49,8 @@ import { TenantMiddleware } from './modules/tenants/middleware/tenant.middleware
 import { TenantsModule } from './modules/tenants/tenants.module';
 import { UniversityErpModule } from './modules/university-erp/university-erp.module';
 import { UsersModule } from './modules/users/users.module';
+import { ScimModule } from './modules/scim/scim.module';
+import { WebhooksModule } from './modules/webhooks/webhooks.module';
 import { WhiteLabelModule } from './modules/white-label/white-label.module';
 
 @Module({
@@ -103,6 +105,8 @@ import { WhiteLabelModule } from './modules/white-label/white-label.module';
     ComplianceModule,
     AppGraphQLModule,
     FeatureFlagsModule,
+    ScimModule,
+    WebhooksModule,
   ],
   providers: [
     {

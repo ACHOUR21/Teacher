@@ -1,0 +1,32 @@
+---
+title: AI API
+description: AI tutor, homework solver, flashcard generator, and more
+---
+
+# AI API
+
+## POST /ai/chat
+
+Multi-turn AI tutor conversation.
+
+```json
+{ "message": "Explain photosynthesis", "subject": "biology", "conversationId": "optional" }
+```
+
+## POST /ai/homework/solve
+
+Step-by-step homework problem solver.
+
+```json
+{ "problem": "Solve: 2x + 5 = 13", "subject": "math" }
+```
+
+## POST /ai/flashcards/generate
+
+Generate a flashcard deck from a topic.
+
+```json
+{ "topic": "World War II causes", "count": 10 }
+```
+
+**Rate limits:** AI endpoints consume credits. Monitor usage at `GET /ai/usage`.

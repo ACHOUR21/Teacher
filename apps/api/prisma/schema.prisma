@@ -34,6 +34,7 @@ model Tenant {
   exams           Exam[]
   flashcardDecks  FlashcardDeck[]
   certTemplates   CertificateTemplate[]
+  webhookEndpoints WebhookEndpoint[]
 }
 
 // === USERS & AUTH ===
@@ -60,6 +61,8 @@ model User {
   parentalConsent   Boolean   @default(false)
   parentEmail       String?
   directoryRestriction Boolean @default(false)
+  scimExternalId    String?
+  scimManaged       Boolean   @default(false)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
   tenant            Tenant    @relation(fields: [tenantId], references: [id])
@@ -779,6 +782,8 @@ model WebhookEndpoint {
   secret     String
   isActive   Boolean  @default(true)
   createdAt  DateTime @default(now())
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  @@index([tenantId])
 }
 
 // === AUDIT ===

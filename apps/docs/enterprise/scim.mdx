@@ -1,0 +1,62 @@
+---
+title: SCIM 2.0 Provisioning
+description: Automate user provisioning with Okta, Azure AD, and OneLogin
+---
+
+# SCIM 2.0 Provisioning
+
+EduAI supports SCIM 2.0 for enterprise identity providers to automatically sync users and groups.
+
+## Setup
+
+### 1. Generate a SCIM token
+
+```bash
+curl -X POST https://api.eduai.example.com/scim/v2/token \
+  -H "Authorization: Bearer ADMIN_JWT" \
+  -H "X-Tenant-ID: YOUR_TENANT_ID"
+```
+
+Store the returned token securely — it is shown only once.
+
+### 2. Configure Okta
+
+1. In Okta Admin, go to **Applications → Add Application → Create New App**
+2. Select **SCIM 2.0** connector
+3. Set **SCIM Connector Base URL**: `https://api.eduai.example.com/scim/v2`
+4. Set **Unique identifier field**: `userName`
+5. Under **Authentication Mode**: select `HTTP Header`
+6. Set **Authorization Header**: `Bearer YOUR_SCIM_TOKEN`
+7. Add header `X-Tenant-ID: YOUR_TENANT_ID`
+8. Test the connection, then enable provisioning
+
+### 3. Configure Azure AD
+
+1. In Azure AD, go to **Enterprise Applications → New Application → Non-gallery**
+2. Under **Provisioning → Provisioning Mode**: select **Automatic**
+3. Set **Tenant URL**: `https://api.eduai.example.com/scim/v2`
+4. Set **Secret Token**: `YOUR_SCIM_TOKEN`
+5. Add attribute mapping for `X-Tenant-ID` header
+6. Click **Test Connection**, then **Save**
+
+## Supported operations
+
+| Operation | Supported |
+|-----------|-----------|
+| Create users | ✅ |
+| Update users | ✅ |
+| Deactivate users | ✅ (sets `isActive: false`) |
+| Delete users | ✅ (soft delete) |
+| Create groups | ✅ |
+| Update groups | ✅ |
+| Delete groups | ✅ |
+| Group membership sync | ✅ |
+
+## Group → Role mapping
+
+| SCIM group name | EduAI role |
+|-----------------|-----------|
+| `teachers` | TEACHER |
+| `students` | STUDENT |
+| `admins` | ADMIN |
+| Other | STUDENT |

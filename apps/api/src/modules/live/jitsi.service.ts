@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as jwt from 'jsonwebtoken';
+import { JwtService } from '@nestjs/jwt';
 
 export interface JitsiTokenParams {
   userId: string;
@@ -12,7 +12,10 @@ export interface JitsiTokenParams {
 
 @Injectable()
 export class JitsiService {
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   /**
    * Generate a Jitsi Meet JWT for a user to join a room.
@@ -39,7 +42,7 @@ export class JitsiService {
       },
     };
 
-    return jwt.sign(payload, appSecret, { expiresIn: '2h' });
+    return this.jwtService.sign(payload, { secret: appSecret, expiresIn: '2h' });
   }
 
   /**

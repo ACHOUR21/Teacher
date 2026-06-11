@@ -1,0 +1,32 @@
+---
+title: White Label
+description: Custom branding for your tenant
+---
+
+# White Label
+
+## GET /white-label/branding
+
+Returns the current branding configuration (logo, colors, fonts). Public — no auth required.
+
+## PUT /white-label/branding
+
+Update branding. Admin only.
+
+```json
+{
+  "primaryColor": "#6366f1",
+  "secondaryColor": "#8b5cf6",
+  "logoUrl": "https://cdn.example.com/logo.png",
+  "fontFamily": "Inter"
+}
+```
+
+## GET /white-label/branding/css
+
+Returns a `text/css` response with CSS custom properties for use in your frontend.
+
+## Custom domains
+
+1. POST `/white-label/domain/validate` — check DNS TXT record
+2. POST `/white-label/domain/register` — register domain (triggers cert provisioning)

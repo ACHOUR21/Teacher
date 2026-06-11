@@ -12,7 +12,7 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID as uuidv4 } from "crypto";
 
 import { WhiteboardEvent } from '../../dto/whiteboard-event.dto';
 import { LiveService } from '../../live.service';

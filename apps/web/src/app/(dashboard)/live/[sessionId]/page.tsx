@@ -1,20 +1,14 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import {
-  Mic, MicOff, Video, VideoOff, PhoneOff, MessageSquare,
-  Hand, Share2, PenLine, Users,
-} from 'lucide-react';
-import { useParams, useRouter } from 'next/navigation';
-import { useEffect, useRef, useState, memo } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { useParams } from 'next/navigation';
+import { io, type Socket } from 'socket.io-client';
 
-import { LiveWhiteboard } from '@/components/live/LiveWhiteboard';
-import { useSocket } from '@/hooks/useSocket';
-import { useWebRTC } from '@/hooks/useWebRTC';
-import { api } from '@/lib/api';
-import { cn } from '@/lib/utils';
-
-// ------------------------------------------------------------------ types
+interface Participant {
+  userId: string;
+  displayName: string;
+  handRaised: boolean;
+}
 
 interface ChatMessage {
   userId: string;
@@ -22,374 +16,208 @@ interface ChatMessage {
   timestamp: string;
 }
 
-interface Participant {
-  userId: string;
-  socketId?: string;
-  user: { firstName: string; lastName: string; avatarUrl?: string };
-  role: string;
+interface PollOption {
+  text: string;
+  votes: number;
 }
 
-// ------------------------------------------------------------------ VideoTile
+interface Poll {
+  id: string;
+  question: string;
+  options: PollOption[];
+  totalVotes: number;
+}
 
-const VideoTile = memo(function VideoTile({
-  stream,
-  name,
-  muted = false,
-}: {
-  stream: MediaStream | null;
-  name: string;
-  muted?: boolean;
-}) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+const REACTIONS = ['👍', '👎', '❤️', '😂', '😮', '👏'];
 
-  useEffect(() => {
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream;
-    }
-  }, [stream]);
+export default function LiveClassroomPage() {
+  const params = useParams<{ sessionId: string }>();
+  const sessionId = params.sessionId;
 
-  return (
-    <div className="aspect-video bg-gray-700 rounded-xl relative overflow-hidden">
-      {stream ? (
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted={muted}
-          className="w-full h-full object-cover"
-        />
-      ) : (
-        <div className="flex items-center justify-center h-full">
-          <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-semibold text-lg">
-            {name[0]?.toUpperCase()}
-          </div>
-        </div>
-      )}
-      <div className="absolute bottom-2 left-2">
-        <span className="text-white text-xs bg-black/50 px-2 py-0.5 rounded truncate max-w-[150px] block">
-          {name}
-        </span>
-      </div>
-    </div>
-  );
-});
-
-// ------------------------------------------------------------------ page
-
-type SidePanel = 'chat' | 'whiteboard' | 'participants';
-
-export default function LiveSessionPage() {
-  const { sessionId } = useParams<{ sessionId: string }>();
-  const router = useRouter();
-  const { socket, isConnected } = useSocket({ namespace: '/live' });
-
-  const {
-    localStream,
-    remoteStreams,
-    callPeer,
-    setMicEnabled,
-    setCameraEnabled,
-  } = useWebRTC(socket);
-
-  const [micOn, setMicOn] = useState(true);
-  const [cameraOn, setCameraOn] = useState(true);
-  const [handRaised, setHandRaised] = useState(false);
-  const [sidePanel, setSidePanel] = useState<SidePanel | null>('chat');
+  const [jitsiUrl, setJitsiUrl] = useState<string | null>(null);
+  const [participants, setParticipants] = useState<Participant[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
-  const [participants, setParticipants] = useState<Participant[]>([]);
-
+  const [handRaised, setHandRaised] = useState(false);
+  const [activePoll, setActivePoll] = useState<Poll | null>(null);
+  const [floatingReactions, setFloatingReactions] = useState<{ id: string; emoji: string }[]>([]);
+  const socketRef = useRef<Socket | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const { data: session } = useQuery({
-    queryKey: ['live-session', sessionId],
-    queryFn: () => api.get(`/live/sessions/${sessionId}`).then(r => r.data.data),
-  });
-
-  // ------------------------------------------------------------------ socket setup
-
   useEffect(() => {
-    if (!socket || !isConnected) {return;}
+    const token = typeof window !== 'undefined'
+      ? JSON.parse(localStorage.getItem('eduai-auth') ?? '{}')?.accessToken
+      : null;
 
-    socket.emit('join-session', { sessionId }, (response: any) => {
-      if (response?.participants) {setParticipants(response.participants);}
+    // Fetch Jitsi join token
+    if (token) {
+      fetch(`/api/live/sessions/${sessionId}/join-token`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((r) => r.json())
+        .then((d: { jitsiUrl?: string }) => {
+          if (d.jitsiUrl) setJitsiUrl(d.jitsiUrl);
+        })
+        .catch(() => null);
+    }
+
+    // Connect Socket.IO
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+    const socket = io(`${apiUrl}/live`, { auth: { token } });
+    socketRef.current = socket;
+
+    socket.on('connect', () => {
+      socket.emit('join-session', { sessionId, token });
     });
 
-    socket.on('participant-joined', (data: any) => {
-      setParticipants(prev => [...prev, data]);
-      // Initiate WebRTC offer to the new peer
-      if (data.socketId) {callPeer(data.socketId);}
-    });
-
-    socket.on('participant-left', (data: any) => {
-      setParticipants(prev => prev.filter(p => p.userId !== data.userId));
-    });
-
-    socket.on('new-message', (msg: ChatMessage) => {
-      setMessages(prev => [...prev, msg]);
-    });
-
-    socket.on('mic-toggled', (data: any) => {
-      setParticipants(prev =>
-        prev.map(p => (p.userId === data.userId ? { ...p, micOn: data.enabled } : p)),
+    socket.on('participant-list', (list: Participant[]) => setParticipants(list));
+    socket.on('hand-raised', (data: { userId: string; raised: boolean }) => {
+      setParticipants((prev) =>
+        prev.map((p) => p.userId === data.userId ? { ...p, handRaised: data.raised } : p),
       );
     });
+    socket.on('chat-message', (msg: ChatMessage) => setMessages((prev) => [...prev, msg]));
+    socket.on('poll-created', (poll: Poll) => setActivePoll(poll));
+    socket.on('poll-updated', (poll: Poll) => setActivePoll(poll));
+    socket.on('reaction', (data: { userId: string; emoji: string }) => {
+      const id = Math.random().toString(36).slice(2);
+      setFloatingReactions((prev) => [...prev, { id, emoji: data.emoji }]);
+      setTimeout(() => setFloatingReactions((prev) => prev.filter((r) => r.id !== id)), 2500);
+    });
 
-    return () => {
-      socket.emit('leave-session');
-      socket.off('participant-joined');
-      socket.off('participant-left');
-      socket.off('new-message');
-      socket.off('mic-toggled');
-    };
-    // callPeer is stable (useCallback), safe to include
-  }, [socket, isConnected, sessionId, callPeer]);
+    return () => { socket.emit('leave-session', { sessionId }); socket.disconnect(); };
+  }, [sessionId]);
 
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-  // ------------------------------------------------------------------ controls
-
-  const toggleMic = () => {
-    const next = !micOn;
-    setMicOn(next);
-    setMicEnabled(next);
-    socket?.emit('toggle-mic', { enabled: next });
-  };
-
-  const toggleCamera = () => {
-    const next = !cameraOn;
-    setCameraOn(next);
-    setCameraEnabled(next);
-    socket?.emit('toggle-camera', { enabled: next });
+  const sendChat = () => {
+    if (!chatInput.trim()) return;
+    socketRef.current?.emit('chat-message', { sessionId, message: chatInput.trim() });
+    setChatInput('');
   };
 
   const toggleHand = () => {
     const next = !handRaised;
     setHandRaised(next);
-    socket?.emit('raise-hand', { raised: next });
+    socketRef.current?.emit('hand-raise', { sessionId, raised: next });
   };
 
-  const startScreenShare = async () => {
-    try {
-      const screen = await navigator.mediaDevices.getDisplayMedia({ video: true });
-      socket?.emit('screen-share', { sharing: true });
-      screen.getVideoTracks()[0].onended = () => {
-        socket?.emit('screen-share', { sharing: false });
-      };
-    } catch {
-      // user cancelled or denied
-    }
+  const sendReaction = (emoji: string) => {
+    socketRef.current?.emit('reaction', { sessionId, emoji });
   };
 
-  const leaveSession = () => {
-    socket?.emit('leave-session');
-    router.push('/live');
+  const votePoll = (pollId: string, optionIndex: number) => {
+    socketRef.current?.emit('poll-vote', { sessionId, pollId, optionIndex });
   };
-
-  const togglePanel = (panel: SidePanel) => {
-    setSidePanel(prev => (prev === panel ? null : panel));
-  };
-
-  // ------------------------------------------------------------------ render helpers
-
-  const allTiles = [
-    // self tile — always first
-    <VideoTile key="self" stream={localStream} name="You (me)" muted />,
-    // remote peers
-    ...participants.slice(0, 7).map(p => (
-      <VideoTile
-        key={p.userId}
-        stream={remoteStreams.get(p.socketId ?? '') ?? null}
-        name={`${p.user?.firstName ?? ''} ${p.user?.lastName ?? ''}`.trim() || 'Participant'}
-      />
-    )),
-  ];
-
-  // ------------------------------------------------------------------ JSX
 
   return (
-    <div className="flex h-[calc(100vh-64px)] bg-gray-900 -mx-6 -mt-6 overflow-hidden">
-      {/* ---- Main area ---- */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
-        <div className="bg-gray-800 px-4 py-3 flex items-center justify-between flex-shrink-0">
-          <div>
-            <p className="text-white font-medium text-sm">{session?.title ?? 'Live Session'}</p>
-            <p className="text-gray-400 text-xs flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
-              Live · {participants.length + 1} participants
-            </p>
+    <div className="flex h-screen bg-gray-900 text-white overflow-hidden">
+      {/* Video area */}
+      <div className="flex-1 relative">
+        {jitsiUrl ? (
+          <iframe
+            src={jitsiUrl}
+            className="w-full h-full border-0"
+            allow="camera; microphone; fullscreen; display-capture"
+            title="Live classroom"
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4" />
+              <p className="text-gray-400">Connecting to classroom…</p>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            {(
-              [
-                { id: 'chat' as SidePanel,         icon: MessageSquare, title: 'Chat'         },
-                { id: 'whiteboard' as SidePanel,   icon: PenLine,       title: 'Whiteboard'  },
-                { id: 'participants' as SidePanel, icon: Users,         title: 'Participants' },
-              ] as const
-            ).map(({ id, icon: Icon, title }) => (
-              <button
-                key={id}
-                onClick={() => togglePanel(id)}
-                title={title}
-                className={cn(
-                  'p-2 rounded-lg transition-colors',
-                  sidePanel === id ? 'bg-blue-600 text-white' : 'text-gray-400 hover:bg-gray-700',
-                )}
-              >
-                <Icon className="h-4 w-4" />
-              </button>
-            ))}
-          </div>
+        )}
+
+        {/* Floating reactions */}
+        <div className="absolute bottom-20 left-4 pointer-events-none">
+          {floatingReactions.map((r) => (
+            <div key={r.id} className="text-3xl animate-bounce mb-1">{r.emoji}</div>
+          ))}
         </div>
 
-        {/* Video grid */}
-        <div className="flex-1 p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 content-start auto-rows-max overflow-y-auto">
-          {allTiles}
-        </div>
-
-        {/* Controls */}
-        <div className="bg-gray-800 px-6 py-4 flex items-center justify-center gap-4 flex-shrink-0">
-          <button
-            onClick={toggleMic}
-            title={micOn ? 'Mute' : 'Unmute'}
-            className={cn(
-              'p-3 rounded-full transition-colors',
-              micOn ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-red-600 text-white',
-            )}
-          >
-            {micOn ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
-          </button>
-          <button
-            onClick={toggleCamera}
-            title={cameraOn ? 'Turn off camera' : 'Turn on camera'}
-            className={cn(
-              'p-3 rounded-full transition-colors',
-              cameraOn ? 'bg-gray-700 text-white hover:bg-gray-600' : 'bg-red-600 text-white',
-            )}
-          >
-            {cameraOn ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
-          </button>
+        {/* Reaction bar */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-gray-800/80 backdrop-blur rounded-full px-4 py-2">
+          {REACTIONS.map((emoji) => (
+            <button key={emoji} onClick={() => sendReaction(emoji)}
+              className="text-xl hover:scale-125 transition-transform">{emoji}</button>
+          ))}
           <button
             onClick={toggleHand}
-            title={handRaised ? 'Lower hand' : 'Raise hand'}
-            className={cn(
-              'p-3 rounded-full transition-colors',
-              handRaised ? 'bg-yellow-500 text-white' : 'bg-gray-700 text-white hover:bg-gray-600',
-            )}
+            className={`ml-3 px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+              handRaised ? 'bg-yellow-500 text-black' : 'bg-gray-600 text-white hover:bg-gray-500'
+            }`}
           >
-            <Hand className="h-5 w-5" />
-          </button>
-          <button
-            onClick={startScreenShare}
-            title="Share screen"
-            className="p-3 rounded-full bg-gray-700 text-white hover:bg-gray-600 transition-colors"
-          >
-            <Share2 className="h-5 w-5" />
-          </button>
-          <button
-            onClick={leaveSession}
-            className="px-5 py-3 rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors flex items-center gap-2"
-          >
-            <PhoneOff className="h-5 w-5" />
-            <span className="text-sm font-medium">Leave</span>
+            {handRaised ? '✋ Lower hand' : '✋ Raise hand'}
           </button>
         </div>
       </div>
 
-      {/* ---- Side panel ---- */}
-      {sidePanel && (
-        <div className="w-80 bg-gray-800 flex flex-col border-l border-gray-700 flex-shrink-0">
-          {/* Chat */}
-          {sidePanel === 'chat' && (
-            <>
-              <div className="px-4 py-3 border-b border-gray-700 flex-shrink-0">
-                <p className="text-white font-medium text-sm">Live Chat</p>
-              </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {messages.length === 0 && (
-                  <p className="text-gray-500 text-xs text-center mt-8">No messages yet</p>
-                )}
-                {messages.map((msg, i) => (
-                  <div key={i} className="text-sm">
-                    <p className="text-blue-400 text-xs font-medium">{msg.userId}</p>
-                    <p className="text-gray-200 mt-0.5 break-words">{msg.message}</p>
-                  </div>
-                ))}
-                <div ref={chatEndRef} />
-              </div>
-              <div className="p-3 border-t border-gray-700 flex gap-2 flex-shrink-0">
-                <input
-                  type="text"
-                  value={chatInput}
-                  onChange={e => setChatInput(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') {
-                      if (!chatInput.trim()) {return;}
-                      socket?.emit('send-message', { message: chatInput });
-                      setChatInput('');
-                    }
-                  }}
-                  placeholder="Type a message..."
-                  className="flex-1 bg-gray-700 text-white text-sm px-3 py-2 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 placeholder-gray-400"
-                />
-                <button
-                  onClick={() => {
-                    if (!chatInput.trim()) {return;}
-                    socket?.emit('send-message', { message: chatInput });
-                    setChatInput('');
-                  }}
-                  className="px-3 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
-                >
-                  Send
-                </button>
-              </div>
-            </>
-          )}
-
-          {/* Whiteboard */}
-          {sidePanel === 'whiteboard' && (
-            <LiveWhiteboard socket={socket} className="flex-1" />
-          )}
-
-          {/* Participants */}
-          {sidePanel === 'participants' && (
-            <>
-              <div className="px-4 py-3 border-b border-gray-700 flex-shrink-0">
-                <p className="text-white font-medium text-sm">
-                  Participants <span className="text-gray-400">({participants.length + 1})</span>
-                </p>
-              </div>
-              <div className="flex-1 overflow-y-auto p-3 space-y-2">
-                {/* Self */}
-                <div className="flex items-center gap-3 px-2 py-2 rounded-lg">
-                  <div className="h-8 w-8 rounded-full bg-gradient-to-br from-green-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                    Y
-                  </div>
-                  <p className="text-white text-sm flex-1">You (me)</p>
-                  <div className="flex items-center gap-1">
-                    {!micOn && <MicOff className="h-3.5 w-3.5 text-red-400" />}
-                    {!cameraOn && <VideoOff className="h-3.5 w-3.5 text-red-400" />}
-                  </div>
+      {/* Sidebar */}
+      <div className="w-80 flex flex-col border-l border-gray-700 bg-gray-800">
+        {/* Participants */}
+        <div className="p-3 border-b border-gray-700">
+          <h3 className="text-sm font-semibold text-gray-300 mb-2">
+            Participants ({participants.length})
+          </h3>
+          <div className="space-y-1 max-h-32 overflow-y-auto">
+            {participants.map((p) => (
+              <div key={p.userId} className="flex items-center gap-2 text-sm">
+                <div className="w-6 h-6 rounded-full bg-indigo-600 flex items-center justify-center text-xs">
+                  {p.displayName.charAt(0).toUpperCase()}
                 </div>
-                {participants.map(p => (
-                  <div key={p.userId} className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-gray-700">
-                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">
-                      {p.user?.firstName?.[0]?.toUpperCase()}
-                    </div>
-                    <p className="text-gray-200 text-sm flex-1 truncate">
-                      {p.user?.firstName} {p.user?.lastName}
-                    </p>
-                    <span className="text-xs text-gray-500">{p.role}</span>
-                  </div>
-                ))}
+                <span className="flex-1 truncate">{p.displayName}</span>
+                {p.handRaised && <span title="Hand raised">✋</span>}
               </div>
-            </>
-          )}
+            ))}
+          </div>
         </div>
-      )}
+
+        {/* Active poll */}
+        {activePoll && (
+          <div className="p-3 border-b border-gray-700">
+            <h3 className="text-sm font-semibold text-gray-300 mb-2">Poll</h3>
+            <p className="text-sm mb-2">{activePoll.question}</p>
+            {activePoll.options.map((opt, i) => (
+              <button key={i} onClick={() => votePoll(activePoll.id, i)}
+                className="w-full text-left text-sm mb-1 p-2 rounded bg-gray-700 hover:bg-indigo-600 transition-colors">
+                <span>{opt.text}</span>
+                <span className="float-right text-xs text-gray-400">{opt.votes} votes</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Chat */}
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="p-3 border-b border-gray-700">
+            <h3 className="text-sm font-semibold text-gray-300">Chat</h3>
+          </div>
+          <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            {messages.map((msg, i) => (
+              <div key={i} className="text-sm">
+                <span className="font-medium text-indigo-400">{msg.userId.slice(0, 8)}: </span>
+                <span className="text-gray-200">{msg.message}</span>
+              </div>
+            ))}
+            <div ref={chatEndRef} />
+          </div>
+          <div className="p-3 border-t border-gray-700 flex gap-2">
+            <input
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') sendChat(); }}
+              placeholder="Type a message…"
+              className="flex-1 bg-gray-700 rounded px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+            <button onClick={sendChat}
+              className="bg-indigo-600 hover:bg-indigo-500 px-3 py-1.5 rounded text-sm font-medium">
+              Send
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

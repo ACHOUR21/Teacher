@@ -1,0 +1,26 @@
+---
+title: Python SDK
+description: Official Python SDK reference
+---
+
+# Python SDK
+
+```bash
+pip install eduai-sdk
+```
+
+```python
+from eduai import EduAIClient
+
+client = EduAIClient(
+    tenant_id=os.environ["EDUAI_TENANT_ID"],
+    api_key=os.environ["EDUAI_API_KEY"],
+)
+
+# List courses
+courses = client.courses.list(page=1, limit=20)
+
+# AI tutor
+response = client.ai.chat(message="What is DNA?", subject="biology")
+print(response.message)
+```

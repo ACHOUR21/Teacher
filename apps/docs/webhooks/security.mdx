@@ -1,0 +1,51 @@
+---
+title: Webhook Security
+description: Verify webhook signatures using HMAC-SHA256
+---
+
+# Webhook Security
+
+All webhooks are signed with HMAC-SHA256. Verify the `X-EduAI-Signature` header to confirm authenticity.
+
+## JavaScript
+
+```javascript
+import { createHmac } from 'crypto';
+
+function verifyWebhook(body, signature, secret) {
+  const expected = `sha256=${createHmac('sha256', secret).update(body).digest('hex')}`;
+  return expected === signature;
+}
+
+// Express handler
+app.post('/webhooks/eduai', express.raw({ type: 'application/json' }), (req, res) => {
+  const sig = req.headers['x-eduai-signature'];
+  if (!verifyWebhook(req.body, sig, process.env.WEBHOOK_SECRET)) {
+    return res.status(401).send('Invalid signature');
+  }
+  const event = JSON.parse(req.body);
+  // handle event...
+  res.sendStatus(200);
+});
+```
+
+## Python
+
+```python
+import hmac, hashlib
+
+def verify_webhook(body: bytes, signature: str, secret: str) -> bool:
+    expected = "sha256=" + hmac.new(
+        secret.encode(), body, hashlib.sha256
+    ).hexdigest()
+    return hmac.compare_digest(expected, signature)
+```
+
+## PHP
+
+```php
+function verifyWebhook(string $body, string $signature, string $secret): bool {
+    $expected = 'sha256=' . hash_hmac('sha256', $body, $secret);
+    return hash_equals($expected, $signature);
+}
+```

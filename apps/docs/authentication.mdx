@@ -1,0 +1,59 @@
+---
+title: Authentication
+description: JWT auth, refresh tokens, and tenant scoping
+---
+
+# Authentication
+
+## JWT Bearer tokens
+
+All API requests require a `Bearer` token in the `Authorization` header and your tenant ID in `X-Tenant-ID`.
+
+```bash
+curl https://api.eduai.example.com/courses \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN" \
+  -H "X-Tenant-ID: YOUR_TENANT_ID"
+```
+
+## Access token lifetime
+
+Access tokens expire after **15 minutes**. Refresh tokens expire after **7 days**.
+
+## Refreshing tokens
+
+```bash
+curl -X POST https://api.eduai.example.com/auth/refresh \
+  -H "Content-Type: application/json" \
+  -H "X-Tenant-ID: YOUR_TENANT_ID" \
+  -d '{"refreshToken": "YOUR_REFRESH_TOKEN"}'
+```
+
+## JavaScript example
+
+```javascript
+import axios from 'axios';
+
+const client = axios.create({
+  baseURL: 'https://api.eduai.example.com',
+  headers: { 'X-Tenant-ID': process.env.TENANT_ID },
+});
+
+// Login
+const { data } = await client.post('/auth/login', { email, password });
+client.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;
+```
+
+## Python example
+
+```python
+import httpx
+
+client = httpx.Client(
+    base_url="https://api.eduai.example.com",
+    headers={"X-Tenant-ID": TENANT_ID}
+)
+
+resp = client.post("/auth/login", json={"email": EMAIL, "password": PASSWORD})
+token = resp.json()["accessToken"]
+client.headers["Authorization"] = f"Bearer {token}"
+```

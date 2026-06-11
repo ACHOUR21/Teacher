@@ -1,0 +1,32 @@
+---
+title: Authentication API
+description: Login, register, MFA, and token refresh endpoints
+---
+
+# Authentication API
+
+## POST /auth/login
+
+```bash
+curl -X POST https://api.eduai.example.com/auth/login \
+  -H "X-Tenant-ID: TENANT_ID" \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "password"}'
+```
+
+**Response 200:**
+```json
+{ "accessToken": "eyJ...", "refreshToken": "eyJ...", "user": { "id": "...", "role": "STUDENT" } }
+```
+
+## POST /auth/register
+
+Create a new user account.
+
+## POST /auth/refresh
+
+Exchange a refresh token for a new access token.
+
+## POST /auth/logout
+
+Invalidate the current session.

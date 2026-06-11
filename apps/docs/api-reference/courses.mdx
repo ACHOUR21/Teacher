@@ -1,0 +1,26 @@
+---
+title: Courses API
+description: Course management, enrollment, and progress tracking
+---
+
+# Courses API
+
+## GET /courses
+
+List all courses for the tenant. Supports `?page`, `?limit`, `?search`, `?categoryId`.
+
+## POST /courses
+
+Create a new course (teacher/admin only).
+
+## GET /courses/:id
+
+Get course details including sections and lessons.
+
+## POST /courses/:id/enroll
+
+Enroll the authenticated user. Returns existing enrollment if already enrolled (idempotent).
+
+## PUT /courses/:courseId/progress
+
+Update lesson progress for the authenticated user.
