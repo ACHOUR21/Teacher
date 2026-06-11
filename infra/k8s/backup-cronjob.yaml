@@ -1,0 +1,167 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: eduai
+spec:
+  schedule: "0 2 * * *"   # 2 AM daily
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: pg-backup
+              image: postgres:16-alpine
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: eduai-secrets
+                      key: DB_PASSWORD
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: eduai-secrets
+                      key: S3_ACCESS_KEY
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: eduai-secrets
+                      key: S3_SECRET_KEY
+                - name: AWS_DEFAULT_REGION
+                  value: us-east-1
+                - name: S3_BUCKET
+                  valueFrom:
+                    configMapKeyRef:
+                      name: eduai-config
+                      key: S3_BUCKET
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+                  FILENAME="backup_${TIMESTAMP}.sql.gz"
+                  echo "Starting backup: ${FILENAME}"
+                  pg_dump -h postgres -U eduai -d eduai_db | gzip > /tmp/${FILENAME}
+                  # Upload to S3 backups folder
+                  apt-get install -y awscli -q
+                  aws s3 cp /tmp/${FILENAME} s3://${S3_BUCKET}/backups/postgres/${FILENAME}
+                  echo "Backup complete: s3://${S3_BUCKET}/backups/postgres/${FILENAME}"
+                  # Cleanup backups older than 30 days
+                  aws s3 ls s3://${S3_BUCKET}/backups/postgres/ | \
+                    awk '{print $4}' | \
+                    while read f; do
+                      fdate=$(echo $f | grep -o '[0-9]\{8\}')
+                      if [ "$(date -d "${fdate}" +%s 2>/dev/null || echo 0)" -lt "$(date -d '30 days ago' +%s)" ]; then
+                        aws s3 rm s3://${S3_BUCKET}/backups/postgres/${f}
+                      fi
+                    done
+              resources:
+                requests:
+                  memory: "256Mi"
+                  cpu: "100m"
+                limits:
+                  memory: "512Mi"
+                  cpu: "500m"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup-weekly
+  namespace: eduai
+spec:
+  schedule: "0 3 * * 0"   # 3 AM every Sunday
+  successfulJobsHistoryLimit: 4
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: pg-backup-weekly
+              image: postgres:16-alpine
+              env:
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: eduai-secrets
+                      key: DB_PASSWORD
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: eduai-secrets
+                      key: S3_ACCESS_KEY
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: eduai-secrets
+                      key: S3_SECRET_KEY
+                - name: AWS_DEFAULT_REGION
+                  value: us-east-1
+                - name: S3_BUCKET
+                  valueFrom:
+                    configMapKeyRef:
+                      name: eduai-config
+                      key: S3_BUCKET
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  set -e
+                  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+                  FILENAME="weekly_backup_${TIMESTAMP}.sql.gz"
+                  pg_dump -h postgres -U eduai -d eduai_db | gzip > /tmp/${FILENAME}
+                  apt-get install -y awscli -q
+                  aws s3 cp /tmp/${FILENAME} s3://${S3_BUCKET}/backups/postgres/weekly/${FILENAME}
+                  echo "Weekly backup complete"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: redis-backup
+  namespace: eduai
+spec:
+  schedule: "30 2 * * *"   # 2:30 AM daily
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: redis-backup
+              image: redis:7-alpine
+              env:
+                - name: REDIS_HOST
+                  value: redis
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: eduai-secrets
+                      key: S3_ACCESS_KEY
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: eduai-secrets
+                      key: S3_SECRET_KEY
+                - name: S3_BUCKET
+                  valueFrom:
+                    configMapKeyRef:
+                      name: eduai-config
+                      key: S3_BUCKET
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  redis-cli -h ${REDIS_HOST} BGSAVE
+                  sleep 5
+                  TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+                  apk add --no-cache aws-cli
+                  aws s3 cp /data/dump.rdb s3://${S3_BUCKET}/backups/redis/dump_${TIMESTAMP}.rdb
+                  echo "Redis backup complete"

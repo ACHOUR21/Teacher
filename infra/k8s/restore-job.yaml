@@ -1,0 +1,50 @@
+# Usage: kubectl create job --from=cronjob/postgres-backup manual-restore -n eduai
+# Or apply this file with BACKUP_FILE set to the S3 path of the backup to restore
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: postgres-restore
+  namespace: eduai
+  annotations:
+    description: "Run manually to restore from a specific backup. Set BACKUP_FILE env var."
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: pg-restore
+          image: postgres:16-alpine
+          env:
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: eduai-secrets
+                  key: DB_PASSWORD
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: eduai-secrets
+                  key: S3_ACCESS_KEY
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: eduai-secrets
+                  key: S3_SECRET_KEY
+            - name: BACKUP_FILE
+              value: "REPLACE_WITH_S3_PATH"  # e.g. backups/postgres/backup_20260101_020000.sql.gz
+            - name: S3_BUCKET
+              valueFrom:
+                configMapKeyRef:
+                  name: eduai-config
+                  key: S3_BUCKET
+          command:
+            - /bin/sh
+            - -c
+            - |
+              set -e
+              echo "Downloading backup: ${BACKUP_FILE}"
+              apt-get install -y awscli -q
+              aws s3 cp s3://${S3_BUCKET}/${BACKUP_FILE} /tmp/restore.sql.gz
+              echo "Restoring database..."
+              gunzip -c /tmp/restore.sql.gz | psql -h postgres -U eduai -d eduai_db
+              echo "Restore complete!"
