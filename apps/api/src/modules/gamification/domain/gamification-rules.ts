@@ -9,7 +9,13 @@ export type GamificationEventType =
   | 'first_lesson'
   | 'first_course_enrolled'
   | 'profile_completed'
-  | 'peer_review_given';
+  | 'peer_review_given'
+  | 'quiz_passed'
+  | 'quiz_perfect'
+  | 'flashcard_reviewed'
+  | 'ai_tutor_session'
+  | 'comment_posted'
+  | 'peer_helped';
 
 export interface GamificationRule {
   eventType: GamificationEventType;
@@ -32,6 +38,12 @@ export const GAMIFICATION_RULES: GamificationRule[] = [
   { eventType: 'first_course_enrolled',   xp: 20,  once: true   },
   { eventType: 'profile_completed',       xp: 50,  once: true   },
   { eventType: 'peer_review_given',       xp: 10,  dailyCap: 3  },
+  { eventType: 'quiz_passed',             xp: 25,  dailyCap: 10 },
+  { eventType: 'quiz_perfect',            xp: 50,  dailyCap: 5  },
+  { eventType: 'flashcard_reviewed',      xp: 2,   dailyCap: 50 },
+  { eventType: 'ai_tutor_session',        xp: 5,   dailyCap: 10 },
+  { eventType: 'comment_posted',          xp: 3,   dailyCap: 10 },
+  { eventType: 'peer_helped',             xp: 10,  dailyCap: 5  },
 ];
 
 export const RULES_MAP = new Map<GamificationEventType, GamificationRule>(

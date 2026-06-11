@@ -6,6 +6,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/api/endpoints.dart';
 import '../../../../features/auth/presentation/providers/auth_provider.dart';
 import '../../../../shared/widgets/loading_indicator.dart';
+import '../../../gamification/presentation/widgets/xp_progress_bar.dart';
 import '../widgets/stats_card.dart';
 import '../widgets/course_progress_card.dart';
 
@@ -71,6 +72,19 @@ class AIRecommendation {
     required this.category,
   });
 }
+
+// Lightweight gamification summary for the dashboard profile section
+final _dashboardXpProvider = FutureProvider.autoDispose<Map<String, dynamic>>((ref) async {
+  final apiClient = ref.watch(apiClientProvider);
+  try {
+    final response = await apiClient.dio.get('${Endpoints.baseUrl}${Endpoints.gamificationStats}');
+    final data = response.data;
+    if (data is Map<String, dynamic>) {
+      return (data['data'] as Map<String, dynamic>?) ?? data;
+    }
+  } catch (_) {}
+  return {};
+});
 
 final dashboardStatsProvider = FutureProvider.autoDispose<DashboardStats>((ref) async {
   final apiClient = ref.watch(apiClientProvider);
@@ -154,6 +168,7 @@ class DashboardScreen extends ConsumerWidget {
     final recentCoursesAsync = ref.watch(recentCoursesProvider);
     final sessionsAsync = ref.watch(upcomingSessionsProvider);
     final recommendationsAsync = ref.watch(aiRecommendationsProvider);
+    final xpAsync = ref.watch(_dashboardXpProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -198,6 +213,31 @@ class DashboardScreen extends ConsumerWidget {
           ],
         ),
         actions: [
+          // XP progress bar (compact) in AppBar
+          xpAsync.when(
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
+            data: (xpData) {
+              final level = (xpData['level'] as num?)?.toInt() ?? 1;
+              final xpProgress = xpData['xpProgress'] as Map<String, dynamic>?;
+              final currentXp = (xpProgress?['current'] as num?)?.toInt() ??
+                  (xpData['currentXp'] as num?)?.toInt() ?? 0;
+              final nextLevelXp = (xpProgress?['needed'] as num?)?.toInt() ??
+                  (xpData['nextLevelXp'] as num?)?.toInt() ?? 100;
+              return Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: GestureDetector(
+                  onTap: () => context.go('/home/gamification'),
+                  child: XpProgressBar(
+                    level: level,
+                    currentXp: currentXp,
+                    nextLevelXp: nextLevelXp,
+                    compact: true,
+                  ),
+                ),
+              );
+            },
+          ),
           IconButton(
             onPressed: () => context.go('/home/notifications'),
             icon: Stack(
