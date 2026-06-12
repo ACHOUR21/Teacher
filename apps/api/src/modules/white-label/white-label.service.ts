@@ -14,6 +14,36 @@ import { PrismaService } from '../database/prisma.service';
 import { type TenantBranding, DEFAULT_TENANT_BRANDING } from './dto/tenant-branding.interface';
 import { type UpdateBrandingDto } from './dto/update-branding.dto';
 
+// ─── Phase-7a Interfaces ──────────────────────────────────────────────────────
+
+export interface BrandingConfigV2 {
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  logoUrl?: string;
+  faviconUrl?: string;
+  brandName: string;
+  tagline?: string;
+  fontFamily?: string;
+  borderRadius?: 'sharp' | 'rounded' | 'pill';
+  darkModeEnabled?: boolean;
+}
+
+export interface WhiteLabelConfig {
+  tenantId: string;
+  branding: BrandingConfigV2;
+  customDomain?: string;
+  customEmailDomain?: string;
+  hideEduAIBranding: boolean;
+  customLoginPage?: {
+    headline?: string;
+    subheadline?: string;
+    backgroundImageUrl?: string;
+  };
+  features: Record<string, boolean>;
+  updatedAt: Date;
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface BrandingConfig {
@@ -683,5 +713,166 @@ export class WhiteLabelService {
       `Custom domain "${domain}" registered for tenant ${tenantId}. ` +
       'Awaiting DNS TXT verification before cert provisioning.',
     );
+  }
+
+  // ─── Phase-7a: getConfig ──────────────────────────────────────────────────
+
+  /**
+   * Return the full WhiteLabelConfig for a tenant, merging DB values with defaults.
+   * Reads from `whiteLabel` record and maps to the new WhiteLabelConfig shape.
+   */
+  async getConfig(tenantId: string): Promise<WhiteLabelConfig> {
+    const record = await this.getWhiteLabelRecord(tenantId);
+    const settings = record ? this.extractSettings(record) : {};
+
+    const branding: BrandingConfigV2 = {
+      primaryColor: record?.primaryColor ?? DEFAULT_TENANT_BRANDING.primaryColor,
+      secondaryColor: record?.secondaryColor ?? DEFAULT_TENANT_BRANDING.secondaryColor,
+      accentColor: (settings.accentColor as string | undefined) ?? DEFAULT_TENANT_BRANDING.accentColor,
+      logoUrl: record?.logoUrl ?? undefined,
+      faviconUrl: record?.faviconUrl ?? undefined,
+      brandName: record?.brandName ?? 'EduAI',
+      tagline: (settings.tagline as string | undefined) ?? undefined,
+      fontFamily: (settings.fontFamily as string | undefined) ?? DEFAULT_TENANT_BRANDING.fontFamily,
+      borderRadius: (settings.borderRadius as BrandingConfigV2['borderRadius']) ?? 'rounded',
+      darkModeEnabled: (settings.darkModeEnabled as boolean | undefined) ?? false,
+    };
+
+    const loginPage = settings.customLoginPage as WhiteLabelConfig['customLoginPage'] | undefined;
+
+    return {
+      tenantId,
+      branding,
+      customDomain: record?.domain ?? undefined,
+      customEmailDomain: (settings.customEmailDomain as string | undefined) ?? undefined,
+      hideEduAIBranding: (settings.hideEduAIBranding as boolean | undefined) ?? false,
+      customLoginPage: loginPage,
+      features: (settings.features as Record<string, boolean> | undefined) ?? {},
+      updatedAt: new Date(),
+    };
+  }
+
+  // ─── Phase-7a: updateBrandingV2 ───────────────────────────────────────────
+
+  /**
+   * Update branding using the new BrandingConfigV2 shape.
+   * Validates hex colors, merges with existing settings.
+   */
+  async updateBrandingV2(tenantId: string, partial: Partial<BrandingConfigV2>): Promise<WhiteLabelConfig> {
+    const HEX_REGEX = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+    for (const colorField of ['primaryColor', 'secondaryColor', 'accentColor'] as const) {
+      const val = partial[colorField];
+      if (val !== undefined && !HEX_REGEX.test(val)) {
+        throw new BadRequestException(`Invalid hex color for ${colorField}: "${val}"`);
+      }
+    }
+
+    const record = await this.getOrCreateRecord(tenantId);
+    const existingSettings = this.extractSettings(record);
+
+    const newSettings: Prisma.InputJsonValue = {
+      ...existingSettings,
+      ...(partial.accentColor !== undefined && { accentColor: partial.accentColor }),
+      ...(partial.fontFamily !== undefined && { fontFamily: partial.fontFamily }),
+      ...(partial.tagline !== undefined && { tagline: partial.tagline }),
+      ...(partial.borderRadius !== undefined && { borderRadius: partial.borderRadius }),
+      ...(partial.darkModeEnabled !== undefined && { darkModeEnabled: partial.darkModeEnabled }),
+    };
+
+    await this.prisma.whiteLabel.update({
+      where: { tenantId },
+      data: {
+        ...(partial.primaryColor !== undefined && { primaryColor: partial.primaryColor }),
+        ...(partial.secondaryColor !== undefined && { secondaryColor: partial.secondaryColor }),
+        ...(partial.logoUrl !== undefined && { logoUrl: partial.logoUrl }),
+        ...(partial.faviconUrl !== undefined && { faviconUrl: partial.faviconUrl }),
+        ...(partial.brandName !== undefined && { brandName: partial.brandName }),
+        settings: newSettings,
+      },
+    });
+
+    await this.cache.del(this.brandingCacheKey(tenantId));
+    this.logger.log(`Branding (v2) updated for tenant ${tenantId}`);
+
+    return this.getConfig(tenantId);
+  }
+
+  // ─── Phase-7a: updateCustomDomainV2 ──────────────────────────────────────
+
+  /**
+   * Set custom domain using basic format validation per spec.
+   * Stores in `whiteLabel.domain`.
+   */
+  async updateCustomDomainV2(tenantId: string, domain: string): Promise<void> {
+    const DOMAIN_REGEX_V2 = /^[a-z0-9.-]+\.[a-z]{2,}$/i;
+    const normalized = domain.trim().toLowerCase();
+
+    if (!DOMAIN_REGEX_V2.test(normalized)) {
+      throw new BadRequestException(
+        `"${domain}" is not a valid domain. Use format: example.com`,
+      );
+    }
+
+    const conflict = await this.prisma.whiteLabel.findFirst({
+      where: { domain: normalized, tenantId: { not: tenantId } },
+    });
+    if (conflict) {
+      throw new BadRequestException('Domain is already in use by another tenant');
+    }
+
+    const record = await this.getOrCreateRecord(tenantId);
+    const existingSettings = this.extractSettings(record);
+
+    await this.prisma.whiteLabel.update({
+      where: { tenantId },
+      data: {
+        domain: normalized,
+        settings: { ...existingSettings, domainVerified: false } as Prisma.InputJsonValue,
+      },
+    });
+
+    await this.cache.del(this.brandingCacheKey(tenantId));
+    this.logger.log(`Custom domain (v2) set to "${normalized}" for tenant ${tenantId}`);
+  }
+
+  // ─── Phase-7a: generateCssVariablesV2 ────────────────────────────────────
+
+  /**
+   * Generate a :root CSS block from a WhiteLabelConfig.
+   */
+  generateCssVariablesV2(config: WhiteLabelConfig): string {
+    const b = config.branding;
+    const lines = [
+      `  --primary: ${b.primaryColor};`,
+      `  --secondary: ${b.secondaryColor};`,
+      `  --accent: ${b.accentColor};`,
+      ...(b.fontFamily ? [`  --font-family: ${b.fontFamily};`] : []),
+      ...(b.borderRadius ? [`  --border-radius: ${b.borderRadius === 'sharp' ? '0' : b.borderRadius === 'pill' ? '9999px' : '0.5rem'};`] : []),
+    ];
+    return `:root {\n${lines.join('\n')}\n}`;
+  }
+
+  // ─── Phase-7a: getPublicBranding ──────────────────────────────────────────
+
+  /**
+   * Lightweight public branding response for login page bootstrap.
+   * No auth required on the endpoint; reads from DB/cache.
+   */
+  async getPublicBranding(tenantId: string): Promise<{
+    brandName: string;
+    logoUrl?: string;
+    primaryColor: string;
+    cssVariables: string;
+  }> {
+    const config = await this.getConfig(tenantId);
+    const cssVariables = this.generateCssVariablesV2(config);
+
+    return {
+      brandName: config.branding.brandName,
+      logoUrl: config.branding.logoUrl,
+      primaryColor: config.branding.primaryColor,
+      cssVariables,
+    };
   }
 }
