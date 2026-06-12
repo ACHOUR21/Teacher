@@ -1,3 +1,28 @@
+output "vpc_id" {
+  description = "ID of the VPC"
+  value       = module.vpc.vpc_id
+}
+
+output "vpc_cidr_block" {
+  description = "CIDR block of the VPC"
+  value       = module.vpc.vpc_cidr_block
+}
+
+output "public_subnet_ids" {
+  description = "IDs of public subnets"
+  value       = module.vpc.public_subnet_ids
+}
+
+output "private_subnet_ids" {
+  description = "IDs of private subnets"
+  value       = module.vpc.private_subnet_ids
+}
+
+output "nat_gateway_public_ip" {
+  description = "Public IP of the NAT Gateway"
+  value       = module.vpc.nat_gateway_public_ip
+}
+
 output "eks_cluster_endpoint" {
   description = "EKS cluster API server endpoint"
   value       = module.eks.cluster_endpoint
@@ -20,16 +45,20 @@ output "eks_node_group_role_arn" {
   value       = module.eks.node_group_role_arn
 }
 
+output "eks_oidc_provider_arn" {
+  description = "ARN of the IAM OIDC provider (used for IRSA)"
+  value       = module.eks.oidc_provider_arn
+}
+
 output "rds_endpoint" {
-  description = "RDS PostgreSQL cluster endpoint (write)"
+  description = "RDS PostgreSQL instance endpoint (host:port)"
   value       = module.rds.db_endpoint
   sensitive   = false
 }
 
-output "rds_reader_endpoint" {
-  description = "RDS PostgreSQL read-replica endpoint"
-  value       = module.rds.db_reader_endpoint
-  sensitive   = false
+output "rds_address" {
+  description = "RDS PostgreSQL hostname"
+  value       = module.rds.db_address
 }
 
 output "rds_port" {
@@ -40,6 +69,12 @@ output "rds_port" {
 output "rds_database_name" {
   description = "Name of the RDS database"
   value       = module.rds.db_name
+}
+
+output "rds_password_secret_arn" {
+  description = "ARN of the Secrets Manager secret containing the RDS master password"
+  value       = module.rds.db_password_secret_arn
+  sensitive   = true
 }
 
 output "redis_primary_endpoint" {
@@ -57,6 +92,12 @@ output "redis_reader_endpoint" {
 output "redis_port" {
   description = "ElastiCache Redis port"
   value       = module.elasticache.port
+}
+
+output "redis_auth_token_secret_arn" {
+  description = "ARN of the Secrets Manager secret containing the Redis AUTH token"
+  value       = module.elasticache.auth_token_secret_arn
+  sensitive   = true
 }
 
 output "s3_bucket_name" {
@@ -79,19 +120,29 @@ output "cloudfront_domain_name" {
   value       = module.cloudfront.domain_name
 }
 
-output "vpc_id" {
-  description = "ID of the VPC"
-  value       = module.vpc.vpc_id
+output "alb_security_group_id" {
+  description = "Security group ID for the ALB"
+  value       = module.security.alb_security_group_id
 }
 
-output "private_subnet_ids" {
-  description = "IDs of private subnets"
-  value       = module.vpc.private_subnets
+output "api_security_group_id" {
+  description = "Security group ID for the API service"
+  value       = module.security.api_security_group_id
 }
 
-output "public_subnet_ids" {
-  description = "IDs of public subnets"
-  value       = module.vpc.public_subnets
+output "web_security_group_id" {
+  description = "Security group ID for the web frontend"
+  value       = module.security.web_security_group_id
+}
+
+output "rds_security_group_id" {
+  description = "Security group ID for RDS (from security module)"
+  value       = module.security.rds_security_group_id
+}
+
+output "redis_security_group_id" {
+  description = "Security group ID for Redis (from security module)"
+  value       = module.security.redis_security_group_id
 }
 
 output "kubeconfig_update_command" {

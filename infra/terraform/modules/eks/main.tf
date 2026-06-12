@@ -260,6 +260,51 @@ resource "aws_launch_template" "eks_nodes" {
 }
 
 # ─────────────────────────────────────────────
+# Spot Node Group
+# ─────────────────────────────────────────────
+resource "aws_eks_node_group" "spot" {
+  cluster_name    = aws_eks_cluster.main.name
+  node_group_name = "${var.cluster_name}-spot-nodes"
+  node_role_arn   = aws_iam_role.eks_node_group.arn
+  subnet_ids      = var.private_subnet_ids
+  instance_types  = var.spot_instance_types
+  capacity_type   = "SPOT"
+
+  scaling_config {
+    desired_size = var.spot_desired_capacity
+    min_size     = var.spot_min_size
+    max_size     = var.spot_max_size
+  }
+
+  update_config {
+    max_unavailable = 1
+  }
+
+  # Taint spot nodes so only spot-tolerant workloads are scheduled here
+  taint {
+    key    = "spot"
+    value  = "true"
+    effect = "NO_SCHEDULE"
+  }
+
+  lifecycle {
+    create_before_destroy = true
+    ignore_changes        = [scaling_config[0].desired_size]
+  }
+
+  depends_on = [
+    aws_iam_role_policy_attachment.eks_worker_node_policy,
+    aws_iam_role_policy_attachment.eks_cni_policy,
+    aws_iam_role_policy_attachment.eks_ecr_read_only,
+  ]
+
+  tags = {
+    Name        = "${var.cluster_name}-spot-nodes"
+    Environment = var.environment
+  }
+}
+
+# ─────────────────────────────────────────────
 # OIDC Provider (for IRSA)
 # ─────────────────────────────────────────────
 data "tls_certificate" "eks" {

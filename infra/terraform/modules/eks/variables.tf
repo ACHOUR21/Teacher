@@ -53,3 +53,27 @@ variable "public_access_cidrs" {
   type        = list(string)
   default     = ["0.0.0.0/0"]
 }
+
+variable "spot_instance_types" {
+  description = "EC2 instance types for the EKS spot node group"
+  type        = list(string)
+  default     = ["t3.medium", "t3.large"]
+}
+
+variable "spot_desired_capacity" {
+  description = "Desired number of spot worker nodes"
+  type        = number
+  default     = 2
+}
+
+variable "spot_min_size" {
+  description = "Minimum number of spot worker nodes"
+  type        = number
+  default     = 0
+}
+
+variable "spot_max_size" {
+  description = "Maximum number of spot worker nodes"
+  type        = number
+  default     = 20
+}

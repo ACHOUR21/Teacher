@@ -63,18 +63,6 @@ module "vpc" {
 }
 
 # ─────────────────────────────────────────────
-# Security Groups
-# ─────────────────────────────────────────────
-module "security" {
-  source = "./modules/security"
-
-  project_name     = var.project_name
-  environment      = var.environment
-  vpc_id           = module.vpc.vpc_id
-  eks_node_sg_id   = module.eks.node_security_group_id
-}
-
-# ─────────────────────────────────────────────
 # EKS
 # ─────────────────────────────────────────────
 module "eks" {
@@ -92,21 +80,34 @@ module "eks" {
 }
 
 # ─────────────────────────────────────────────
+# Security Groups
+# Depends on EKS for the node security group ID.
+# ─────────────────────────────────────────────
+module "security" {
+  source = "./modules/security"
+
+  project_name   = var.project_name
+  environment    = var.environment
+  vpc_id         = module.vpc.vpc_id
+  eks_node_sg_id = module.eks.node_security_group_id
+}
+
+# ─────────────────────────────────────────────
 # RDS
 # ─────────────────────────────────────────────
 module "rds" {
   source = "./modules/rds"
 
-  identifier          = "${var.cluster_name}-postgres"
-  instance_class      = var.db_instance_class
-  engine_version      = var.db_engine_version
-  vpc_id              = module.vpc.vpc_id
-  subnet_ids          = module.vpc.private_subnet_ids
-  allowed_cidr_blocks = module.vpc.private_subnet_cidrs
-  environment         = var.environment
-  db_name             = var.db_name
-  db_username         = var.db_username
-  multi_az            = var.db_multi_az
+  identifier              = "${var.cluster_name}-postgres"
+  instance_class          = var.db_instance_class
+  engine_version          = var.db_engine_version
+  vpc_id                  = module.vpc.vpc_id
+  subnet_ids              = module.vpc.private_subnet_ids
+  allowed_cidr_blocks     = module.vpc.private_subnet_cidrs
+  environment             = var.environment
+  db_name                 = var.db_name
+  db_username             = var.db_username
+  multi_az                = var.db_multi_az
   backup_retention_period = var.db_backup_retention_days
 }
 
