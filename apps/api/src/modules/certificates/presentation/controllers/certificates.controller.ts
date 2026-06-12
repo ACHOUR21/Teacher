@@ -12,6 +12,7 @@ import { Roles } from '../../../core/decorators/roles.decorator';
 import { TenantId } from '../../../core/decorators/tenant.decorator';
 import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../core/guards/roles.guard';
+import { CertificateGeneratorService } from '../../certificate-generator.service';
 import { CertificatesService } from '../../certificates.service';
 
 class IssueCertificateDto {
@@ -46,7 +47,55 @@ class CreateTemplateDto {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('certificates')
 export class CertificatesController {
-  constructor(private readonly certificatesService: CertificatesService) {}
+  constructor(
+    private readonly certificatesService: CertificatesService,
+    private readonly certificateGeneratorService: CertificateGeneratorService,
+  ) {}
+
+  // ---- Generator endpoints (enrollment/progress-based) ---------------------
+
+  @Post('generate/:progressId')
+  @Roles(UserRole.STUDENT, UserRole.TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Generate a certificate from a completed CourseProgress record' })
+  async generate(
+    @Param('progressId') progressId: string,
+    @TenantId() tenantId: string,
+  ) {
+    const { certificateId, verificationHash } =
+      await this.certificateGeneratorService.generateCertificate(progressId, tenantId);
+    return { certificateId, verificationHash };
+  }
+
+  @Public()
+  @Get('verify/:certificateId')
+  @ApiOperation({ summary: 'Publicly verify a certificate by UUID (generator path)' })
+  verifyById(@Param('certificateId') certificateId: string) {
+    return this.certificateGeneratorService.verifyCertificate(certificateId);
+  }
+
+  @Get('my-generated')
+  @Roles(UserRole.STUDENT, UserRole.TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'List all generated certificates for the current user' })
+  myGeneratedCertificates(@CurrentUser() user: CurrentUserPayload) {
+    return this.certificateGeneratorService.getCertificates(user.id);
+  }
+
+  @Get('download/:certificateId')
+  @Roles(UserRole.STUDENT, UserRole.TEACHER, UserRole.ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Download a generated certificate PDF by certificateId' })
+  async downloadById(
+    @Param('certificateId') certificateId: string,
+    @CurrentUser() user: CurrentUserPayload,
+    @Res() res: Response,
+  ) {
+    const buffer = await this.certificateGeneratorService.downloadCertificate(certificateId, user.id);
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="certificate-${certificateId}.pdf"`,
+      'Content-Length': buffer.length,
+    });
+    res.send(buffer);
+  }
 
   // ---- Templates -----------------------------------------------------------
 

@@ -1,5 +1,5 @@
 terraform {
-  required_version = ">= 1.7.0"
+  required_version = ">= 1.6.0"
 
   required_providers {
     aws = {
@@ -19,14 +19,6 @@ terraform {
       version = "~> 3.0"
     }
   }
-
-  backend "s3" {
-    bucket         = "eduai-terraform-state"
-    key            = "production/terraform.tfstate"
-    region         = "us-east-1"
-    encrypt        = true
-    dynamodb_table = "eduai-terraform-locks"
-  }
 }
 
 provider "aws" {
@@ -34,7 +26,7 @@ provider "aws" {
 
   default_tags {
     tags = {
-      Project     = "eduai-ultimate"
+      Project     = var.project_name
       Environment = var.environment
       ManagedBy   = "terraform"
     }
@@ -59,32 +51,27 @@ provider "helm" {
 # VPC
 # ─────────────────────────────────────────────
 module "vpc" {
-  source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 5.0"
+  source = "./modules/vpc"
 
-  name = "${var.cluster_name}-vpc"
-  cidr = var.vpc_cidr
+  project_name         = var.project_name
+  environment          = var.environment
+  vpc_cidr             = var.vpc_cidr
+  availability_zones   = var.availability_zones
+  private_subnet_cidrs = var.private_subnet_cidrs
+  public_subnet_cidrs  = var.public_subnet_cidrs
+  cluster_name         = var.cluster_name
+}
 
-  azs             = var.availability_zones
-  private_subnets = var.private_subnet_cidrs
-  public_subnets  = var.public_subnet_cidrs
+# ─────────────────────────────────────────────
+# Security Groups
+# ─────────────────────────────────────────────
+module "security" {
+  source = "./modules/security"
 
-  enable_nat_gateway     = true
-  single_nat_gateway     = false
-  one_nat_gateway_per_az = true
-  enable_dns_hostnames   = true
-  enable_dns_support     = true
-
-  # EKS requires specific tags on subnets
-  private_subnet_tags = {
-    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
-    "kubernetes.io/role/internal-elb"           = "1"
-  }
-
-  public_subnet_tags = {
-    "kubernetes.io/cluster/${var.cluster_name}" = "shared"
-    "kubernetes.io/role/elb"                    = "1"
-  }
+  project_name     = var.project_name
+  environment      = var.environment
+  vpc_id           = module.vpc.vpc_id
+  eks_node_sg_id   = module.eks.node_security_group_id
 }
 
 # ─────────────────────────────────────────────
@@ -96,7 +83,7 @@ module "eks" {
   cluster_name       = var.cluster_name
   kubernetes_version = var.kubernetes_version
   vpc_id             = module.vpc.vpc_id
-  private_subnet_ids = module.vpc.private_subnets
+  private_subnet_ids = module.vpc.private_subnet_ids
   desired_capacity   = var.desired_capacity
   min_size           = var.min_size
   max_size           = var.max_size
@@ -110,12 +97,17 @@ module "eks" {
 module "rds" {
   source = "./modules/rds"
 
-  identifier         = "${var.cluster_name}-postgres"
-  instance_class     = var.db_instance_class
-  vpc_id             = module.vpc.vpc_id
-  subnet_ids         = module.vpc.private_subnets
-  allowed_cidr_blocks = module.vpc.private_subnets_cidr_blocks
-  environment        = var.environment
+  identifier          = "${var.cluster_name}-postgres"
+  instance_class      = var.db_instance_class
+  engine_version      = var.db_engine_version
+  vpc_id              = module.vpc.vpc_id
+  subnet_ids          = module.vpc.private_subnet_ids
+  allowed_cidr_blocks = module.vpc.private_subnet_cidrs
+  environment         = var.environment
+  db_name             = var.db_name
+  db_username         = var.db_username
+  multi_az            = var.db_multi_az
+  backup_retention_period = var.db_backup_retention_days
 }
 
 # ─────────────────────────────────────────────
@@ -126,9 +118,11 @@ module "elasticache" {
 
   cluster_id          = "${var.cluster_name}-redis"
   node_type           = var.redis_node_type
+  engine_version      = var.redis_engine_version
+  num_cache_nodes     = var.redis_num_cache_nodes
   vpc_id              = module.vpc.vpc_id
-  subnet_ids          = module.vpc.private_subnets
-  allowed_cidr_blocks = module.vpc.private_subnets_cidr_blocks
+  subnet_ids          = module.vpc.private_subnet_ids
+  allowed_cidr_blocks = module.vpc.private_subnet_cidrs
   environment         = var.environment
 }
 
@@ -138,7 +132,7 @@ module "elasticache" {
 module "s3" {
   source = "./modules/s3"
 
-  bucket_name = "${var.cluster_name}-assets-${var.environment}"
+  bucket_name = "${var.project_name}-assets-${var.environment}"
   environment = var.environment
 }
 
@@ -152,4 +146,5 @@ module "cloudfront" {
   s3_bucket_id              = module.s3.bucket_id
   origin_access_identity    = module.s3.origin_access_identity_iam_arn
   environment               = var.environment
+  price_class               = var.cloudfront_price_class
 }

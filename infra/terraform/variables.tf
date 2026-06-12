@@ -15,6 +15,12 @@ variable "environment" {
   }
 }
 
+variable "project_name" {
+  description = "Short project identifier used as a prefix for resource names"
+  type        = string
+  default     = "eduai"
+}
+
 variable "cluster_name" {
   description = "Name of the EKS cluster (also used as prefix for other resources)"
   type        = string
@@ -43,13 +49,13 @@ variable "availability_zones" {
 variable "private_subnet_cidrs" {
   description = "CIDR blocks for private subnets (one per AZ)"
   type        = list(string)
-  default     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  default     = ["10.0.11.0/24", "10.0.12.0/24", "10.0.13.0/24"]
 }
 
 variable "public_subnet_cidrs" {
   description = "CIDR blocks for public subnets (one per AZ)"
   type        = list(string)
-  default     = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+  default     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
 }
 
 # ── EKS ──────────────────────────────────────────────────────────────────────
@@ -68,13 +74,13 @@ variable "desired_capacity" {
 variable "min_size" {
   description = "Minimum number of worker nodes in the EKS node group"
   type        = number
-  default     = 3
+  default     = 2
 }
 
 variable "max_size" {
   description = "Maximum number of worker nodes in the EKS node group"
   type        = number
-  default     = 20
+  default     = 10
 }
 
 # ── RDS ──────────────────────────────────────────────────────────────────────
@@ -87,7 +93,7 @@ variable "db_instance_class" {
 variable "db_engine_version" {
   description = "PostgreSQL engine version"
   type        = string
-  default     = "16.2"
+  default     = "16.1"
 }
 
 variable "db_name" {
@@ -129,7 +135,7 @@ variable "redis_engine_version" {
 }
 
 variable "redis_num_cache_nodes" {
-  description = "Number of cache nodes in the ElastiCache cluster"
+  description = "Number of cache nodes in the ElastiCache replication group (primary + replicas)"
   type        = number
   default     = 2
 }
@@ -138,7 +144,7 @@ variable "redis_num_cache_nodes" {
 variable "s3_lifecycle_transition_days" {
   description = "Days before S3 objects are transitioned to STANDARD_IA"
   type        = number
-  default     = 90
+  default     = 30
 }
 
 variable "s3_lifecycle_expiration_days" {
@@ -151,6 +157,25 @@ variable "cloudfront_price_class" {
   description = "CloudFront price class (PriceClass_100 | PriceClass_200 | PriceClass_All)"
   type        = string
   default     = "PriceClass_100"
+}
+
+# ── S3 Lifecycle (root-level backup rules in s3-lifecycle.tf) ─────────────────
+variable "s3_bucket_name" {
+  description = "Name of the S3 bucket used for backups in the root lifecycle config"
+  type        = string
+  default     = ""
+}
+
+variable "enable_cross_region_replication" {
+  description = "Enable S3 cross-region replication for backup bucket"
+  type        = bool
+  default     = false
+}
+
+variable "s3_replica_bucket_arn" {
+  description = "ARN of the destination S3 bucket for cross-region replication"
+  type        = string
+  default     = ""
 }
 
 # ── Alerting ─────────────────────────────────────────────────────────────────
