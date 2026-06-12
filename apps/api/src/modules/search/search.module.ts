@@ -1,10 +1,11 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ElasticsearchModule } from '@nestjs/elasticsearch';
 
 import { SearchController } from './presentation/controllers/search.controller';
 import { SearchService } from './search.service';
 
+@Global()
 @Module({
   imports: [
     ElasticsearchModule.registerAsync({

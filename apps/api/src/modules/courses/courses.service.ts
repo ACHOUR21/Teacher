@@ -222,6 +222,10 @@ export class CoursesService {
     });
 
     this.logger.log(`Course created: ${course.slug} in tenant ${tenantId}`);
+
+    // Auto-index new course (fire-and-forget; gracefully degrades if ES is down)
+    this.searchService.indexCourse({ ...course, teacherName: '' }).catch(() => {});
+
     return course;
   }
 

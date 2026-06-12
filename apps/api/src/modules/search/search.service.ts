@@ -159,6 +159,25 @@ export class SearchService implements OnModuleInit {
     }
   }
 
+  /** Alias for deleteDocument — used by phase-8a interface contract */
+  async deleteFromIndex(indexName: string, id: string) {
+    return this.deleteDocument(indexName, id);
+  }
+
+  /** Alias for createIndices — used by phase-8a interface contract */
+  async ensureIndexes() {
+    return this.createIndices();
+  }
+
+  async checkHealth(): Promise<{ status: string; ping: boolean }> {
+    try {
+      await this.es.ping();
+      return { status: 'ok', ping: true };
+    } catch {
+      return { status: 'unavailable', ping: false };
+    }
+  }
+
   // ── Individual searches ───────────────────────────────────────────────────
 
   async searchCourses(
