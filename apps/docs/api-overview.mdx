@@ -1,0 +1,199 @@
+---
+title: API Overview
+description: EduAI Ultimate REST API reference — authentication, versioning, rate limiting, and error handling
+---
+
+# API Overview
+
+The EduAI Ultimate API is organized around REST principles. All request and response bodies use JSON.
+Interactive API documentation is available at `/api/docs` (Swagger UI) and raw OpenAPI JSON at `/api/openapi.json`.
+
+## Base URLs
+
+| Environment | URL |
+|-------------|-----|
+| Production | `https://api.eduai.app` |
+| Staging | `https://api.staging.eduai.app` |
+| Local Development | `http://localhost:3001` |
+
+All routes are prefixed with `/api/v1`. Example: `POST https://api.eduai.app/api/v1/auth/login`
+
+---
+
+## Authentication
+
+Two authentication methods are supported:
+
+### 1. JWT Bearer Token
+
+Obtain a token via `POST /api/v1/auth/login`, then pass it in every request:
+
+```http
+Authorization: Bearer <your_access_token>
+```
+
+Access tokens expire after **15 minutes**. Use the refresh token (`POST /api/v1/auth/refresh`) to
+obtain a new access token without re-authenticating. Refresh tokens are valid for **7 days**.
+
+### 2. API Key
+
+For server-to-server integrations, create an API key in the API Ecosystem module and pass it via
+the `X-API-Key` header:
+
+```http
+X-API-Key: eak_live_xxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+API keys carry explicit scopes (e.g., `courses:read`, `enrollments:write`) and can have expiry
+dates and per-minute rate limits configured per key.
+
+### Multi-Tenant Header
+
+All API requests must identify the target tenant using the `X-Tenant-ID` header (tenant slug or CUID):
+
+```http
+X-Tenant-ID: my-school
+```
+
+If omitted, the API attempts to resolve the tenant from the subdomain (`my-school.eduai.app`).
+
+---
+
+## Rate Limiting
+
+Rate limits are enforced per IP and per authenticated user/API key:
+
+| Tier | Limit |
+|------|-------|
+| Unauthenticated | 30 requests / minute |
+| Authenticated (JWT) | 300 requests / minute |
+| API Key (default) | 100 requests / minute |
+| API Key (custom) | Configured per key |
+
+When a limit is exceeded, the API returns `429 Too Many Requests` with a `Retry-After` header.
+
+---
+
+## Versioning
+
+The current API version is **v1**. Version is part of the URL path (`/api/v1/...`).
+
+Breaking changes will result in a new version (`/api/v2/...`). Non-breaking additions (new fields,
+new endpoints) may be added to the current version without notice.
+
+Deprecated endpoints are marked in Swagger with a `[Deprecated]` label and will be removed after
+a minimum 6-month deprecation window.
+
+---
+
+## Error Format
+
+All errors return a consistent JSON body:
+
+```json
+{
+  "statusCode": 404,
+  "message": "Course not found",
+  "error": "Not Found",
+  "timestamp": "2026-06-12T10:00:00.000Z",
+  "path": "/api/v1/courses/non-existent-id",
+  "requestId": "req_01j2k3l4m5n6"
+}
+```
+
+### Common HTTP Status Codes
+
+| Code | Meaning |
+|------|---------|
+| `200 OK` | Success |
+| `201 Created` | Resource created |
+| `204 No Content` | Success with no body |
+| `400 Bad Request` | Validation error |
+| `401 Unauthorized` | Missing or invalid credentials |
+| `403 Forbidden` | Authenticated but insufficient permissions |
+| `404 Not Found` | Resource does not exist |
+| `409 Conflict` | Duplicate resource |
+| `422 Unprocessable Entity` | Business logic validation failed |
+| `429 Too Many Requests` | Rate limit exceeded |
+| `500 Internal Server Error` | Unexpected server error |
+
+---
+
+## Pagination
+
+List endpoints return paginated results using the `page` and `limit` query parameters:
+
+```
+GET /api/v1/courses?page=2&limit=20
+```
+
+Response includes pagination metadata:
+
+```json
+{
+  "data": [...],
+  "meta": {
+    "page": 2,
+    "limit": 20,
+    "total": 350,
+    "totalPages": 18
+  }
+}
+```
+
+---
+
+## API Modules
+
+| Tag | Base Path | Description |
+|-----|-----------|-------------|
+| Auth | `/api/v1/auth` | Login, register, refresh, logout, MFA |
+| Tenants | `/api/v1/tenants` | Multi-tenant provisioning and settings |
+| Users | `/api/v1/users` | User CRUD, profiles, roles |
+| Courses | `/api/v1/courses` | Course authoring and management |
+| Students | `/api/v1/students` | Student profiles and progress |
+| Teachers | `/api/v1/teachers` | Teacher profiles and schedules |
+| Parents | `/api/v1/parents` | Parent portal endpoints |
+| School ERP | `/api/v1/school` | Departments, classes, timetable, attendance |
+| University ERP | `/api/v1/university` | Faculties, programs, semesters, transcripts |
+| AI | `/api/v1/ai` | AI Education Suite features |
+| AI Agents | `/api/v1/agents` | Autonomous AI agent pipelines |
+| Marketplace | `/api/v1/marketplace` | Course discovery and purchase |
+| Live | `/api/v1/live` | Live classroom sessions |
+| Certificates | `/api/v1/certificates` | Certificate issuance and verification |
+| Gamification | `/api/v1/gamification` | XP, badges, leaderboards, streaks |
+| Notifications | `/api/v1/notifications` | In-app and push notifications |
+| Messaging | `/api/v1/messaging` | Real-time direct and group messaging |
+| Billing | `/api/v1/billing` | Subscriptions, invoices, payments |
+| Analytics | `/api/v1/analytics` | BI dashboards and reports |
+| White Label | `/api/v1/white-label` | Branding and custom domains |
+| Plugins | `/api/v1/plugins` | Plugin marketplace |
+| API Ecosystem | `/api/v1/api-ecosystem` | API keys and webhooks |
+| Search | `/api/v1/search` | Elasticsearch full-text search |
+| Storage | `/api/v1/storage` | File upload and presigned URLs |
+| Audit | `/api/v1/audit` | Immutable audit log |
+
+---
+
+## SDKs & Code Generation
+
+The OpenAPI JSON at `/api/openapi.json` can be used to generate client SDKs:
+
+```bash
+# TypeScript / JavaScript
+npx openapi-typescript https://api.eduai.app/api/openapi.json --output src/api-types.ts
+
+# Python
+openapi-python-client generate --url https://api.eduai.app/api/openapi.json
+```
+
+Official SDKs for JavaScript/TypeScript and Python are available in the [SDKs](/sdks) section.
+
+---
+
+## Webhooks
+
+EduAI Ultimate can deliver real-time event payloads to your endpoints. Register webhook URLs via
+`POST /api/v1/api-ecosystem/webhooks` with a list of event types to subscribe to.
+
+See the [Webhooks](/webhooks/overview) guide for the full event catalog and payload format.

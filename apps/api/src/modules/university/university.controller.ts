@@ -25,7 +25,7 @@ import {
   CreateSemesterDto,
 } from './university.service';
 
-@ApiTags('University')
+@ApiTags('University ERP')
 @ApiBearerAuth('JWT-auth')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('university')
