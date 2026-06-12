@@ -5,6 +5,7 @@ import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { Module } from '@nestjs/common';
 import { GraphQLModule } from '@nestjs/graphql';
 
+import { AiEducationModule } from '../ai-education/ai-education.module';
 import { AnalyticsModule } from '../analytics/analytics.module';
 import { AssignmentsModule } from '../assignments/assignments.module';
 import { CoursesModule } from '../courses/courses.module';
@@ -14,6 +15,7 @@ import { SuperAdminModule } from '../super-admin/super-admin.module';
 import { UsersModule } from '../users/users.module';
 
 import { GqlAuthGuard } from './guards/gql-auth.guard';
+import { AiAdvancedResolver } from './resolvers/ai-advanced.resolver';
 import { AnalyticsResolver } from './resolvers/analytics.resolver';
 import { AssignmentsResolver } from './resolvers/assignments.resolver';
 import { CoursesResolver } from './resolvers/courses.resolver';
@@ -59,6 +61,7 @@ import { UsersResolver } from './resolvers/users.resolver';
     GamificationModule,
     AssignmentsModule,
     SuperAdminModule,
+    AiEducationModule,
   ],
   providers: [
     CoursesResolver,
@@ -69,6 +72,7 @@ import { UsersResolver } from './resolvers/users.resolver';
     AssignmentsResolver,
     SuperAdminResolver,
     SubscriptionsResolver,
+    AiAdvancedResolver,
     GqlAuthGuard,
   ],
 })

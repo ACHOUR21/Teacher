@@ -37,6 +37,11 @@ model Tenant {
   webhookEndpoints WebhookEndpoint[]
   agentRuns        AgentRun[]
   installedPlugins InstalledPlugin[]
+  uniCourseDepartments UniCourseDepartment[]
+  uniCourses       UniCourse[]
+  facultyMembers   FacultyMember[]
+  semesters        Semester[]
+  universityEnrollments UniversityEnrollment[]
 }
 
 // === USERS & AUTH ===
@@ -93,6 +98,7 @@ model User {
   points                   UserPoints?
   markedAttendance         Attendance[]               @relation("AttendanceMarkedBy")
   agentRuns                AgentRun[]
+  facultyProfile           FacultyMember?
   @@unique([tenantId, email])
   @@index([tenantId])
 }
@@ -266,6 +272,89 @@ model University {
   @@index([tenantId])
 }
 
+// === UNIVERSITY MODULE (Phase 6a) ===
+model UniCourse {
+  id           String                  @id @default(cuid())
+  tenantId     String
+  departmentId String?
+  teacherId    String?
+  title        String
+  slug         String
+  description  String?
+  credits      Int                     @default(3)
+  maxCapacity  Int                     @default(30)
+  enrollCount  Int                     @default(0)
+  isPublished  Boolean                 @default(false)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
+  tenant       Tenant                  @relation(fields: [tenantId], references: [id])
+  department   UniCourseDepartment?    @relation(fields: [departmentId], references: [id])
+  enrollments  UniversityEnrollment[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+}
+
+model UniCourseDepartment {
+  id            String          @id @default(cuid())
+  tenantId      String
+  name          String
+  code          String
+  headFacultyId String?
+  createdAt     DateTime        @default(now())
+  tenant        Tenant          @relation(fields: [tenantId], references: [id])
+  faculty       FacultyMember[]
+  courses       UniCourse[]
+
+  @@unique([tenantId, code])
+}
+
+model FacultyMember {
+  id              String               @id @default(cuid())
+  tenantId        String
+  userId          String               @unique
+  departmentId    String?
+  title           String               @default("Lecturer")
+  specializations String[]
+  createdAt       DateTime             @default(now())
+  tenant          Tenant               @relation(fields: [tenantId], references: [id])
+  user            User                 @relation(fields: [userId], references: [id])
+  department      UniCourseDepartment? @relation(fields: [departmentId], references: [id])
+}
+
+model Semester {
+  id          String                 @id @default(cuid())
+  tenantId    String
+  name        String
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean                @default(false)
+  createdAt   DateTime               @default(now())
+  tenant      Tenant                 @relation(fields: [tenantId], references: [id])
+  enrollments UniversityEnrollment[]
+
+  @@unique([tenantId, name])
+}
+
+model UniversityEnrollment {
+  id          String      @id @default(cuid())
+  tenantId    String
+  studentId   String
+  courseId    String
+  semesterId  String
+  status      String      @default("ACTIVE")
+  grade       Float?
+  letterGrade String?
+  enrolledAt  DateTime    @default(now())
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  student     Student     @relation(fields: [studentId], references: [id])
+  course      UniCourse   @relation(fields: [courseId], references: [id])
+  semester    Semester    @relation(fields: [semesterId], references: [id])
+
+  @@unique([studentId, courseId, semesterId])
+  @@index([tenantId])
+}
+
 model Faculty {
   id           String              @id @default(cuid())
   universityId String
@@ -346,6 +435,7 @@ model Student {
   parentLinks     ParentStudent[]
   certificates    IssuedCertificate[]
   attendance      Attendance[]
+  universityEnrollments UniversityEnrollment[]
 }
 
 // === PARENTS ===
@@ -483,6 +573,7 @@ model Submission {
   status       AssignmentStatus @default(PENDING)
   score        Float?
   feedback     String?
+  metadata     Json             @default("{}")
   submittedAt  DateTime         @default(now())
   gradedAt     DateTime?
   assignment   Assignment       @relation(fields: [assignmentId], references: [id])

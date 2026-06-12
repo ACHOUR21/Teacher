@@ -4,6 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 
 import { AiModule } from './modules/ai/ai.module';
+import { AiEducationModule } from './modules/ai-education/ai-education.module';
 import { ComplianceModule } from './modules/compliance/compliance.module';
 import { FeatureFlagsModule } from './modules/feature-flags/feature-flags.module';
 import { AiAgentsModule } from './modules/ai-agents/ai-agents.module';
@@ -48,6 +49,7 @@ import { TeachersModule } from './modules/teachers/teachers.module';
 import { TenantMiddleware } from './modules/tenants/middleware/tenant.middleware';
 import { TenantsModule } from './modules/tenants/tenants.module';
 import { UniversityErpModule } from './modules/university-erp/university-erp.module';
+import { UniversityModule } from './modules/university/university.module';
 import { UsersModule } from './modules/users/users.module';
 import { ScimModule } from './modules/scim/scim.module';
 import { WebhooksModule } from './modules/webhooks/webhooks.module';
@@ -73,6 +75,7 @@ import { WhiteLabelModule } from './modules/white-label/white-label.module';
     CoursesModule,
     LiveModule,
     AiModule,
+    AiEducationModule,
     NotificationsModule,
     StorageModule,
     SearchModule,
@@ -85,6 +88,7 @@ import { WhiteLabelModule } from './modules/white-label/white-label.module';
     ObservabilityModule,
     SchoolErpModule,
     UniversityErpModule,
+    UniversityModule,
     TeachersModule,
     StudentsModule,
     ParentsModule,
