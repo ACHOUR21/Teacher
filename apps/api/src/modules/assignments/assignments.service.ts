@@ -11,6 +11,7 @@ import { IsString, IsOptional, IsArray, IsNumber, IsInt, Min, Max } from 'class-
 import { ApiEcosystemService } from '../api-ecosystem/api-ecosystem.service';
 import { PrismaService } from '../database/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ParentNotificationsService } from '../notifications/parent-notifications.service';
 
 export class CreateAssignmentDto {
   @IsString()
@@ -54,6 +55,7 @@ export class AssignmentsService {
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
     private readonly apiEcosystem: ApiEcosystemService,
+    private readonly parentNotifications: ParentNotificationsService,
   ) {}
 
   async create(teacherId: string, dto: CreateAssignmentDto) {
@@ -248,6 +250,22 @@ export class AssignmentsService {
         `You scored ${dto.score}/${submission.assignment.maxScore} on "${submission.assignment.title}"`,
         { type: 'GRADE_PUBLISHED', assignmentId: submission.assignmentId }
       );
+    }
+
+    // Notify linked parents (non-blocking)
+    const studentRecord = await this.prisma.student.findUnique({
+      where: { id: submission.studentId },
+      include: { user: { select: { firstName: true, lastName: true } } },
+    }).catch(() => null);
+    if (studentRecord) {
+      this.parentNotifications.notifyParentsOfGradedSubmission({
+        studentId: submission.studentId,
+        studentFirstName: studentRecord.user.firstName,
+        studentLastName: studentRecord.user.lastName,
+        assignmentTitle: submission.assignment.title,
+        score: dto.score,
+        maxScore: submission.assignment.maxScore,
+      }).catch(() => null);
     }
 
     // Fire-and-forget webhook

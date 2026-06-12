@@ -1,14 +1,17 @@
 import { Module } from '@nestjs/common';
 
 import { DatabaseModule } from '../database/database.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
-import { ParentsService } from './parents.service';
+import { ParentPortalController } from './parent-portal.controller';
+import { ParentPortalService } from './parent-portal.service';
 import { ParentsController } from './presentation/controllers/parents.controller';
+import { ParentsService } from './parents.service';
 
 @Module({
-  imports: [DatabaseModule],
-  controllers: [ParentsController],
-  providers: [ParentsService],
-  exports: [ParentsService],
+  imports: [DatabaseModule, NotificationsModule],
+  controllers: [ParentsController, ParentPortalController],
+  providers: [ParentsService, ParentPortalService],
+  exports: [ParentsService, ParentPortalService],
 })
 export class ParentsModule {}

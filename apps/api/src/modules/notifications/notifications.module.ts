@@ -9,6 +9,8 @@ import { QueueModule } from '../queue/queue.module';
 
 import { EmailPreviewController } from './email/email-preview.controller';
 import { EmailService } from './email/email.service';
+import { NotificationDigestService } from './notification-digest.service';
+import { NotificationPreferencesService } from './notification-preferences.service';
 import { NotificationsGateway } from './notifications.gateway';
 import { NotificationsScheduler } from './notifications.scheduler';
 import { NotificationsService } from './notifications.service';
@@ -36,7 +38,9 @@ import { NotificationsController } from './presentation/controllers/notification
     EmailProcessor,
     NotificationProcessor,
     EmailService,
+    NotificationPreferencesService,
+    NotificationDigestService,
   ],
-  exports: [NotificationsService, NotificationsGateway, ParentNotificationsService, EmailService],
+  exports: [NotificationsService, NotificationsGateway, ParentNotificationsService, EmailService, NotificationPreferencesService],
 })
 export class NotificationsModule {}

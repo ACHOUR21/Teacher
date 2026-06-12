@@ -157,6 +157,12 @@ export class NotificationsService {
     return this.prisma.notification.count({ where: { userId, isRead: false } });
   }
 
+  async deleteNotification(userId: string, notificationId: string) {
+    return this.prisma.notification.deleteMany({
+      where: { id: notificationId, userId },
+    });
+  }
+
   // ── Branded email templates ──────────────────────────────────────────────
 
   async sendWelcomeEmail(to: string, firstName: string, tenantName: string) {

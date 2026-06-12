@@ -35,7 +35,8 @@ model Tenant {
   flashcardDecks  FlashcardDeck[]
   certTemplates   CertificateTemplate[]
   webhookEndpoints WebhookEndpoint[]
-  agentRuns       AgentRun[]
+  agentRuns        AgentRun[]
+  installedPlugins InstalledPlugin[]
 }
 
 // === USERS & AUTH ===
@@ -836,10 +837,15 @@ model Plugin {
   description  String?
   version      String
   authorId     String?
+  author       String?
   category     String?
   price        Decimal         @default(0)
+  rating       Float           @default(0)
   isActive     Boolean         @default(true)
   installCount Int             @default(0)
+  iconUrl      String?
+  tags         String[]        @default([])
+  screenshots  String[]        @default([])
   manifest     Json
   createdAt    DateTime        @default(now())
   installed    InstalledPlugin[]
@@ -855,7 +861,9 @@ model InstalledPlugin {
   isEnabled   Boolean  @default(true)
   installedAt DateTime @default(now())
   plugin      Plugin   @relation(fields: [pluginId], references: [id])
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
   @@unique([tenantId, pluginId])
+  @@index([tenantId])
 }
 
 // === ENUMS ===
