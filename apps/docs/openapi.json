@@ -1,0 +1,479 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "EduAI Ultimate API",
+    "version": "1.0.0",
+    "description": "AI-powered Education SaaS Platform — REST API Reference.\n\nThis file is a static placeholder. The live OpenAPI document (auto-generated from NestJS decorators) is served at runtime from `/api/openapi.json`.",
+    "contact": {
+      "name": "EduAI Support",
+      "url": "https://eduai.app",
+      "email": "support@eduai.app"
+    },
+    "license": {
+      "name": "Proprietary",
+      "url": "https://eduai.app/terms"
+    }
+  },
+  "servers": [
+    {
+      "url": "https://api.eduai.app",
+      "description": "Production"
+    },
+    {
+      "url": "https://api.staging.eduai.app",
+      "description": "Staging"
+    },
+    {
+      "url": "http://localhost:3001",
+      "description": "Local Development"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT access token. Obtain via POST /api/v1/auth/login"
+      },
+      "apiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key",
+        "description": "API key for service-to-service calls. Manage keys via the API Ecosystem module."
+      }
+    },
+    "parameters": {
+      "TenantId": {
+        "in": "header",
+        "name": "X-Tenant-ID",
+        "required": false,
+        "schema": {
+          "type": "string"
+        },
+        "description": "Tenant identifier (slug or CUID). Required for multi-tenant contexts."
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "example": 400
+          },
+          "message": {
+            "type": "string",
+            "example": "Validation failed"
+          },
+          "error": {
+            "type": "string",
+            "example": "Bad Request"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "path": {
+            "type": "string",
+            "example": "/api/v1/courses"
+          },
+          "requestId": {
+            "type": "string",
+            "example": "req_01j2k3l4m5n6"
+          }
+        },
+        "required": ["statusCode", "message", "error", "timestamp", "path"]
+      },
+      "PaginationMeta": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "example": 1
+          },
+          "limit": {
+            "type": "integer",
+            "example": 20
+          },
+          "total": {
+            "type": "integer",
+            "example": 350
+          },
+          "totalPages": {
+            "type": "integer",
+            "example": 18
+          }
+        },
+        "required": ["page", "limit", "total", "totalPages"]
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    { "name": "Health", "description": "Liveness and readiness health checks" },
+    { "name": "Auth", "description": "Authentication — login, register, refresh, logout, MFA" },
+    { "name": "Tenants", "description": "Multi-tenant provisioning, settings, and plan management" },
+    { "name": "Users", "description": "User CRUD, profile, roles, device management" },
+    { "name": "Courses", "description": "Course authoring — sections, lessons, publishing, pricing" },
+    { "name": "Students", "description": "Student profiles, progress, performance, submissions" },
+    { "name": "Teachers", "description": "Teacher profiles, verification, subject management" },
+    { "name": "Parents", "description": "Parent portal — child linking, monitoring, communications" },
+    { "name": "School ERP", "description": "Schools, departments, classes, timetables, attendance" },
+    { "name": "University ERP", "description": "Universities, faculties, programs, academic enrollments" },
+    { "name": "AI", "description": "AI Education Suite — tutor, exam/lesson/curriculum generation, flashcards, mind maps" },
+    { "name": "AI Agents", "description": "AI Agents Platform — autonomous agents, tool orchestration, pipelines" },
+    { "name": "Marketplace", "description": "Course discovery, purchase flow, ratings and reviews" },
+    { "name": "Live", "description": "Live classroom sessions, recordings, participant management" },
+    { "name": "Certificates", "description": "Certificate template design, issuance, public verification" },
+    { "name": "Gamification", "description": "Points, XP, badges, leaderboards, streaks, events" },
+    { "name": "Notifications", "description": "In-app, email, SMS and push notification delivery" },
+    { "name": "Messaging", "description": "Real-time direct and group messaging via WebSocket" },
+    { "name": "Billing", "description": "Subscriptions, plans, Stripe/PayPal, coupons, invoices, revenue analytics" },
+    { "name": "Analytics", "description": "Platform analytics, BI dashboards, reports and data export" },
+    { "name": "White Label", "description": "Custom branding, domain mapping, email themes" },
+    { "name": "Plugins", "description": "Plugin marketplace — discovery, installation, configuration" },
+    { "name": "API Ecosystem", "description": "API key management, webhook endpoints, rate limiting" },
+    { "name": "Search", "description": "Full-text search across courses, users, and content (Elasticsearch)" },
+    { "name": "Storage", "description": "File upload, presigned URLs, S3-compatible object storage" },
+    { "name": "Audit", "description": "Immutable audit log — actions, resources, actors, timestamps" }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "tags": ["Health"],
+        "summary": "Liveness check",
+        "operationId": "healthCheck",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "ok" },
+                    "timestamp": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Login with email and password",
+        "operationId": "login",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email", "example": "admin@school.edu" },
+                  "password": { "type": "string", "format": "password", "example": "S3cur3P@ss!" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accessToken": { "type": "string" },
+                    "refreshToken": { "type": "string" },
+                    "expiresIn": { "type": "integer", "example": 900 }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Refresh access token",
+        "operationId": "refreshToken",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["refreshToken"],
+                "properties": {
+                  "refreshToken": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "New access token issued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "accessToken": { "type": "string" },
+                    "expiresIn": { "type": "integer", "example": 900 }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refresh token invalid or expired",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "Logout and invalidate refresh token",
+        "operationId": "logout",
+        "responses": {
+          "204": { "description": "Logged out successfully" },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/courses": {
+      "get": {
+        "tags": ["Courses"],
+        "summary": "List courses",
+        "operationId": "listCourses",
+        "parameters": [
+          { "in": "query", "name": "page", "schema": { "type": "integer", "default": 1 } },
+          { "in": "query", "name": "limit", "schema": { "type": "integer", "default": 20 } },
+          { "in": "query", "name": "search", "schema": { "type": "string" } },
+          { "in": "query", "name": "category", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated course list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "type": "array", "items": { "type": "object" } },
+                    "meta": { "$ref": "#/components/schemas/PaginationMeta" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Courses"],
+        "summary": "Create a new course",
+        "operationId": "createCourse",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["title"],
+                "properties": {
+                  "title": { "type": "string", "example": "Introduction to Algebra" },
+                  "description": { "type": "string" },
+                  "categoryId": { "type": "string" },
+                  "level": { "type": "string", "enum": ["BEGINNER", "INTERMEDIATE", "ADVANCED"] },
+                  "price": { "type": "number", "format": "float" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Course created" },
+          "400": {
+            "description": "Validation error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/search": {
+      "get": {
+        "tags": ["Search"],
+        "summary": "Unified search across courses, users, or all entities",
+        "operationId": "search",
+        "parameters": [
+          { "in": "query", "name": "q", "required": true, "schema": { "type": "string" } },
+          { "in": "query", "name": "type", "schema": { "type": "string", "enum": ["courses", "users", "all"], "default": "all" } },
+          { "in": "query", "name": "page", "schema": { "type": "integer", "default": 1 } },
+          { "in": "query", "name": "limit", "schema": { "type": "integer", "default": 20 } }
+        ],
+        "responses": {
+          "200": { "description": "Search results" }
+        }
+      }
+    },
+    "/api/v1/white-label/branding": {
+      "get": {
+        "tags": ["White Label"],
+        "summary": "Get branding for the current tenant",
+        "operationId": "getBranding",
+        "security": [],
+        "responses": {
+          "200": { "description": "TenantBranding object" }
+        }
+      },
+      "put": {
+        "tags": ["White Label"],
+        "summary": "Update branding settings",
+        "operationId": "updateBranding",
+        "responses": {
+          "200": { "description": "Updated TenantBranding object" },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/api-ecosystem/keys": {
+      "get": {
+        "tags": ["API Ecosystem"],
+        "summary": "List API keys for tenant",
+        "operationId": "listApiKeys",
+        "responses": {
+          "200": { "description": "List of API keys" }
+        }
+      },
+      "post": {
+        "tags": ["API Ecosystem"],
+        "summary": "Create a new API key",
+        "operationId": "createApiKey",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "scopes"],
+                "properties": {
+                  "name": { "type": "string", "example": "CI/CD Integration" },
+                  "scopes": { "type": "array", "items": { "type": "string" }, "example": ["courses:read", "enrollments:write"] },
+                  "rateLimit": { "type": "integer", "example": 200 },
+                  "expiresAt": { "type": "string", "format": "date-time" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "API key created — secret shown only once" }
+        }
+      }
+    },
+    "/api/v1/university/dashboard": {
+      "get": {
+        "tags": ["University ERP"],
+        "summary": "Get university dashboard stats",
+        "operationId": "getUniversityDashboard",
+        "responses": {
+          "200": { "description": "Dashboard statistics" }
+        }
+      }
+    },
+    "/api/v1/billing/subscription": {
+      "get": {
+        "tags": ["Billing"],
+        "summary": "Get current tenant subscription",
+        "operationId": "getSubscription",
+        "responses": {
+          "200": { "description": "Subscription details" }
+        }
+      }
+    },
+    "/api/v1/gamification/leaderboard": {
+      "get": {
+        "tags": ["Gamification"],
+        "summary": "Get XP leaderboard",
+        "operationId": "getLeaderboard",
+        "parameters": [
+          { "in": "query", "name": "limit", "schema": { "type": "integer", "default": 20 } }
+        ],
+        "responses": {
+          "200": { "description": "Leaderboard entries" }
+        }
+      }
+    },
+    "/api/v1/certificates/{id}/verify": {
+      "get": {
+        "tags": ["Certificates"],
+        "summary": "Publicly verify a certificate by ID",
+        "operationId": "verifyCertificate",
+        "security": [],
+        "parameters": [
+          { "in": "path", "name": "id", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Certificate is valid" },
+          "404": {
+            "description": "Certificate not found or revoked",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
