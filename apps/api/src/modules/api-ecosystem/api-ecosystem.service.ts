@@ -12,13 +12,20 @@ export class ApiEcosystemService {
     private readonly cache: RedisService,
   ) {}
 
-  async createApiKey(tenantId: string, name: string, scopes: string[], rateLimit = 1000, expiresAt?: Date) {
+  async createApiKey(tenantId: string, name: string, scopes: string[], rateLimit = 1000, expiresAt?: Date, userId?: string) {
     const rawKey = `eduai_${crypto.randomBytes(24).toString('hex')}`;
     const keyHash = crypto.createHash('sha256').update(rawKey).digest('hex');
     const keyPrefix = rawKey.substring(0, 12);
 
+    // Resolve userId: use provided value or fall back to first admin in tenant
+    let resolvedUserId: string = userId ?? '';
+    if (!resolvedUserId) {
+      const firstUser = await this.prisma.user.findFirst({ where: { tenantId }, select: { id: true } });
+      resolvedUserId = firstUser?.id ?? '';
+    }
+
     const apiKey = await this.prisma.apiKey.create({
-      data: { tenantId, name, keyHash, keyPrefix, scopes, rateLimit, expiresAt },
+      data: { tenantId, userId: resolvedUserId, name, keyHash, keyPrefix, scopes, rateLimit, expiresAt },
     });
 
     // Invalidate list and usage caches after creating a new key

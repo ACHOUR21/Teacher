@@ -99,6 +99,7 @@ model User {
   markedAttendance         Attendance[]               @relation("AttendanceMarkedBy")
   agentRuns                AgentRun[]
   facultyProfile           FacultyMember?
+  apiKeys                  ApiKey[]
   @@unique([tenantId, email])
   @@index([tenantId])
 }
@@ -854,18 +855,22 @@ model WhiteLabel {
 
 // === API ECOSYSTEM ===
 model ApiKey {
-  id          String    @id @default(cuid())
+  id          String    @id @default(uuid())
   tenantId    String
+  userId      String
   name        String
-  keyHash     String    @unique
-  keyPrefix   String
-  scopes      String[]
-  rateLimit   Int       @default(1000)
+  keyHash     String    @unique  // bcrypt hash of the actual key
+  keyPrefix   String            // first 8 chars for display: "eak_xxxx"
+  scopes      String[]          // e.g. ["read:courses", "write:enrollments"]
+  rateLimit   Int       @default(1000)  // requests per hour
   lastUsedAt  DateTime?
   expiresAt   DateTime?
   isActive    Boolean   @default(true)
   createdAt   DateTime  @default(now())
   tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@index([tenantId, isActive])
 }
 
 model WebhookEndpoint {

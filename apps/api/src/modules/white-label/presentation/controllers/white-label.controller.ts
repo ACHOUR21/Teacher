@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Put,
+  Patch,
   Post,
   Body,
   Param,
@@ -16,6 +17,7 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagg
 import { UserRole } from '@prisma/client';
 import { Response } from 'express';
 
+import { CurrentUser } from '../../../core/decorators/current-user.decorator';
 import { Public } from '../../../core/decorators/public.decorator';
 import { Roles } from '../../../core/decorators/roles.decorator';
 import { TenantId } from '../../../core/decorators/tenant.decorator';
@@ -23,6 +25,7 @@ import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
 import { RolesGuard } from '../../../core/guards/roles.guard';
 import { CustomDomainDto } from '../../dto/custom-domain.dto';
 import { UpdateBrandingDto } from '../../dto/update-branding.dto';
+import { type BrandingConfigV2 } from '../../white-label.service';
 import { WhiteLabelService } from '../../white-label.service';
 
 @ApiTags('White Label')
@@ -160,5 +163,64 @@ export class WhiteLabelController {
   @ApiOperation({ summary: 'Import branding from a JSON snapshot' })
   importBrandingConfig(@TenantId() tenantId: string, @Body() body: any) {
     return this.whiteLabelService.importBrandingConfig(tenantId, body);
+  }
+
+  // ─── Phase-7a endpoints ──────────────────────────────────────────────────
+
+  @Get('config')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Get full white-label config for the current tenant (ADMIN only)' })
+  @ApiResponse({ status: 200, description: 'WhiteLabelConfig object' })
+  getConfig(@CurrentUser('tenantId') tenantId: string) {
+    return this.whiteLabelService.getConfig(tenantId);
+  }
+
+  @Patch('branding')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPER_ADMIN)
+  @ApiOperation({ summary: 'Update branding config (ADMIN only)' })
+  @ApiResponse({ status: 200, description: 'Updated WhiteLabelConfig' })
+  patchBranding(
+    @CurrentUser('tenantId') tenantId: string,
+    @Body() body: Partial<BrandingConfigV2>,
+  ) {
+    return this.whiteLabelService.updateBrandingV2(tenantId, body);
+  }
+
+  @Patch('domain')
+  @ApiBearerAuth('JWT-auth')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN, UserRole.SCHOOL_ADMIN, UserRole.UNIVERSITY_ADMIN, UserRole.SUPER_ADMIN)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Set custom domain for tenant (ADMIN only)' })
+  @ApiResponse({ status: 204, description: 'Domain updated' })
+  async patchDomain(
+    @CurrentUser('tenantId') tenantId: string,
+    @Body('domain') domain: string,
+  ) {
+    await this.whiteLabelService.updateCustomDomainV2(tenantId, domain);
+  }
+
+  @Get('public/:tenantId')
+  @Public()
+  @ApiOperation({ summary: 'Get public branding for login page bootstrap (no auth)' })
+  @ApiResponse({ status: 200, description: 'Public branding payload' })
+  getPublicBranding(@Param('tenantId') tenantId: string) {
+    return this.whiteLabelService.getPublicBranding(tenantId);
+  }
+
+  @Get('css/:tenantId')
+  @Public()
+  @ApiOperation({ summary: 'Get CSS variables for tenant branding (no auth, text/css)' })
+  @ApiResponse({ status: 200, description: 'CSS variables :root block', content: { 'application/css': {} } })
+  async getCssByTenant(@Param('tenantId') tenantId: string, @Res() res: Response) {
+    const config = await this.whiteLabelService.getConfig(tenantId);
+    const css = this.whiteLabelService.generateCssVariablesV2(config);
+    res.setHeader('Content-Type', 'application/css');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(css);
   }
 }
