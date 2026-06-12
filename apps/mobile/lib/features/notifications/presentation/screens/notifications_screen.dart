@@ -1,28 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/api/endpoints.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../data/notifications_models.dart';
+import '../../data/notifications_repository.dart';
 
 // ---------------------------------------------------------------------------
 // Providers
 // ---------------------------------------------------------------------------
 
-final _notificationsProvider = FutureProvider.autoDispose<List<dynamic>>((ref) async {
+final _notificationsRepositoryProvider =
+    Provider<NotificationsRepository>((ref) {
   final apiClient = ref.watch(apiClientProvider);
-  final response = await apiClient.dio.get(
-    '${Endpoints.baseUrl}${Endpoints.notifications}',
-  );
-  final data = response.data;
-  if (data is Map<String, dynamic>) {
-    final inner = data['data'];
-    if (inner is List) return inner;
-    if (inner is Map<String, dynamic>) {
-      final items = inner['items'] ?? inner['data'] ?? inner['notifications'];
-      if (items is List) return items;
-    }
-  }
-  if (data is List) return data;
-  return [];
+  return NotificationsRepository(apiClient.dio);
+});
+
+final _notificationsProvider =
+    FutureProvider.autoDispose<List<AppNotification>>((ref) async {
+  final repo = ref.watch(_notificationsRepositoryProvider);
+  return repo.getNotifications();
 });
 
 // ---------------------------------------------------------------------------
@@ -34,10 +31,8 @@ class NotificationsScreen extends ConsumerWidget {
 
   Future<void> _markAllRead(BuildContext context, WidgetRef ref) async {
     try {
-      final apiClient = ref.read(apiClientProvider);
-      await apiClient.dio.patch(
-        '${Endpoints.baseUrl}${Endpoints.markAllNotificationsRead}',
-      );
+      final repo = ref.read(_notificationsRepositoryProvider);
+      await repo.markAllRead();
       ref.invalidate(_notificationsProvider);
     } catch (e) {
       if (context.mounted) {
@@ -48,6 +43,56 @@ class NotificationsScreen extends ConsumerWidget {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _markRead(
+    WidgetRef ref,
+    String id,
+  ) async {
+    try {
+      final repo = ref.read(_notificationsRepositoryProvider);
+      await repo.markRead(id);
+      ref.invalidate(_notificationsProvider);
+    } catch (_) {
+      // Silently ignore mark-read failures
+    }
+  }
+
+  void _navigateForNotification(
+      BuildContext context, AppNotification notification) {
+    final data = notification.data ?? {};
+    final type = notification.type.toUpperCase();
+    final id = data['id']?.toString() ??
+        data['courseId']?.toString() ??
+        data['sessionId']?.toString();
+
+    if (type.contains('COURSE') || type.contains('LESSON')) {
+      if (id != null) {
+        context.go('/home/courses/$id');
+      } else {
+        context.go('/home/courses');
+      }
+    } else if (type.contains('LIVE') || type.contains('SESSION')) {
+      if (id != null) {
+        context.go('/home/live/$id');
+      } else {
+        context.go('/home/live');
+      }
+    } else if (type.contains('MESSAGE') || type.contains('CHAT')) {
+      context.go('/home/messages');
+    } else if (type.contains('ACHIEVEMENT') ||
+        type.contains('BADGE') ||
+        type.contains('GAMIFICATION')) {
+      context.go('/home/gamification');
+    } else if (type.contains('PAYMENT') ||
+        type.contains('BILLING') ||
+        type.contains('INVOICE')) {
+      context.go('/home/billing');
+    } else if (type.contains('ASSIGNMENT') || type.contains('HOMEWORK')) {
+      context.go('/home/assignments');
+    } else {
+      context.go('/home/notifications');
     }
   }
 
@@ -62,9 +107,7 @@ class NotificationsScreen extends ConsumerWidget {
         actions: [
           notificationsAsync.maybeWhen(
             data: (list) {
-              final hasUnread = list.any(
-                (n) => n is Map<String, dynamic> && n['readAt'] == null,
-              );
+              final hasUnread = list.any((n) => !n.isRead);
               if (!hasUnread) return const SizedBox.shrink();
               return TextButton(
                 onPressed: () => _markAllRead(context, ref),
@@ -96,21 +139,14 @@ class NotificationsScreen extends ConsumerWidget {
                   Divider(height: 1, color: Colors.grey.shade100),
               itemBuilder: (_, i) {
                 final n = notifications[i];
-                if (n is! Map<String, dynamic>) return const SizedBox.shrink();
                 return _NotificationTile(
                   notification: n,
                   onTap: () async {
-                    final id = n['id'] as String?;
-                    if (id != null && n['readAt'] == null) {
-                      try {
-                        final apiClient = ref.read(apiClientProvider);
-                        await apiClient.dio.patch(
-                          '${Endpoints.baseUrl}${Endpoints.markNotificationRead(id)}',
-                        );
-                        ref.invalidate(_notificationsProvider);
-                      } catch (_) {
-                        // silently ignore mark-read failures
-                      }
+                    if (!n.isRead) {
+                      await _markRead(ref, n.id);
+                    }
+                    if (context.mounted) {
+                      _navigateForNotification(context, n);
                     }
                   },
                 );
@@ -128,25 +164,26 @@ class NotificationsScreen extends ConsumerWidget {
 // ---------------------------------------------------------------------------
 
 class _NotificationTile extends StatelessWidget {
-  final Map<String, dynamic> notification;
+  final AppNotification notification;
   final VoidCallback onTap;
-  const _NotificationTile({required this.notification, required this.onTap});
+
+  const _NotificationTile({
+    required this.notification,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final isRead = notification['readAt'] != null;
-    final type = (notification['type'] as String? ?? 'GENERAL').toUpperCase();
-    final title = notification['title'] as String? ?? 'Notification';
-    final body = notification['body'] as String? ??
-        notification['message'] as String? ??
-        '';
-    final createdAt = notification['createdAt'] as String?;
+    final isRead = notification.isRead;
+    final type = notification.type.toUpperCase();
 
     return InkWell(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: isRead ? Colors.transparent : Colors.blue.shade50.withOpacity(0.45),
+          color: isRead
+              ? Colors.transparent
+              : Colors.blue.shade50.withOpacity(0.45),
           border: Border(
             left: BorderSide(
               color: isRead ? Colors.transparent : Colors.blue.shade400,
@@ -154,7 +191,8 @@ class _NotificationTile extends StatelessWidget {
             ),
           ),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -168,11 +206,12 @@ class _NotificationTile extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          title,
+                          notification.title,
                           style: TextStyle(
                             fontSize: 13,
-                            fontWeight:
-                                isRead ? FontWeight.normal : FontWeight.w600,
+                            fontWeight: isRead
+                                ? FontWeight.normal
+                                : FontWeight.w600,
                             color: Colors.grey.shade900,
                           ),
                         ),
@@ -182,16 +221,17 @@ class _NotificationTile extends StatelessWidget {
                           width: 7,
                           height: 7,
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary,
+                            color:
+                                Theme.of(context).colorScheme.primary,
                             shape: BoxShape.circle,
                           ),
                         ),
                     ],
                   ),
-                  if (body.isNotEmpty) ...[
+                  if (notification.body.isNotEmpty) ...[
                     const SizedBox(height: 3),
                     Text(
-                      body,
+                      notification.body,
                       style: TextStyle(
                         fontSize: 12,
                         color: Colors.grey.shade600,
@@ -201,14 +241,12 @@ class _NotificationTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
-                  if (createdAt != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      _timeAgo(createdAt),
-                      style: TextStyle(
-                          fontSize: 11, color: Colors.grey.shade400),
-                    ),
-                  ],
+                  const SizedBox(height: 4),
+                  Text(
+                    _timeAgo(notification.createdAt),
+                    style: TextStyle(
+                        fontSize: 11, color: Colors.grey.shade400),
+                  ),
                 ],
               ),
             ),
@@ -218,9 +256,7 @@ class _NotificationTile extends StatelessWidget {
     );
   }
 
-  String _timeAgo(String iso) {
-    final dt = DateTime.tryParse(iso);
-    if (dt == null) return '';
+  String _timeAgo(DateTime dt) {
     final diff = DateTime.now().difference(dt);
     if (diff.inMinutes < 1) return 'Just now';
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
@@ -252,22 +288,35 @@ class _NotificationIcon extends StatelessWidget {
   }
 
   (IconData, Color) _iconForType(String type) {
-    if (type.contains('COURSE') || type.contains('LESSON') || type.contains('ENROLL')) {
+    if (type.contains('COURSE') ||
+        type.contains('LESSON') ||
+        type.contains('ENROLL')) {
       return (Icons.book_outlined, Colors.blue);
     }
-    if (type.contains('ASSIGNMENT') || type.contains('HOMEWORK') || type.contains('GRADE')) {
+    if (type.contains('ASSIGNMENT') ||
+        type.contains('HOMEWORK') ||
+        type.contains('GRADE')) {
       return (Icons.assignment_outlined, Colors.orange);
     }
-    if (type.contains('ACHIEVEMENT') || type.contains('BADGE') || type.contains('STAR')) {
+    if (type.contains('ACHIEVEMENT') ||
+        type.contains('BADGE') ||
+        type.contains('STAR')) {
       return (Icons.star_outline_rounded, Colors.amber);
     }
-    if (type.contains('PAYMENT') || type.contains('BILLING') || type.contains('INVOICE') || type.contains('PURCHASE')) {
+    if (type.contains('PAYMENT') ||
+        type.contains('BILLING') ||
+        type.contains('INVOICE') ||
+        type.contains('PURCHASE')) {
       return (Icons.payment_outlined, Colors.green);
     }
-    if (type.contains('MESSAGE') || type.contains('CHAT') || type.contains('COMMENT')) {
+    if (type.contains('MESSAGE') ||
+        type.contains('CHAT') ||
+        type.contains('COMMENT')) {
       return (Icons.message_outlined, Colors.purple);
     }
-    if (type.contains('LIVE') || type.contains('SESSION') || type.contains('WEBINAR')) {
+    if (type.contains('LIVE') ||
+        type.contains('SESSION') ||
+        type.contains('WEBINAR')) {
       return (Icons.video_call_outlined, Colors.red);
     }
     if (type.contains('CERTIFICATE')) {
@@ -278,7 +327,7 @@ class _NotificationIcon extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Loading skeleton
+// Loading Skeleton
 // ---------------------------------------------------------------------------
 
 class _LoadingSkeleton extends StatelessWidget {
@@ -291,7 +340,8 @@ class _LoadingSkeleton extends StatelessWidget {
       separatorBuilder: (_, __) =>
           Divider(height: 1, color: Colors.grey.shade100),
       itemBuilder: (_, __) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
             Container(
@@ -335,7 +385,7 @@ class _LoadingSkeleton extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Empty state
+// Empty State
 // ---------------------------------------------------------------------------
 
 class _EmptyState extends StatelessWidget {
@@ -361,15 +411,18 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           const Text(
-            "You're all caught up",
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            'No notifications yet',
+            style:
+                TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           Text(
-            'New notifications will appear here.',
+            'When you receive notifications, they will appear here.',
             textAlign: TextAlign.center,
             style: TextStyle(
-                color: Colors.grey.shade500, fontSize: 13, height: 1.5),
+                color: Colors.grey.shade500,
+                fontSize: 13,
+                height: 1.5),
           ),
         ],
       ),
@@ -400,14 +453,15 @@ class _ErrorRetry extends StatelessWidget {
             const SizedBox(height: 12),
             const Text(
               'Failed to load notifications',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 6),
             Text(
               message,
               textAlign: TextAlign.center,
-              style:
-                  TextStyle(fontSize: 12, color: Colors.grey.shade500),
+              style: TextStyle(
+                  fontSize: 12, color: Colors.grey.shade500),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
             ),
