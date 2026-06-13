@@ -782,17 +782,19 @@ model Invoice {
 }
 
 model Coupon {
-  id             String    @id @default(cuid())
-  code           String    @unique
-  discountType   String
-  discountValue  Decimal
-  maxUses        Int?
-  usedCount      Int       @default(0)
-  validFrom      DateTime
-  validUntil     DateTime?
-  isActive       Boolean   @default(true)
-  stripeCouponId String?
-  createdAt      DateTime  @default(now())
+  id               String    @id @default(cuid())
+  code             String    @unique
+  discountType     String
+  discountValue    Decimal
+  maxUses          Int?
+  usedCount        Int       @default(0)
+  validFrom        DateTime
+  validUntil       DateTime?
+  isActive         Boolean   @default(true)
+  stripeCouponId   String?
+  applicablePlans  String[]
+  description      String?
+  createdAt        DateTime  @default(now())
 }
 
 // === AI ===
