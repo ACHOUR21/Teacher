@@ -58,6 +58,19 @@ type BillingOverview {
   totalRevenue: Float!
 }
 
+type CareerMatchType {
+  description: String!
+  matchScore: Float!
+  requiredSkills: [String!]!
+  title: String!
+}
+
+type CareerRecommendationType {
+  careers: [CareerMatchType!]!
+  learningPath: [LearningStepType!]!
+  skillGaps: [SkillGapType!]!
+}
+
 type ChatMessage {
   content: String!
   conversationId: String!
@@ -148,11 +161,30 @@ type LeaderboardEntry {
   userId: ID!
 }
 
+type LearningStepType {
+  action: String!
+  step: Int!
+  timelineWeeks: Int!
+}
+
 type LiveSessionEvent {
   event: String!
   sessionId: ID!
   timestamp: DateTime!
   title: String!
+}
+
+type MindMapNodeType {
+  children: [MindMapNodeType!]!
+  color: String
+  id: ID!
+  label: String!
+}
+
+type MindMapResultType {
+  generatedAt: DateTime!
+  root: MindMapNodeType!
+  topic: String!
 }
 
 type MonthlyRevenue {
@@ -222,6 +254,22 @@ type PaginationMeta {
   totalPages: Int!
 }
 
+type PerformanceFactorType {
+  impact: String!
+  name: String!
+  weight: Float!
+}
+
+type PerformancePredictionType {
+  confidence: Float!
+  dropoutRisk: Float!
+  factors: [PerformanceFactorType!]!
+  predictedGrade: String!
+  recommendations: [String!]!
+  riskLevel: String!
+  studentId: String!
+}
+
 type PlatformKPI {
   activeTenants: Int!
   totalCourses: Int!
@@ -261,6 +309,12 @@ type Query {
 
   """List courses for the authenticated tenant"""
   courses(filter: CourseFilterInput): CoursePage!
+
+  """Generate an AI mind map for a topic"""
+  generateMindMap(depth: String = "deep", topic: String!): MindMapResultType!
+
+  """Get AI career recommendations for the current user"""
+  getCareerRecommendations: CareerRecommendationType!
   leaderboard(limit: Int = 20): [LeaderboardEntry!]!
 
   """Get current authenticated user"""
@@ -280,6 +334,9 @@ type Query {
   """Platform-wide statistics"""
   platformStats: PlatformStats!
 
+  """Predict performance for the current student"""
+  predictMyPerformance(courseId: String): PerformancePredictionType!
+
   """Monthly revenue breakdown"""
   revenueAnalytics(months: Int = 6): [MonthlyRevenue!]!
 
@@ -298,6 +355,12 @@ type Query {
 
   """List users in the tenant"""
   users(limit: Int = 20, page: Int = 1, role: String, search: String): UserPage!
+}
+
+type SkillGapType {
+  priority: String!
+  recommendedCourses: [String!]!
+  skill: String!
 }
 
 type StudentActivity {
