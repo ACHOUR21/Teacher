@@ -1,4 +1,6 @@
+// NOTE: @sentry/nextjs must be installed (`npm install @sentry/nextjs`) for the withSentryConfig wrapper to work.
 import type { NextConfig } from 'next';
+import { withSentryConfig } from '@sentry/nextjs';
 
 // Allow the Railway/custom API host in CSP at build time
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
@@ -65,4 +67,14 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Sentry webpack plugin options (build-time)
+  silent: true,
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+}, {
+  // Sentry SDK runtime options
+  widenClientFileUpload: true,
+  hideSourceMaps: true,
+  disableLogger: true,
+});

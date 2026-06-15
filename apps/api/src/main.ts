@@ -1,7 +1,8 @@
-// OpenTelemetry must be initialized before any other imports
+// Sentry and OpenTelemetry must be initialized before any other imports
 // eslint-disable-next-line import/order
-import { startTelemetry } from './instrumentation';
+import { startSentry, startTelemetry } from './instrumentation';
 
+startSentry();
 startTelemetry();
 
 import { existsSync, mkdirSync } from 'fs';

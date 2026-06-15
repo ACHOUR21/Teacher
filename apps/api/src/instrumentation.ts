@@ -1,9 +1,33 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires */
 /**
- * OpenTelemetry instrumentation bootstrap.
- * Loaded conditionally — only when OTEL_ENABLED=true and packages are installed.
+ * Instrumentation bootstrap.
+ * Initializes Sentry error tracking and OpenTelemetry tracing.
  * Import this file BEFORE all other imports in main.ts.
+ *
+ * NOTE: Run `npm install @sentry/node` in apps/api if not yet installed.
  */
+
+/**
+ * Initialize Sentry for production error tracking.
+ * Must be called before anything else so that all subsequent requires are auto-instrumented.
+ */
+export function startSentry() {
+  if (!process.env['SENTRY_DSN'] || process.env['NODE_ENV'] !== 'production') { return; }
+
+  try {
+    const Sentry = require('@sentry/node');
+    Sentry.init({
+      dsn: process.env['SENTRY_DSN'],
+      environment: process.env['NODE_ENV'],
+      tracesSampleRate: parseFloat(process.env['SENTRY_TRACES_SAMPLE_RATE'] ?? '0.1'),
+      // Attach request metadata from Express automatically
+      integrations: [],
+    });
+    console.log('[Sentry] Error tracking initialized');
+  } catch (err) {
+    console.warn('[Sentry] Skipping — @sentry/node not installed or init failed:', (err as Error).message);
+  }
+}
 
 export function startTelemetry() {
   if (process.env['OTEL_ENABLED'] !== 'true') {return;}

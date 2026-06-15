@@ -152,12 +152,12 @@ function InviteCard() {
             <Link2 className="h-5 w-5 text-indigo-600" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900">Student invite link</p>
-            <p className="text-xs text-gray-500 truncate mt-0.5">{joinUrl}</p>
+            <p className="text-sm font-semibold text-foreground">Student invite link</p>
+            <p className="text-xs text-muted-foreground truncate mt-0.5">{joinUrl}</p>
           </div>
           <button
             onClick={copy}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-gray-100 hover:bg-gray-200 transition-colors shrink-0"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-muted hover:bg-accent transition-colors shrink-0"
           >
             {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
             {copied ? 'Copied!' : 'Copy link'}
@@ -198,10 +198,10 @@ function TeacherDashboard() {
     <div className="space-y-6">
       <SetupBanner />
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-foreground">
           Welcome back, {user?.firstName}!
         </h1>
-        <p className="text-sm text-gray-500 mt-1">Here's how your courses are performing</p>
+        <p className="text-sm text-muted-foreground mt-1">Here's how your courses are performing</p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -211,12 +211,12 @@ function TeacherDashboard() {
           { label: 'Avg Rating', value: stats?.avgRating ? stats.avgRating.toFixed(1) : '—', icon: DollarSign, color: 'text-amber-500 bg-amber-50' },
           { label: 'Completions', value: stats?.completionsCount ?? '—', icon: Video, color: 'text-green-500 bg-green-50' },
         ].map(stat => (
-          <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-5">
+          <div key={stat.label} className="bg-card rounded-xl border border-border p-5">
             <div className={cn('h-9 w-9 rounded-xl flex items-center justify-center mb-3', stat.color.split(' ')[1])}>
               <stat.icon className={cn('h-4 w-4', stat.color.split(' ')[0])} />
             </div>
-            <p className="text-2xl font-bold text-gray-900">{String(stat.value)}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{stat.label}</p>
+            <p className="text-2xl font-bold text-foreground">{String(stat.value)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
           </div>
         ))}
       </div>
@@ -226,25 +226,25 @@ function TeacherDashboard() {
           <CardHeader>
             <CardTitle className="text-base flex items-center justify-between">
               My Courses
-              <Link href="/courses" className="text-xs text-blue-600 font-normal hover:underline">View all</Link>
+              <Link href="/courses" className="text-xs text-primary font-normal hover:underline">View all</Link>
             </CardTitle>
           </CardHeader>
           <CardContent>
             {!profile?.courses?.length ? (
-              <div className="text-center py-6 text-gray-400 text-sm">
+              <div className="text-center py-6 text-muted-foreground text-sm">
                 No published courses yet.{' '}
-                <Link href="/courses/new" className="text-blue-600 hover:underline">Create one</Link>
+                <Link href="/courses/new" className="text-primary hover:underline">Create one</Link>
               </div>
             ) : (
               <div className="space-y-3">
                 {profile.courses.map((c: { id: string; thumbnailUrl?: string; title: string; enrollCount?: number; rating?: number }) => (
-                  <Link key={c.id} href={`/courses/${c.id}`} className="flex items-center gap-3 hover:bg-gray-50 p-2 rounded-lg transition-colors">
+                  <Link key={c.id} href={`/courses/${c.id}`} className="flex items-center gap-3 hover:bg-accent p-2 rounded-lg transition-colors">
                     <div className="h-10 w-14 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex-shrink-0 overflow-hidden">
                       {c.thumbnailUrl && <img src={c.thumbnailUrl} alt="" className="w-full h-full object-cover" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{c.title}</p>
-                      <p className="text-xs text-gray-500">{c.enrollCount ?? 0} students · ★ {c.rating?.toFixed(1) ?? '—'}</p>
+                      <p className="text-sm font-medium text-foreground truncate">{c.title}</p>
+                      <p className="text-xs text-muted-foreground">{c.enrollCount ?? 0} students · ★ {c.rating?.toFixed(1) ?? '—'}</p>
                     </div>
                   </Link>
                 ))}
@@ -257,14 +257,14 @@ function TeacherDashboard() {
           <CardHeader>
             <CardTitle className="text-base flex items-center justify-between">
               Upcoming Sessions
-              <Link href="/live" className="text-xs text-blue-600 font-normal hover:underline">View all</Link>
+              <Link href="/live" className="text-xs text-primary font-normal hover:underline">View all</Link>
             </CardTitle>
           </CardHeader>
           <CardContent>
             {!upcoming.length ? (
-              <div className="text-center py-6 text-gray-400 text-sm">
+              <div className="text-center py-6 text-muted-foreground text-sm">
                 No upcoming sessions.{' '}
-                <Link href="/live" className="text-blue-600 hover:underline">Schedule one</Link>
+                <Link href="/live" className="text-primary hover:underline">Schedule one</Link>
               </div>
             ) : (
               <div className="space-y-3">
@@ -274,8 +274,8 @@ function TeacherDashboard() {
                       <Video className="h-4 w-4 text-blue-600" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{s.title}</p>
-                      <p className="text-xs text-gray-500">{new Date(s.scheduledAt).toLocaleString()}</p>
+                      <p className="text-sm font-medium text-foreground truncate">{s.title}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(s.scheduledAt).toLocaleString()}</p>
                     </div>
                   </div>
                 ))}
@@ -308,10 +308,10 @@ function StudentDashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">
+        <h1 className="text-2xl font-bold text-foreground">
           Welcome back, {user?.firstName}!
         </h1>
-        <p className="text-sm text-gray-500 mt-1">Pick up where you left off</p>
+        <p className="text-sm text-muted-foreground mt-1">Pick up where you left off</p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -321,12 +321,12 @@ function StudentDashboard() {
           { label: 'Completion Rate', value: performance?.completionRate !== null && performance?.completionRate !== undefined ? `${performance.completionRate}%` : '—', icon: Target, color: 'text-purple-500 bg-purple-50' },
           { label: 'Points', value: performance?.points ?? '—', icon: Trophy, color: 'text-amber-500 bg-amber-50' },
         ].map(stat => (
-          <div key={stat.label} className="bg-white rounded-xl border border-gray-200 p-5">
+          <div key={stat.label} className="bg-card rounded-xl border border-border p-5">
             <div className={cn('h-9 w-9 rounded-xl flex items-center justify-center mb-3', stat.color.split(' ')[1])}>
               <stat.icon className={cn('h-4 w-4', stat.color.split(' ')[0])} />
             </div>
-            <p className="text-2xl font-bold text-gray-900">{String(stat.value)}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{stat.label}</p>
+            <p className="text-2xl font-bold text-foreground">{String(stat.value)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{stat.label}</p>
           </div>
         ))}
       </div>
@@ -341,13 +341,13 @@ function StudentDashboard() {
           </div>
           {isLoading ? (
             <div className="space-y-3">
-              {[1, 2].map(i => <div key={i} className="h-24 bg-gray-100 rounded-xl animate-pulse" />)}
+              {[1, 2].map(i => <div key={i} className="h-24 bg-muted rounded-xl animate-pulse" />)}
             </div>
           ) : inProgress.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 py-10 text-center">
-              <BookOpen className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-              <p className="text-gray-500 text-sm">No courses in progress</p>
-              <Link href="/marketplace" className="mt-2 inline-block text-sm text-blue-600 hover:underline">Browse courses</Link>
+            <div className="bg-card rounded-xl border border-border py-10 text-center">
+              <BookOpen className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+              <p className="text-muted-foreground text-sm">No courses in progress</p>
+              <Link href="/marketplace" className="mt-2 inline-block text-sm text-primary hover:underline">Browse courses</Link>
             </div>
           ) : (
             <div className="space-y-3">
@@ -355,7 +355,7 @@ function StudentDashboard() {
                 <Link
                   key={p.id}
                   href={`/courses/${p.courseId}/learn`}
-                  className="flex items-center gap-4 bg-white rounded-xl border border-gray-200 p-4 hover:shadow-sm hover:border-blue-200 transition-all"
+                  className="flex items-center gap-4 bg-card rounded-xl border border-border p-4 hover:shadow-sm hover:border-primary/30 transition-all"
                 >
                   <div className="h-14 w-20 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex-shrink-0 overflow-hidden">
                     {p.course?.thumbnailUrl && (
@@ -363,17 +363,17 @@ function StudentDashboard() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-gray-900 text-sm truncate">{p.course?.title}</p>
+                    <p className="font-medium text-foreground text-sm truncate">{p.course?.title}</p>
                     <div className="mt-2">
-                      <div className="flex justify-between text-xs text-gray-500 mb-1">
+                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
                         <span>{p.progressPct ?? 0}%</span>
                       </div>
-                      <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-500 rounded-full" style={{ width: `${p.progressPct ?? 0}%` }} />
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full bg-primary rounded-full" style={{ width: `${p.progressPct ?? 0}%` }} />
                       </div>
                     </div>
                   </div>
-                  <Play className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                  <Play className="h-4 w-4 text-primary flex-shrink-0" />
                 </Link>
               ))}
             </div>
@@ -383,16 +383,16 @@ function StudentDashboard() {
         <div className="space-y-4">
           <Card>
             <CardContent className="pt-5">
-              <h3 className="font-semibold text-gray-900 text-sm mb-4">Quick Links</h3>
+              <h3 className="font-semibold text-foreground text-sm mb-4">Quick Links</h3>
               <div className="space-y-2">
                 {[
                   { label: 'Browse Marketplace', href: '/marketplace', icon: BookOpen },
                   { label: 'Ask AI Tutor', href: '/ai-tutor', icon: Video },
                   { label: 'My Certificates', href: '/certificates', icon: CheckCircle },
                 ].map(link => (
-                  <Link key={link.href} href={link.href} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-gray-50 transition-colors">
-                    <link.icon className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-700">{link.label}</span>
+                  <Link key={link.href} href={link.href} className="flex items-center gap-3 p-2.5 rounded-lg hover:bg-accent transition-colors">
+                    <link.icon className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-foreground">{link.label}</span>
                   </Link>
                 ))}
               </div>

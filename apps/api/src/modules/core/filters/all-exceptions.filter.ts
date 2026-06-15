@@ -87,6 +87,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
         ? (exception instanceof Error ? exception.message : String(exception))
         : (exception instanceof Error ? exception.stack : String(exception));
       this.logger.error(`${request.method} ${request.url} - ${statusCode}`, detail);
+
+      // Report unhandled server errors to Sentry (production only)
+      if (process.env['SENTRY_DSN'] && process.env['NODE_ENV'] === 'production') {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
+          const Sentry = require('@sentry/node');
+          Sentry.captureException(exception);
+        } catch (_) { /* Sentry not installed — skip silently */ }
+      }
     } else {
       this.logger.warn(`${request.method} ${request.url} - ${statusCode}: ${message}`);
     }
