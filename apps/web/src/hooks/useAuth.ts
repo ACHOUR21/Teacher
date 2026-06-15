@@ -68,7 +68,7 @@ export function useAuth() {
           setMfaChallengeToken(data.tokens.accessToken);
           return { requiresMfa: true };
         }
-        login(data.user, data.tokens.accessToken);
+        login(data.user, data.tokens.accessToken, data.tokens.refreshToken);
         router.push('/');
         return { success: true };
       } finally {
@@ -122,7 +122,7 @@ export function useAuth() {
           deviceName: opts?.deviceName,
         });
         const data: AuthResponse = resp?.data ?? resp;
-        login(data.user, data.tokens.accessToken);
+        login(data.user, data.tokens.accessToken, data.tokens.refreshToken);
         router.push('/');
         return { success: true };
       } finally {
@@ -133,10 +133,13 @@ export function useAuth() {
   );
 
   const refreshToken = useCallback(async (): Promise<string> => {
-    const data = await apiPost<{ accessToken: string }>('/auth/refresh');
-    updateUser({});
+    const storedRefreshToken = useAuthStore.getState().refreshToken;
+    if (!storedRefreshToken) throw new Error('No refresh token available');
+    const resp = await apiPost<any>('/auth/refresh', { refreshToken: storedRefreshToken });
+    const data: { accessToken: string } = resp?.data ?? resp;
+    useAuthStore.getState().setAccessToken(data.accessToken);
     return data.accessToken;
-  }, [updateUser]);
+  }, []);
 
   const hasRole = useCallback(
     (roles: string | string[]) => {

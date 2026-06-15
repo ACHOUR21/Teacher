@@ -19,25 +19,32 @@ export const api = axios.create({
 
 // Store for the auth state — imported lazily to avoid circular dependencies
 let getAccessToken: (() => string | null) | null = null;
+let getTenantId: (() => string | null) | null = null;
 let clearAuth: (() => void) | null = null;
 let refreshTokenFn: (() => Promise<string>) | null = null;
 
 export function initApiInterceptors(
   tokenGetter: () => string | null,
   authClearer: () => void,
-  tokenRefresher: () => Promise<string>
+  tokenRefresher: () => Promise<string>,
+  tenantIdGetter?: () => string | null
 ) {
   getAccessToken = tokenGetter;
   clearAuth = authClearer;
   refreshTokenFn = tokenRefresher;
+  getTenantId = tenantIdGetter ?? null;
 }
 
-// Request interceptor — attach Bearer token
+// Request interceptor — attach Bearer token and X-Tenant-ID
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     const token = getAccessToken?.();
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    const tenantId = getTenantId?.();
+    if (tenantId && config.headers) {
+      config.headers['X-Tenant-ID'] = tenantId;
     }
     return config;
   },

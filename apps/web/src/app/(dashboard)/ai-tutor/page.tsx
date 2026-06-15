@@ -1,11 +1,11 @@
 'use client';
 
 import { useMutation } from '@tanstack/react-query';
-import { Send, Plus, Bot, User } from 'lucide-react';
+import { Send, Plus, Bot, User, AlertTriangle } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
 import { Button } from '@/components/ui/Button';
-import { api } from '@/lib/api';
+import { api, type ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 interface Message {
@@ -32,6 +32,17 @@ export default function AITutorPage() {
     onSuccess: (data) => {
       if (!conversationId) {setConversationId(data.conversationId);}
       setMessages(prev => [...prev, { role: 'assistant', content: data.answer }]);
+    },
+    onError: (error: ApiError) => {
+      const isKeyMissing =
+        error?.statusCode === 500 ||
+        error?.statusCode === 0 ||
+        (error?.message ?? '').toLowerCase().includes('api key') ||
+        (error?.message ?? '').toLowerCase().includes('placeholder');
+      const errorMessage = isKeyMissing
+        ? 'AI Tutor is unavailable — ANTHROPIC_API_KEY is not configured in the backend.'
+        : (error?.message ?? 'An unexpected error occurred. Please try again.');
+      setMessages(prev => [...prev, { role: 'assistant', content: `⚠️ ${errorMessage}` }]);
     },
   });
 

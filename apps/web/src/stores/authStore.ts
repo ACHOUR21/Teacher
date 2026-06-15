@@ -28,6 +28,7 @@ export interface User {
 interface AuthState {
   user: User | null;
   accessToken: string | null;
+  refreshToken: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   _hasHydrated: boolean;
@@ -35,7 +36,7 @@ interface AuthState {
 }
 
 interface AuthActions {
-  login: (user: User, token: string) => void;
+  login: (user: User, accessToken: string, refreshToken: string) => void;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
   setAccessToken: (token: string) => void;
@@ -49,6 +50,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
     (set) => ({
       user: null,
       accessToken: null,
+      refreshToken: null,
       isAuthenticated: false,
       isLoading: false,
       _hasHydrated: false,
@@ -57,14 +59,15 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       setHasHydrated: (v) => set({ _hasHydrated: v }),
       setMfaChallengeToken: (token) => set({ mfaChallengeToken: token }),
 
-      login: (user, accessToken) => {
-        set({ user, accessToken, isAuthenticated: true, isLoading: false, mfaChallengeToken: null });
+      login: (user, accessToken, refreshToken) => {
+        set({ user, accessToken, refreshToken, isAuthenticated: true, isLoading: false, mfaChallengeToken: null });
       },
 
       logout: () => {
         set({
           user: null,
           accessToken: null,
+          refreshToken: null,
           isAuthenticated: false,
           isLoading: false,
           mfaChallengeToken: null,
@@ -91,6 +94,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
         isAuthenticated: state.isAuthenticated,
       }),
       onRehydrateStorage: () => (state) => {

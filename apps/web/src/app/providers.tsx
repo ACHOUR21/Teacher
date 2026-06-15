@@ -19,15 +19,26 @@ function ApiInterceptorInit() {
       () => useAuthStore.getState().accessToken,
       () => useAuthStore.getState().logout(),
       async () => {
+        const storedRefreshToken = useAuthStore.getState().refreshToken;
+        if (!storedRefreshToken) throw new Error('No refresh token available');
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/auth/refresh`,
-          { method: 'POST', credentials: 'include' }
+          {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken: storedRefreshToken }),
+          }
         );
         if (!res.ok) {throw new Error('Refresh failed');}
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const data = await res.json();
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
         useAuthStore.getState().setAccessToken(data.accessToken);
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
         return data.accessToken;
-      }
+      },
+      () => useAuthStore.getState().user?.tenantId ?? null
     );
   }, []);
 

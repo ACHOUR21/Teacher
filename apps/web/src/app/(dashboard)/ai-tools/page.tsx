@@ -9,8 +9,41 @@ import {
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/Button';
-import { api } from '@/lib/api';
+import { api, type ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
+
+// ─── Shared Error Banner ─────────────────────────────────────────────────────
+
+function AiErrorBanner({ error }: { error: unknown }) {
+  const apiErr = error as ApiError | null;
+  const isKeyMissing =
+    apiErr?.statusCode === 500 ||
+    apiErr?.statusCode === 0 ||
+    apiErr?.statusCode === 403 ||
+    (apiErr?.message ?? '').toLowerCase().includes('api key') ||
+    (apiErr?.message ?? '').toLowerCase().includes('placeholder') ||
+    (apiErr?.message ?? '').toLowerCase().includes('token limit');
+
+  if (isKeyMissing) {
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+        <p className="text-amber-800 font-medium text-sm">AI generation is unavailable.</p>
+        <p className="text-amber-600 text-xs mt-1">
+          {(apiErr?.message ?? '').toLowerCase().includes('token limit')
+            ? apiErr?.message
+            : 'Add ANTHROPIC_API_KEY and OPENAI_API_KEY to the backend .env file to enable this feature.'}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+      <p className="text-red-800 font-medium text-sm">Request failed.</p>
+      <p className="text-red-600 text-xs mt-1">{apiErr?.message ?? 'An unexpected error occurred. Please try again.'}</p>
+    </div>
+  );
+}
 
 type Tab =
   | 'curriculum'
@@ -107,6 +140,8 @@ function CurriculumTab() {
         {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Generating Curriculum...</> : 'Generate Curriculum'}
       </Button>
 
+      {mutation.isError && <AiErrorBanner error={mutation.error} />}
+
       {result && (
         <div className="border border-border rounded-xl overflow-hidden">
           <div className="bg-primary/5 px-4 py-3 flex items-center justify-between">
@@ -189,6 +224,7 @@ function ResearchTab() {
       <Button onClick={() => mutation.mutate()} disabled={!topic || mutation.isPending} className="w-full">
         {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Researching...</> : 'Start Research'}
       </Button>
+      {mutation.isError && <AiErrorBanner error={mutation.error} />}
       {result && (
         <div className="border border-border rounded-xl p-4 bg-muted/30 max-h-[480px] overflow-y-auto">
           <div className="prose prose-sm max-w-none text-foreground whitespace-pre-wrap text-sm leading-relaxed">{result}</div>
@@ -242,6 +278,7 @@ function SpeechToTextTab() {
       <Button onClick={() => mutation.mutate()} disabled={!file || mutation.isPending} className="w-full">
         {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Transcribing...</> : 'Transcribe Audio'}
       </Button>
+      {mutation.isError && <AiErrorBanner error={mutation.error} />}
       {result && (
         <div className="border border-border rounded-xl p-4 bg-muted/30">
           <div className="flex items-center justify-between mb-2">
@@ -298,6 +335,7 @@ function TextToSpeechTab() {
       <Button onClick={() => mutation.mutate()} disabled={!text.trim() || mutation.isPending} className="w-full">
         {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Generating Audio...</> : 'Generate Speech'}
       </Button>
+      {mutation.isError && <AiErrorBanner error={mutation.error} />}
       {audioUrl && (
         <div className="border border-border rounded-xl p-4 bg-muted/30">
           <p className="text-xs font-semibold text-muted-foreground uppercase mb-3">Generated Audio</p>
@@ -355,6 +393,8 @@ function CareerAdvisorTab() {
       <Button onClick={() => mutation.mutate()} disabled={!interests || !skills || mutation.isPending} className="w-full">
         {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Analyzing Career Path...</> : 'Get Career Advice'}
       </Button>
+
+      {mutation.isError && <AiErrorBanner error={mutation.error} />}
 
       {result && (
         <div className="space-y-4">
@@ -437,6 +477,7 @@ function PerformancePredictionTab() {
           {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Analyze'}
         </Button>
       </div>
+      {mutation.isError && <AiErrorBanner error={mutation.error} />}
       {result && (
         <div className="border border-border rounded-xl overflow-hidden">
           <div className="bg-primary/5 px-4 py-3">
@@ -504,6 +545,7 @@ function DropoutRiskTab() {
           {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Analyze Risk'}
         </Button>
       </div>
+      {mutation.isError && <AiErrorBanner error={mutation.error} />}
       {result && (
         <div className={cn('border rounded-xl overflow-hidden', riskColors[result.riskLevel])}>
           <div className="px-4 py-3 border-b flex items-center justify-between">
@@ -570,6 +612,8 @@ function HomeworkTab() {
       <Button onClick={() => mutation.mutate()} disabled={!problem.trim() || mutation.isPending} className="w-full">
         {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Solving...</> : 'Solve Problem'}
       </Button>
+
+      {mutation.isError && <AiErrorBanner error={mutation.error} />}
 
       {result && (
         <div className="space-y-4">
@@ -705,6 +749,8 @@ function ExamGeneratorTab() {
         {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Generating Exam...</> : 'Generate Exam'}
       </Button>
 
+      {mutation.isError && <AiErrorBanner error={mutation.error} />}
+
       {result && (
         <div className="border border-border rounded-xl overflow-hidden">
           <div className="bg-primary/5 px-4 py-3 flex items-center justify-between">
@@ -800,6 +846,8 @@ function LessonPlannerTab() {
       <Button onClick={() => mutation.mutate()} disabled={!topic.trim() || mutation.isPending} className="w-full">
         {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Creating Lesson Plan...</> : 'Generate Lesson Plan'}
       </Button>
+
+      {mutation.isError && <AiErrorBanner error={mutation.error} />}
 
       {result && (
         <div className="border border-border rounded-xl overflow-hidden">
@@ -912,6 +960,8 @@ function FlashcardsTab() {
         {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Generating Flashcards...</> : 'Generate Flashcards'}
       </Button>
 
+      {mutation.isError && <AiErrorBanner error={mutation.error} />}
+
       {cards.length > 0 && card && (
         <div className="space-y-4">
           <div className="flex items-center justify-between text-sm text-muted-foreground">
@@ -1005,6 +1055,8 @@ function MindMapTab() {
         {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Generating Mind Map...</> : 'Generate Mind Map'}
       </Button>
 
+      {mutation.isError && <AiErrorBanner error={mutation.error} />}
+
       {result && (
         <div className="border border-border rounded-xl overflow-hidden">
           <div className="bg-primary px-4 py-3 text-center">
@@ -1085,6 +1137,8 @@ function TranslatorTab() {
         {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Translating...</> : 'Translate'}
       </Button>
 
+      {mutation.isError && <AiErrorBanner error={mutation.error} />}
+
       {result && (
         <div className="grid grid-cols-2 gap-4">
           <div className="border border-border rounded-xl p-4 bg-muted/30">
@@ -1133,6 +1187,8 @@ function PlagiarismTab() {
       <Button onClick={() => mutation.mutate()} disabled={!content.trim() || mutation.isPending} className="w-full">
         {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Checking...</> : 'Check for Plagiarism'}
       </Button>
+
+      {mutation.isError && <AiErrorBanner error={mutation.error} />}
 
       {result && (
         <div className="space-y-4">
@@ -1223,6 +1279,8 @@ function ContentModerationTab() {
       <Button onClick={() => mutation.mutate()} disabled={!content.trim() || mutation.isPending} className="w-full">
         {mutation.isPending ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Moderating...</> : 'Moderate Content'}
       </Button>
+
+      {mutation.isError && <AiErrorBanner error={mutation.error} />}
 
       {result && (
         <div className="space-y-4">
