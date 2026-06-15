@@ -1,5 +1,11 @@
+'use client';
+
 import { ArrowRight, Brain, Users, BookOpen, Video, Award, Zap, BarChart } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+
+import { useAuthStore } from '@/stores/authStore';
 
 const FEATURES = [
   { icon: Brain, title: 'AI-Powered Learning', description: 'Personalized AI tutors, automated exam generation, and intelligent content recommendations.' },
@@ -17,6 +23,29 @@ const PLANS = [
 ];
 
 export default function LandingPage() {
+  const router = useRouter();
+  const { isAuthenticated, _hasHydrated } = useAuthStore();
+
+  useEffect(() => {
+    if (_hasHydrated && isAuthenticated) {
+      router.replace('/courses');
+    }
+  }, [isAuthenticated, _hasHydrated, router]);
+
+  // While the store is hydrating, show nothing to avoid flash of landing page
+  if (!_hasHydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="h-8 w-8 rounded-full border-4 border-blue-600 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
+  // Authenticated users are redirected — only render landing for guests
+  if (isAuthenticated) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-white">
       {/* Nav */}
