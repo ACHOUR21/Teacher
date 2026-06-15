@@ -71,13 +71,32 @@ export default function ProfilePage() {
         folder: 'avatars',
       });
       const { uploadUrl, publicUrl } = presigned.data ?? presigned;
+
+      // Detect local vs S3: local upload-local endpoint expects multipart POST, S3 expects raw PUT
+      const isLocal = uploadUrl.includes('/storage/upload');
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open('PUT', uploadUrl, true);
-        xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
-        xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error('Upload failed'));
-        xhr.onerror = () => reject(new Error('Network error'));
-        xhr.send(file);
+        if (isLocal) {
+          const formData = new FormData();
+          formData.append('file', file);
+          xhr.open('POST', uploadUrl, true);
+          // Read access token from Zustand persisted auth store
+          try {
+            const raw = localStorage.getItem('eduai-auth');
+            const parsed = raw ? JSON.parse(raw) as { state?: { accessToken?: string } } : null;
+            const token = parsed?.state?.accessToken;
+            if (token) {xhr.setRequestHeader('Authorization', `Bearer ${token}`);}
+          } catch { /* ignore */ }
+          xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error('Upload failed'));
+          xhr.onerror = () => reject(new Error('Network error'));
+          xhr.send(formData);
+        } else {
+          xhr.open('PUT', uploadUrl, true);
+          xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+          xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error('Upload failed'));
+          xhr.onerror = () => reject(new Error('Network error'));
+          xhr.send(file);
+        }
       });
       await api.patch('/users/me', { avatarUrl: publicUrl });
       setAvatarUrl(publicUrl);

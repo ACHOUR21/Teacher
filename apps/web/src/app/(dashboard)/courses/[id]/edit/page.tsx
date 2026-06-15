@@ -22,6 +22,7 @@ import { useParams } from 'next/navigation';
 import React, { useState } from 'react';
 
 import { api } from '@/lib/api';
+import { ImageUpload } from '@/components/ui/ImageUpload';
 
 const contentTypeIcon = (type: string) => {
   if (type === 'VIDEO') {return <Video className="h-3.5 w-3.5" />;}
@@ -457,10 +458,25 @@ export default function CourseEditorPage() {
   const [newSectionTitle, setNewSectionTitle] = useState('');
   const [quizModalLessonId, setQuizModalLessonId] = useState<string | null>(null);
   const [quizModalLessonTitle, setQuizModalLessonTitle] = useState('');
+  const [thumbnailUrl, setThumbnailUrl] = useState<string>('');
+  const [thumbnailSaved, setThumbnailSaved] = useState(false);
 
   const { data: course, isLoading } = useQuery<any>({
     queryKey: ['course', courseId],
     queryFn: () => api.get(`/courses/${courseId}`).then(r => r.data.data),
+  });
+
+  React.useEffect(() => {
+    if (course?.thumbnailUrl) { setThumbnailUrl(course.thumbnailUrl); }
+  }, [course?.thumbnailUrl]);
+
+  const saveThumbnailMut = useMutation({
+    mutationFn: (url: string) => api.patch(`/courses/${courseId}`, { thumbnailUrl: url }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['course', courseId] });
+      setThumbnailSaved(true);
+      setTimeout(() => setThumbnailSaved(false), 2000);
+    },
   });
 
   const addSectionMut = useMutation({
@@ -559,6 +575,31 @@ export default function CourseEditorPage() {
             </span>
           )}
         </div>
+      </div>
+
+      {/* Course Thumbnail */}
+      <div className="bg-card border border-border rounded-lg p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">Course Thumbnail</h2>
+          {thumbnailUrl && (
+            <button
+              onClick={() => saveThumbnailMut.mutate(thumbnailUrl)}
+              disabled={saveThumbnailMut.isPending}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50"
+            >
+              <Save className="h-3 w-3" />
+              {thumbnailSaved ? 'Saved!' : saveThumbnailMut.isPending ? 'Saving...' : 'Save Thumbnail'}
+            </button>
+          )}
+        </div>
+        <ImageUpload
+          value={thumbnailUrl}
+          onChange={(url) => { setThumbnailUrl(url); if (url) { saveThumbnailMut.mutate(url); } }}
+          folder="thumbnails"
+          label="Upload course thumbnail"
+          maxSizeMB={5}
+          aspectRatio="video"
+        />
       </div>
 
       {/* Sections */}
