@@ -1,6 +1,4 @@
-// NOTE: @sentry/nextjs must be installed (`npm install @sentry/nextjs`) for the withSentryConfig wrapper to work.
 import type { NextConfig } from 'next';
-import { withSentryConfig } from '@sentry/nextjs';
 
 // Allow the Railway/custom API host in CSP at build time
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
@@ -67,14 +65,22 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
-  // Sentry webpack plugin options (build-time)
-  silent: true,
-  org: process.env.SENTRY_ORG,
-  project: process.env.SENTRY_PROJECT,
-}, {
-  // Sentry SDK runtime options
-  widenClientFileUpload: true,
-  hideSourceMaps: true,
-  disableLogger: true,
-});
+// Wrap with Sentry only when the package is installed (production builds with SENTRY_DSN set)
+let exportedConfig: NextConfig = nextConfig;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { withSentryConfig } = require('@sentry/nextjs');
+  exportedConfig = withSentryConfig(nextConfig, {
+    silent: true,
+    org: process.env.SENTRY_ORG,
+    project: process.env.SENTRY_PROJECT,
+  }, {
+    widenClientFileUpload: true,
+    hideSourceMaps: true,
+    disableLogger: true,
+  });
+} catch (_) {
+  // @sentry/nextjs not installed — run without Sentry (install with: npm install @sentry/nextjs)
+}
+
+export default exportedConfig;

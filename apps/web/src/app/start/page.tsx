@@ -98,7 +98,7 @@ export default function StartPage() {
     if (!schoolData) {return;}
     setIsSubmitting(true);
     try {
-      const result = await apiPost<{ user: any; tokens: { accessToken: string } }>(
+      const result = await apiPost<{ user: any; tokens: { accessToken: string; refreshToken?: string } }>(
         '/auth/tenant/register',
         {
           tenantName: schoolData.tenantName,
@@ -110,7 +110,7 @@ export default function StartPage() {
           password: admin.password,
         },
       );
-      login(result.user, result.tokens.accessToken);
+      login(result.user, result.tokens.accessToken, result.tokens.refreshToken ?? '');
       // Small delay so auth store persists before redirect
       setTimeout(() => router.push('/onboarding'), 300);
       setStep(2);
