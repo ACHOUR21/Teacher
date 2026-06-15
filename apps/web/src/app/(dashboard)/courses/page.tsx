@@ -71,7 +71,7 @@ function CourseCard({ enrollment }: { enrollment: EnrolledCourse }) {
   return (
     <Link
       href={`/courses/${course.id}/learn`}
-      className="group block bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md hover:border-blue-200 transition-all duration-200"
+      className="group block bg-card rounded-xl border border-border overflow-hidden hover:shadow-md hover:border-primary/30 transition-all duration-200"
     >
       {/* Thumbnail */}
       <div className="relative h-40 bg-gradient-to-br from-blue-500 to-purple-600">
@@ -94,19 +94,19 @@ function CourseCard({ enrollment }: { enrollment: EnrolledCourse }) {
         {course.category && (
           <p className="text-xs text-blue-600 font-medium mb-1">{course.category}</p>
         )}
-        <h3 className="font-semibold text-gray-900 text-sm leading-snug line-clamp-2 group-hover:text-blue-600 transition-colors mb-2">
+        <h3 className="font-semibold text-foreground text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors mb-2">
           {course.title}
         </h3>
 
         {course.teacher && (
-          <p className="text-xs text-gray-500 mb-2">
+          <p className="text-xs text-muted-foreground mb-2">
             {course.teacher.user.firstName} {course.teacher.user.lastName}
           </p>
         )}
 
         {/* Progress bar */}
         <div className="mb-2">
-          <div className="flex justify-between text-xs text-gray-500 mb-1">
+          <div className="flex justify-between text-xs text-muted-foreground mb-1">
             <span>{pct}% complete</span>
             {course.totalLessons && (
               <span className="flex items-center gap-1">
@@ -115,15 +115,15 @@ function CourseCard({ enrollment }: { enrollment: EnrolledCourse }) {
               </span>
             )}
           </div>
-          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
             <div
-              className={cn('h-full rounded-full transition-all', isComplete ? 'bg-green-500' : 'bg-blue-500')}
+              className={cn('h-full rounded-full transition-all', isComplete ? 'bg-green-500' : 'bg-primary')}
               style={{ width: `${pct}%` }}
             />
           </div>
         </div>
 
-        <div className="flex items-center justify-between mt-2 text-xs text-gray-500">
+        <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
           <StarRating rating={course.rating ?? 0} />
           {(durationH > 0 || durationM > 0) && (
             <span className="flex items-center gap-1">
@@ -134,7 +134,7 @@ function CourseCard({ enrollment }: { enrollment: EnrolledCourse }) {
         </div>
 
         {lastAccessed && (
-          <p className="text-xs text-gray-400 mt-1">Last accessed {lastAccessed}</p>
+          <p className="text-xs text-muted-foreground/70 mt-1">Last accessed {lastAccessed}</p>
         )}
       </div>
     </Link>
@@ -143,13 +143,13 @@ function CourseCard({ enrollment }: { enrollment: EnrolledCourse }) {
 
 function SkeletonCard() {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden animate-pulse">
-      <div className="h-40 bg-gray-200" />
+    <div className="bg-card rounded-xl border border-border overflow-hidden animate-pulse">
+      <div className="h-40 bg-muted" />
       <div className="p-4 space-y-3">
-        <div className="h-3 bg-gray-200 rounded w-1/3" />
-        <div className="h-4 bg-gray-200 rounded w-4/5" />
-        <div className="h-3 bg-gray-200 rounded w-1/2" />
-        <div className="h-2 bg-gray-200 rounded-full" />
+        <div className="h-3 bg-muted rounded w-1/3" />
+        <div className="h-4 bg-muted rounded w-4/5" />
+        <div className="h-3 bg-muted rounded w-1/2" />
+        <div className="h-2 bg-muted rounded-full" />
       </div>
     </div>
   );
@@ -179,8 +179,8 @@ export default function CoursesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">My Courses</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="text-2xl font-bold text-foreground">My Courses</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             {isLoading ? 'Loading…' : `${enrollments.length} enrolled course${enrollments.length !== 1 ? 's' : ''}`}
           </p>
         </div>

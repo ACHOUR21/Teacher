@@ -433,8 +433,8 @@ export default function DashboardClient() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-1">Welcome back. Here's what's happening today.</p>
+        <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+        <p className="text-sm text-muted-foreground mt-1">Welcome back. Here's what's happening today.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
@@ -519,34 +519,34 @@ export default function DashboardClient() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">Course</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">Enrollments</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">Rating</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-500">Completions</th>
+                <tr className="border-b border-border">
+                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">Course</th>
+                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">Enrollments</th>
+                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">Rating</th>
+                  <th className="text-left py-3 px-4 font-medium text-muted-foreground">Completions</th>
                 </tr>
               </thead>
               <tbody>
                 {(topCourses ?? []).map((course: { id: string; title: string; enrollCount?: number; rating?: number; _count?: { progress?: number } }, i: number) => (
-                  <tr key={course.id} className="border-b border-gray-50 hover:bg-gray-50">
+                  <tr key={course.id} className="border-b border-border hover:bg-muted/50">
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-3">
-                        <span className="text-gray-400 text-xs w-5">{i + 1}</span>
-                        <span className="font-medium text-gray-900 truncate max-w-[200px]">{course.title}</span>
+                        <span className="text-muted-foreground text-xs w-5">{i + 1}</span>
+                        <span className="font-medium text-foreground truncate max-w-[200px]">{course.title}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-gray-700">{course.enrollCount ?? 0}</td>
+                    <td className="py-3 px-4 text-foreground">{course.enrollCount ?? 0}</td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-1">
                         <span className="text-yellow-500">★</span>
                         <span>{course.rating?.toFixed(1) ?? '—'}</span>
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-gray-700">{course._count?.progress ?? 0}</td>
+                    <td className="py-3 px-4 text-foreground">{course._count?.progress ?? 0}</td>
                   </tr>
                 ))}
                 {!topCourses?.length && (
-                  <tr><td colSpan={4} className="py-8 text-center text-gray-400">No courses yet</td></tr>
+                  <tr><td colSpan={4} className="py-8 text-center text-muted-foreground">No courses yet</td></tr>
                 )}
               </tbody>
             </table>
