@@ -1,9 +1,9 @@
 'use client';
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { RefreshCw, Star, Users, BookOpen, Sparkles, TrendingUp, Zap } from 'lucide-react';
+import { RefreshCw, Star, Users, BookOpen, Sparkles, TrendingUp, Zap, AlertTriangle } from 'lucide-react';
 
-import { api } from '@/lib/api';
+import { api, type ApiError } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 interface CourseRecommendation {
@@ -158,10 +158,11 @@ function Section({ title, icon, courses, isLoading }: SectionProps) {
 export default function RecommendationsPage() {
   const qc = useQueryClient();
 
-  const { data, isLoading, isFetching } = useQuery<PersonalizedFeed>({
+  const { data, isLoading, isFetching, isError, error } = useQuery<PersonalizedFeed>({
     queryKey: ['recommendations', 'feed'],
     queryFn: () =>
       api.get('/ai/recommendations/feed').then((r) => r.data.data as PersonalizedFeed),
+    retry: 1,
   });
 
   const handleRefresh = () => {
@@ -171,6 +172,13 @@ export default function RecommendationsPage() {
   const recommendations = data?.recommendations ?? [];
   const trending = data?.trending ?? [];
   const newCourses = data?.newCourses ?? [];
+
+  const apiErr = error as ApiError | null;
+  const isKeyMissing =
+    apiErr?.statusCode === 500 ||
+    apiErr?.statusCode === 0 ||
+    (apiErr?.message ?? '').toLowerCase().includes('api key') ||
+    (apiErr?.message ?? '').toLowerCase().includes('placeholder');
 
   return (
     <div className="space-y-8">
@@ -191,6 +199,26 @@ export default function RecommendationsPage() {
           Refresh Recommendations
         </button>
       </div>
+
+      {/* Error Banner */}
+      {isError && (
+        <div className={cn(
+          'border rounded-lg p-4 flex items-start gap-3',
+          isKeyMissing ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200',
+        )}>
+          <AlertTriangle className={cn('h-5 w-5 shrink-0 mt-0.5', isKeyMissing ? 'text-amber-500' : 'text-red-500')} />
+          <div>
+            <p className={cn('font-medium text-sm', isKeyMissing ? 'text-amber-800' : 'text-red-800')}>
+              {isKeyMissing ? 'AI recommendations unavailable' : 'Failed to load recommendations'}
+            </p>
+            <p className={cn('text-xs mt-1', isKeyMissing ? 'text-amber-600' : 'text-red-600')}>
+              {isKeyMissing
+                ? 'Add ANTHROPIC_API_KEY and OPENAI_API_KEY to the backend .env file to enable personalized recommendations.'
+                : (apiErr?.message ?? 'An unexpected error occurred. Please try again.')}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Three sections */}
       <Section
