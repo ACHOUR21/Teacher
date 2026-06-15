@@ -69,4 +69,9 @@ export class NotificationsGateway implements OnGatewayConnection, OnGatewayDisco
   sendToUser(userId: string, payload: NotificationPayload) {
     this.server.to(`user:${userId}`).emit('notification', payload);
   }
+
+  /** Emit the current unread count to a specific user so the bell badge stays accurate. */
+  sendUnreadCount(userId: string, count: number) {
+    this.server.to(`user:${userId}`).emit('unread_count', count);
+  }
 }

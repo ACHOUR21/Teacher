@@ -32,6 +32,7 @@ interface UIActions {
   markAllNotificationsRead: () => void;
   clearNotifications: () => void;
   removeNotification: (id: string) => void;
+  setUnreadCount: (count: number) => void;
 }
 
 let notificationIdCounter = 0;
@@ -101,6 +102,8 @@ export const useUIStore = create<UIState & UIActions>()(
           return { notifications, unreadCount };
         });
       },
+
+      setUnreadCount: (count) => set({ unreadCount: count }),
     }),
     {
       name: 'eduai-ui',

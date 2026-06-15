@@ -1,7 +1,8 @@
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { Users, BookOpen, Video, DollarSign, Link2, Copy, Check, Play, CheckCircle, Target, Trophy, Rocket, ChevronRight, X } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { Users, BookOpen, Video, DollarSign, Link2, Copy, Check, Play, CheckCircle, Target, Trophy, Rocket, ChevronRight, X, Activity, Bell, AlertCircle, Info } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
@@ -12,7 +13,81 @@ import { useAuth } from '@/hooks/useAuth';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/stores/authStore';
+import { useUIStore } from '@/stores/uiStore';
 
+
+/** Icon helper keyed on notification type */
+function NotifIcon({ type }: { type: string }) {
+  switch (type) {
+    case 'success': return <CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0 mt-0.5" />;
+    case 'warning': return <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0 mt-0.5" />;
+    case 'error': return <AlertCircle className="h-3.5 w-3.5 text-destructive shrink-0 mt-0.5" />;
+    default: return <Info className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />;
+  }
+}
+
+/** Real-time activity feed powered by the WebSocket notifications store */
+function ActivityFeed() {
+  const notifications = useUIStore((s) => s.notifications);
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <Activity className="h-4 w-4 text-primary" />
+          Live Activity
+          {notifications.length > 0 && (
+            <span className="ml-auto text-xs font-normal text-muted-foreground">
+              {notifications.length} event{notifications.length !== 1 ? 's' : ''}
+            </span>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {notifications.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <Bell className="h-8 w-8 text-muted-foreground/30 mb-2" />
+            <p className="text-sm text-muted-foreground">No recent activity</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">
+              Events will appear here in real time
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3 max-h-72 overflow-y-auto scrollbar-thin pr-1">
+            {notifications.slice(0, 8).map((n) => (
+              <div
+                key={n.id}
+                className={cn(
+                  'flex items-start gap-3 text-sm rounded-lg p-2 transition-colors',
+                  !n.read && 'bg-primary/5'
+                )}
+              >
+                <NotifIcon type={n.type} />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-foreground text-xs truncate">{n.title}</p>
+                  <p className="text-muted-foreground text-xs mt-0.5 line-clamp-2">{n.message}</p>
+                  <p className="text-[10px] text-muted-foreground/70 mt-1">
+                    {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true })}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {notifications.length > 0 && (
+          <div className="pt-3 border-t border-border mt-3">
+            <Link
+              href="/dashboard/notifications"
+              className="text-xs text-primary hover:underline"
+            >
+              View all notifications
+            </Link>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 function SetupBanner() {
   const { isAdmin } = useAuth();
@@ -209,6 +284,8 @@ function TeacherDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      <ActivityFeed />
     </div>
   );
 }
@@ -323,6 +400,8 @@ function StudentDashboard() {
           </Card>
         </div>
       </div>
+
+      <ActivityFeed />
     </div>
   );
 }
@@ -474,6 +553,8 @@ export default function DashboardClient() {
           </div>
         </CardContent>
       </Card>
+
+      <ActivityFeed />
     </div>
   );
 }

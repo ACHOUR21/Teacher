@@ -77,15 +77,20 @@ export class NotificationsService {
     const notification = await this.createInApp(userId, NotificationType.IN_APP, title, body, data);
 
     // Real-time delivery via Socket.IO
-    this.gateway?.sendToUser(userId, {
-      id: notification.id,
-      title,
-      message: body,
-      type: (data?.['type'] as string) ?? 'IN_APP',
-      href: data?.['href'] as string | undefined,
-      createdAt: notification.createdAt.toISOString(),
-      data,
-    });
+    if (this.gateway) {
+      this.gateway.sendToUser(userId, {
+        id: notification.id,
+        title,
+        message: body,
+        type: (data?.['type'] as string) ?? 'IN_APP',
+        href: data?.['href'] as string | undefined,
+        createdAt: notification.createdAt.toISOString(),
+        data,
+      });
+      // Push fresh unread count so the bell badge updates immediately
+      const newUnreadCount = await this.getUnreadCount(userId);
+      this.gateway.sendUnreadCount(userId, newUnreadCount);
+    }
 
     if (user.email) {
       await this.sendEmail(user.email, title, `<p>${body}</p>`);
@@ -147,10 +152,13 @@ export class NotificationsService {
   }
 
   async markAllRead(userId: string) {
-    return this.prisma.notification.updateMany({
+    const result = await this.prisma.notification.updateMany({
       where: { userId, isRead: false },
       data: { isRead: true },
     });
+    // Inform connected clients that all are read now
+    this.gateway?.sendUnreadCount(userId, 0);
+    return result;
   }
 
   async getUnreadCount(userId: string) {
