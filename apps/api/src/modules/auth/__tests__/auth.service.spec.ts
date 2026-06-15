@@ -11,6 +11,7 @@ import * as bcrypt from 'bcrypt';
 
 import { RedisService } from '../../cache/redis.service';
 import { PrismaService } from '../../database/prisma.service';
+import { EmailService } from '../../notifications/email/email.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { AuthService } from '../auth.service';
 
@@ -64,6 +65,12 @@ const mockNotifications = {
   sendCourseEnrollmentEmail: jest.fn().mockResolvedValue(undefined),
 };
 
+const mockEmailService = {
+  sendWelcome: jest.fn().mockResolvedValue(undefined),
+  sendPasswordReset: jest.fn().mockResolvedValue(undefined),
+  sendEmailVerification: jest.fn().mockResolvedValue(undefined),
+};
+
 // Shared user fixture factory
 function makeUser(overrides: Record<string, unknown> = {}) {
   return {
@@ -97,6 +104,7 @@ describe('AuthService', () => {
         { provide: ConfigService, useValue: mockConfig },
         { provide: RedisService, useValue: mockRedis },
         { provide: NotificationsService, useValue: mockNotifications },
+        { provide: EmailService, useValue: mockEmailService },
       ],
     }).compile();
 
