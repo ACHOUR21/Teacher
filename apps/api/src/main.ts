@@ -4,6 +4,9 @@ import { startTelemetry } from './instrumentation';
 
 startTelemetry();
 
+import { existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
+
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { type NestExpressApplication } from '@nestjs/platform-express';
@@ -65,6 +68,14 @@ async function bootstrap() {
     new TransformInterceptor(),
     new TimeoutInterceptor(),
   );
+
+  // Serve uploaded files from local disk (only active when STORAGE_PROVIDER=local, the default)
+  if ((process.env['STORAGE_PROVIDER'] ?? 'local') === 'local') {
+    const uploadDir = process.env['UPLOAD_DIR'] ?? join(process.cwd(), 'uploads');
+    if (!existsSync(uploadDir)) { mkdirSync(uploadDir, { recursive: true }); }
+    app.useStaticAssets(uploadDir, { prefix: '/uploads' });
+    logger.log(`Serving local uploads from ${uploadDir} at /uploads`);
+  }
 
   // Socket.IO
   app.useWebSocketAdapter(new IoAdapter(app));

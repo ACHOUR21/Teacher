@@ -56,7 +56,14 @@ export function ImageUpload({
       const { uploadUrl, publicUrl } = data.data ?? data;
 
       setState('uploading');
-      await uploadWithProgress(file, uploadUrl, (pct) => setProgress(pct));
+
+      // Detect local vs S3 upload: local endpoint is our own API, S3 is an external presigned PUT URL
+      const isLocalUpload = isLocalStorageUrl(uploadUrl);
+      if (isLocalUpload) {
+        await uploadMultipart(file, uploadUrl, (pct) => setProgress(pct));
+      } else {
+        await uploadWithProgress(file, uploadUrl, (pct) => setProgress(pct));
+      }
 
       onChange(publicUrl);
       setState('done');
@@ -132,6 +139,26 @@ function SpinIcon() {
   );
 }
 
+/** Returns true when the upload URL targets our own API (local storage mode). */
+function isLocalStorageUrl(uploadUrl: string): boolean {
+  try {
+    const url = new URL(uploadUrl);
+    const apiUrl = typeof window !== 'undefined'
+      ? window.location.origin
+      : (process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:3001');
+    // Matches our own host or localhost/127.0.0.1 patterns
+    return (
+      url.pathname.includes('/storage/upload') ||
+      url.hostname === 'localhost' ||
+      url.hostname === '127.0.0.1' ||
+      url.origin === apiUrl
+    );
+  } catch {
+    return false;
+  }
+}
+
+/** Upload using raw PUT (for S3 presigned URLs). */
 function uploadWithProgress(file: File, uploadUrl: string, onProgress: (pct: number) => void): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -147,4 +174,39 @@ function uploadWithProgress(file: File, uploadUrl: string, onProgress: (pct: num
     xhr.onerror = () => reject(new Error('Network error during upload'));
     xhr.send(file);
   });
+}
+
+/** Upload using multipart POST (for local storage endpoint). */
+function uploadMultipart(file: File, uploadUrl: string, onProgress: (pct: number) => void): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', uploadUrl, true);
+    // Read access token from Zustand persisted store in localStorage
+    const token = getStoredToken();
+    if (token) { xhr.setRequestHeader('Authorization', `Bearer ${token}`); }
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) {onProgress(Math.round((e.loaded / e.total) * 100));}
+    };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) { onProgress(100); resolve(); }
+      else {reject(new Error(`Upload failed: ${xhr.status} ${xhr.statusText}`));}
+    };
+    xhr.onerror = () => reject(new Error('Network error during upload'));
+    xhr.send(formData);
+  });
+}
+
+/** Read the JWT access token from the Zustand persisted auth store. */
+function getStoredToken(): string | null {
+  if (typeof window === 'undefined') { return null; }
+  try {
+    const raw = localStorage.getItem('eduai-auth');
+    if (!raw) { return null; }
+    const parsed = JSON.parse(raw) as { state?: { accessToken?: string } };
+    return parsed?.state?.accessToken ?? null;
+  } catch {
+    return null;
+  }
 }
