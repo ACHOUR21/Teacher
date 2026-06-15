@@ -1,5 +1,5 @@
 # Stage 1: deps — install all dependencies
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 WORKDIR /app
 
 # Install pnpm
@@ -16,7 +16,7 @@ RUN pnpm install --frozen-lockfile
 # ─────────────────────────────────────────────
 # Stage 2: builder — compile TypeScript
 # ─────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
 RUN npm install -g pnpm@9
@@ -34,7 +34,7 @@ RUN pnpm --filter @eduai/api build
 # ─────────────────────────────────────────────
 # Stage 3: runner — lean production image
 # ─────────────────────────────────────────────
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -57,4 +57,4 @@ USER nestjs
 EXPOSE 4000
 
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["node", "dist/main"]
+CMD ["node", "dist/src/main.js"]

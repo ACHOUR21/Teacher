@@ -1,5 +1,5 @@
 # Stage 1: deps — install all dependencies
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 WORKDIR /app
 
 RUN npm install -g pnpm@9
@@ -13,7 +13,7 @@ RUN pnpm install --frozen-lockfile
 # ─────────────────────────────────────────────
 # Stage 2: builder — produce Next.js standalone
 # ─────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
 RUN npm install -g pnpm@9
@@ -28,7 +28,7 @@ RUN pnpm --filter @eduai/web build
 # ─────────────────────────────────────────────
 # Stage 3: runner — minimal standalone image
 # ─────────────────────────────────────────────
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
