@@ -20,6 +20,9 @@ const mockPrisma = {
     update: jest.fn(),
     count: jest.fn(),
   },
+  user: {
+    findFirst: jest.fn().mockResolvedValue(null),
+  },
 };
 
 const mockCache = {

@@ -1,3 +1,4 @@
+import { ConfigService } from '@nestjs/config';
 import { Test, type TestingModule } from '@nestjs/testing';
 
 import { RedisService } from '../../cache/redis.service';
@@ -27,6 +28,7 @@ describe('WhiteLabelService', () => {
         WhiteLabelService,
         { provide: PrismaService, useValue: mockPrisma },
         { provide: RedisService, useValue: mockCache },
+        { provide: ConfigService, useValue: { get: jest.fn().mockReturnValue('http://localhost:3000') } },
       ],
     }).compile();
 
@@ -114,8 +116,8 @@ describe('WhiteLabelService', () => {
 
       const css = await service.generateThemeCSS('tenant-1');
 
-      expect(css).toContain('--color-primary: #2563EB');
-      expect(css).toContain('--color-secondary: #7C3AED');
+      expect(css).toContain('--color-primary: #6366f1');
+      expect(css).toContain('--color-secondary: #8b5cf6');
     });
   });
 });

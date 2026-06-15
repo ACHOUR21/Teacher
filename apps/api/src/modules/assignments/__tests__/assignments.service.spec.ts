@@ -4,6 +4,7 @@ import { AssignmentStatus } from '@prisma/client';
 
 import { ApiEcosystemService } from '../../api-ecosystem/api-ecosystem.service';
 import { PrismaService } from '../../database/prisma.service';
+import { ParentNotificationsService } from '../../notifications/parent-notifications.service';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { AssignmentsService } from '../assignments.service';
 
@@ -23,7 +24,8 @@ const mockPrisma = {
     update: jest.fn(),
   },
   student: {
-    findUnique: jest.fn(),
+    findUnique: jest.fn().mockResolvedValue(null),
+    findFirst: jest.fn().mockResolvedValue(null),
   },
   courseProgress: {
     findMany: jest.fn(),
@@ -54,6 +56,14 @@ describe('AssignmentsService', () => {
           provide: ApiEcosystemService,
           useValue: {
             deliverWebhook: jest.fn().mockResolvedValue(undefined),
+          },
+        },
+        {
+          provide: ParentNotificationsService,
+          useValue: {
+            notifyGradePosted: jest.fn().mockResolvedValue(undefined),
+            notifyAssignmentDue: jest.fn().mockResolvedValue(undefined),
+            notifySubmissionGraded: jest.fn().mockResolvedValue(undefined),
           },
         },
       ],

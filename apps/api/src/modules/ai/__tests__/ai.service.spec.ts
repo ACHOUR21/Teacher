@@ -1,5 +1,6 @@
 import { Test, type TestingModule } from '@nestjs/testing';
 
+import { ResilienceService } from '../../core/services/resilience.service';
 import { PrismaService } from '../../database/prisma.service';
 import { AiService } from '../ai.service';
 
@@ -70,6 +71,14 @@ describe('AiService', () => {
       providers: [
         AiService,
         { provide: PrismaService, useValue: mockPrisma },
+        {
+          provide: ResilienceService,
+          useValue: {
+            withRetry: jest.fn().mockImplementation((_name: string, fn: () => Promise<unknown>) => fn()),
+            withCircuitBreaker: jest.fn().mockImplementation((_name: string, fn: () => Promise<unknown>) => fn()),
+            withResilience: jest.fn().mockImplementation((_name: string, fn: () => Promise<unknown>) => fn()),
+          },
+        },
       ],
     }).compile();
 

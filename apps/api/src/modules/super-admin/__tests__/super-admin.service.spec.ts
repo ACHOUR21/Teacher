@@ -39,6 +39,7 @@ const mockPrisma = {
   },
   auditLog: {
     count: jest.fn(),
+    create: jest.fn().mockResolvedValue({}),
   },
   $queryRaw: jest.fn(),
 };
@@ -63,21 +64,72 @@ describe('SuperAdminService', () => {
     jest.clearAllMocks();
   });
 
+  // Helper to set up all the mock calls needed for getPlatformOverview
+  function setupPlatformOverviewMocks(overrides: {
+    totalTenants?: number;
+    activeTenants?: number;
+    totalUsers?: number;
+    activeUsers?: number;
+    totalCourses?: number;
+    publishedCourses?: number;
+    totalEnrollments?: number;
+    invoiceAmount?: number | null;
+    recentTenants?: unknown[];
+    planBreakdown?: unknown[];
+  } = {}) {
+    const {
+      totalTenants = 0,
+      activeTenants = 0,
+      totalUsers = 0,
+      activeUsers = 0,
+      totalCourses = 0,
+      publishedCourses = 0,
+      totalEnrollments = 0,
+      invoiceAmount = null,
+      recentTenants = [],
+      planBreakdown = [],
+    } = overrides;
+
+    // Promise.all batch: tenant.count×2, user.count×2, course.count×2, courseProgress.count, invoice.aggregate, tenant.findMany, tenant.groupBy
+    mockPrisma.tenant.count
+      .mockResolvedValueOnce(totalTenants)
+      .mockResolvedValueOnce(activeTenants);
+    mockPrisma.user.count
+      .mockResolvedValueOnce(totalUsers)
+      .mockResolvedValueOnce(activeUsers);
+    mockPrisma.course.count
+      .mockResolvedValueOnce(totalCourses)
+      .mockResolvedValueOnce(publishedCourses);
+    mockPrisma.courseProgress.count.mockResolvedValueOnce(totalEnrollments);
+    mockPrisma.invoice.aggregate.mockResolvedValueOnce({ _sum: { amount: invoiceAmount } });
+    mockPrisma.tenant.findMany.mockResolvedValueOnce(recentTenants);
+    // First tenant.groupBy call → plan breakdown
+    mockPrisma.tenant.groupBy.mockResolvedValueOnce(planBreakdown);
+    // Second tenant.groupBy call → tenant growth (sequential, after Promise.all)
+    mockPrisma.tenant.groupBy.mockResolvedValueOnce([]);
+    // user.groupBy → user growth (sequential)
+    mockPrisma.user.groupBy.mockResolvedValueOnce([]);
+  }
+
   describe('getPlatformOverview', () => {
     it('should return aggregated platform stats', async () => {
-      mockPrisma.tenant.count.mockResolvedValueOnce(10).mockResolvedValueOnce(8);
-      mockPrisma.user.count.mockResolvedValueOnce(500).mockResolvedValueOnce(420);
-      mockPrisma.course.count.mockResolvedValueOnce(80).mockResolvedValueOnce(60);
-      mockPrisma.courseProgress.count.mockResolvedValueOnce(1200);
-      mockPrisma.invoice.aggregate.mockResolvedValueOnce({ _sum: { amount: 9500 } });
-      mockPrisma.tenant.findMany.mockResolvedValueOnce([
-        { id: 't-1', name: 'Acme School', slug: 'acme', type: 'SCHOOL', plan: 'PROFESSIONAL', isActive: true, createdAt: new Date(), _count: { users: 50 } },
-      ]);
-      mockPrisma.tenant.groupBy.mockResolvedValueOnce([
-        { plan: 'PROFESSIONAL', _count: { plan: 5 } },
-        { plan: 'STARTER', _count: { plan: 3 } },
-      ]);
-      mockPrisma.user.groupBy.mockResolvedValueOnce([]);
+      setupPlatformOverviewMocks({
+        totalTenants: 10,
+        activeTenants: 8,
+        totalUsers: 500,
+        activeUsers: 420,
+        totalCourses: 80,
+        publishedCourses: 60,
+        totalEnrollments: 1200,
+        invoiceAmount: 9500,
+        recentTenants: [
+          { id: 't-1', name: 'Acme School', slug: 'acme', type: 'SCHOOL', plan: 'PROFESSIONAL', isActive: true, createdAt: new Date(), _count: { users: 50 } },
+        ],
+        planBreakdown: [
+          { plan: 'PROFESSIONAL', _count: { plan: 5 } },
+          { plan: 'STARTER', _count: { plan: 3 } },
+        ],
+      });
 
       const result = await service.getPlatformOverview();
 
@@ -91,14 +143,7 @@ describe('SuperAdminService', () => {
     });
 
     it('should return zero totalRevenue when no paid invoices exist', async () => {
-      mockPrisma.tenant.count.mockResolvedValue(0);
-      mockPrisma.user.count.mockResolvedValue(0);
-      mockPrisma.course.count.mockResolvedValue(0);
-      mockPrisma.courseProgress.count.mockResolvedValue(0);
-      mockPrisma.invoice.aggregate.mockResolvedValueOnce({ _sum: { amount: null } });
-      mockPrisma.tenant.findMany.mockResolvedValueOnce([]);
-      mockPrisma.tenant.groupBy.mockResolvedValueOnce([]);
-      mockPrisma.user.groupBy.mockResolvedValueOnce([]);
+      setupPlatformOverviewMocks({ invoiceAmount: null });
 
       const result = await service.getPlatformOverview();
 
@@ -194,14 +239,14 @@ describe('SuperAdminService', () => {
     });
   });
 
-  describe('updateTenant', () => {
+  describe('updateTenantLegacy', () => {
     it('should update tenant fields', async () => {
-      const existing = { id: 't-1', name: 'Old Name', plan: 'STARTER' };
+      const existing = { id: 't-1', name: 'Old Name', plan: 'STARTER', domain: null, isActive: true };
       const updated = { id: 't-1', name: 'New Name', plan: 'PROFESSIONAL' };
       mockPrisma.tenant.findUnique.mockResolvedValueOnce(existing);
       mockPrisma.tenant.update.mockResolvedValueOnce(updated);
 
-      const result = await service.updateTenant('t-1', { name: 'New Name', plan: SubscriptionPlan.PROFESSIONAL });
+      const result = await service.updateTenantLegacy('t-1', { name: 'New Name', plan: SubscriptionPlan.PROFESSIONAL }, 'admin-1');
 
       expect(result.name).toBe('New Name');
       expect(mockPrisma.tenant.update).toHaveBeenCalledWith(
@@ -212,17 +257,17 @@ describe('SuperAdminService', () => {
     it('should throw NotFoundException when tenant does not exist', async () => {
       mockPrisma.tenant.findUnique.mockResolvedValueOnce(null);
 
-      await expect(service.updateTenant('nonexistent', { name: 'X' })).rejects.toThrow(NotFoundException);
+      await expect(service.updateTenantLegacy('nonexistent', { name: 'X' }, 'admin-1')).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('deleteTenant', () => {
     it('should delete tenant when it exists', async () => {
-      const existing = { id: 't-1', name: 'Acme' };
+      const existing = { id: 't-1', name: 'Acme', plan: 'STARTER' };
       mockPrisma.tenant.findUnique.mockResolvedValueOnce(existing);
       mockPrisma.tenant.delete.mockResolvedValueOnce(existing);
 
-      await service.deleteTenant('t-1');
+      await service.deleteTenant('t-1', 'admin-1');
 
       expect(mockPrisma.tenant.delete).toHaveBeenCalledWith({ where: { id: 't-1' } });
     });
@@ -230,7 +275,7 @@ describe('SuperAdminService', () => {
     it('should throw NotFoundException when tenant does not exist', async () => {
       mockPrisma.tenant.findUnique.mockResolvedValueOnce(null);
 
-      await expect(service.deleteTenant('nonexistent')).rejects.toThrow(NotFoundException);
+      await expect(service.deleteTenant('nonexistent', 'admin-1')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -292,14 +337,14 @@ describe('SuperAdminService', () => {
     });
   });
 
-  describe('updateUser', () => {
+  describe('updateUserLegacy', () => {
     it('should update user role and active status', async () => {
-      const existing = { id: 'u-1', role: 'STUDENT', isActive: true };
+      const existing = { id: 'u-1', role: 'STUDENT', isActive: true, tenantId: 'tenant-1' };
       const updated = { id: 'u-1', role: 'TEACHER', isActive: false };
       mockPrisma.user.findUnique.mockResolvedValueOnce(existing);
       mockPrisma.user.update.mockResolvedValueOnce(updated);
 
-      const result = await service.updateUser('u-1', { role: UserRole.TEACHER, isActive: false });
+      const result = await service.updateUserLegacy('u-1', { role: UserRole.TEACHER, isActive: false }, 'admin-1');
 
       expect(result.role).toBe('TEACHER');
       expect(result.isActive).toBe(false);
@@ -308,7 +353,7 @@ describe('SuperAdminService', () => {
     it('should throw NotFoundException when user does not exist', async () => {
       mockPrisma.user.findUnique.mockResolvedValueOnce(null);
 
-      await expect(service.updateUser('nonexistent', { isActive: false })).rejects.toThrow(NotFoundException);
+      await expect(service.updateUserLegacy('nonexistent', { isActive: false }, 'admin-1')).rejects.toThrow(NotFoundException);
     });
   });
 

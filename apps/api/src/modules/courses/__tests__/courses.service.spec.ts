@@ -5,6 +5,7 @@ import { ApiEcosystemService } from '../../api-ecosystem/api-ecosystem.service';
 import { RedisService } from '../../cache/redis.service';
 import { PaginationDto } from '../../core/pagination/pagination.dto';
 import { PrismaService } from '../../database/prisma.service';
+import { EmailService } from '../../notifications/email/email.service';
 import { SearchService } from '../../search/search.service';
 import { CoursesService } from '../courses.service';
 
@@ -26,9 +27,19 @@ const mockRedis = {
   delPattern: jest.fn(),
 };
 
-const mockSearch = { indexCourse: jest.fn(), deleteDocument: jest.fn(), searchCourses: jest.fn() };
+const mockSearch = {
+  indexCourse: jest.fn().mockResolvedValue(undefined),
+  deleteDocument: jest.fn().mockResolvedValue(undefined),
+  searchCourses: jest.fn().mockResolvedValue([]),
+};
 
 const mockApiEcosystem = { deliverWebhook: jest.fn().mockResolvedValue(undefined) };
+
+const mockEmailService = {
+  sendCourseEnrollment: jest.fn().mockResolvedValue(undefined),
+  sendCourseCompletion: jest.fn().mockResolvedValue(undefined),
+  sendWelcome: jest.fn().mockResolvedValue(undefined),
+};
 
 const mockPrisma = {
   course: {
@@ -80,8 +91,8 @@ const mockPrisma = {
     findMany: jest.fn(),
   },
   student: {
-    findFirst: jest.fn(),
-    findUnique: jest.fn(),
+    findFirst: jest.fn().mockResolvedValue(null),
+    findUnique: jest.fn().mockResolvedValue(null),
   },
   certificateTemplate: {
     findFirst: jest.fn(),
@@ -103,6 +114,7 @@ describe('CoursesService', () => {
         { provide: RedisService, useValue: mockRedis },
         { provide: SearchService, useValue: mockSearch },
         { provide: ApiEcosystemService, useValue: mockApiEcosystem },
+        { provide: EmailService, useValue: mockEmailService },
       ],
     }).compile();
 
