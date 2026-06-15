@@ -6,6 +6,7 @@ import React, { useEffect } from 'react';
 
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { ImpersonationBanner } from '@/components/ImpersonationBanner';
+import { BackToTop } from '@/components/layout/BackToTop';
 import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { CommandPalette } from '@/components/search/CommandPalette';
@@ -91,6 +92,7 @@ export default function DashboardLayout({
         </main>
       </div>
       </div>
+      <BackToTop />
     </div>
   );
 }

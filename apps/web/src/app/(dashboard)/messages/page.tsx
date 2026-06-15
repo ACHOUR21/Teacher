@@ -92,29 +92,37 @@ export default function MessagesPage() {
   return (
     <div className="flex h-[calc(100vh-64px-48px)] -mx-6 -mt-6 overflow-hidden">
       {/* Sidebar */}
-      <div className="w-72 border-r border-gray-200 bg-white flex flex-col flex-shrink-0">
-        <div className="p-4 border-b border-gray-100">
+      <div className="w-72 border-r border-border bg-card flex flex-col flex-shrink-0">
+        <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="font-semibold text-gray-900">Messages</h2>
-            <button className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+            <h2 className="font-semibold text-foreground">Messages</h2>
+            <button className="p-1.5 rounded-lg hover:bg-accent text-muted-foreground transition-colors">
               <Plus className="h-4 w-4" />
             </button>
           </div>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search conversations..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-8 pr-3 py-2 bg-gray-50 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-8 pr-3 py-2 bg-muted rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto">
           {filteredConvos.length === 0 && (
-            <p className="text-xs text-gray-400 text-center py-8">No conversations</p>
+            <div className="flex flex-col items-center gap-2 py-10 px-4 text-center">
+              <Hash className="h-8 w-8 text-muted-foreground/40" />
+              <p className="text-sm font-medium text-foreground">
+                {search ? 'No results' : 'No conversations'}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {search ? 'Try a different search term' : 'Start a new conversation using the + button above'}
+              </p>
+            </div>
           )}
           {filteredConvos.map(convo => {
             const name = convo.name ?? convo.participants.map(p => `${p.user.firstName} ${p.user.lastName}`).join(', ');
@@ -124,8 +132,8 @@ export default function MessagesPage() {
                 key={convo.id}
                 onClick={() => setSelectedId(convo.id)}
                 className={cn(
-                  'w-full flex items-start gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left',
-                  isSelected && 'bg-blue-50',
+                  'w-full flex items-start gap-3 px-4 py-3 hover:bg-accent transition-colors text-left',
+                  isSelected && 'bg-primary/10',
                 )}
               >
                 <div className={cn(
@@ -138,17 +146,17 @@ export default function MessagesPage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <p className={cn('text-sm font-medium truncate', isSelected ? 'text-blue-700' : 'text-gray-900')}>
+                    <p className={cn('text-sm font-medium truncate', isSelected ? 'text-primary' : 'text-foreground')}>
                       {name}
                     </p>
                     {convo.lastMessage && (
-                      <span className="text-xs text-gray-400 flex-shrink-0 ml-1">
+                      <span className="text-xs text-muted-foreground flex-shrink-0 ml-1">
                         {formatDistanceToNow(new Date(convo.lastMessage.createdAt), { addSuffix: false })}
                       </span>
                     )}
                   </div>
                   {convo.lastMessage && (
-                    <p className="text-xs text-gray-500 truncate mt-0.5">{convo.lastMessage.content}</p>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">{convo.lastMessage.content}</p>
                   )}
                 </div>
                 {(convo.unreadCount ?? 0) > 0 && (
@@ -164,19 +172,19 @@ export default function MessagesPage() {
 
       {/* Chat Area */}
       {!selectedId ? (
-        <div className="flex-1 flex items-center justify-center bg-gray-50">
+        <div className="flex-1 flex items-center justify-center bg-muted/30">
           <div className="text-center">
-            <div className="h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center mx-auto mb-4">
-              <Hash className="h-8 w-8 text-blue-400" />
+            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <Hash className="h-8 w-8 text-primary/60" />
             </div>
-            <p className="text-gray-500 font-medium">Select a conversation</p>
-            <p className="text-sm text-gray-400 mt-1">Choose from the list to start messaging</p>
+            <p className="text-foreground font-medium">Select a conversation</p>
+            <p className="text-sm text-muted-foreground mt-1">Choose from the list to start messaging</p>
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col bg-white">
+        <div className="flex-1 flex flex-col bg-background">
           {/* Header */}
-          <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-3">
+          <div className="px-5 py-3.5 border-b border-border flex items-center gap-3">
             <div className={cn(
               'h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-semibold',
               selectedConvo?.type === 'GROUP'
@@ -186,9 +194,9 @@ export default function MessagesPage() {
               {selectedConvo?.type === 'GROUP' ? <Users className="h-4 w-4" /> : convoName.slice(0, 2).toUpperCase()}
             </div>
             <div>
-              <p className="text-sm font-semibold text-gray-900">{convoName}</p>
+              <p className="text-sm font-semibold text-foreground">{convoName}</p>
               {selectedConvo?.type === 'GROUP' && (
-                <p className="text-xs text-gray-400">{selectedConvo.participants.length} members</p>
+                <p className="text-xs text-muted-foreground">{selectedConvo.participants.length} members</p>
               )}
             </div>
             {selectedConvo?.type === 'DIRECT' && (
@@ -220,8 +228,8 @@ export default function MessagesPage() {
                   <div className={cn(
                     'max-w-[70%] rounded-2xl px-4 py-2.5',
                     isOwn
-                      ? 'bg-blue-600 text-white rounded-br-sm'
-                      : 'bg-gray-100 text-gray-900 rounded-bl-sm',
+                      ? 'bg-primary text-primary-foreground rounded-br-sm'
+                      : 'bg-muted text-foreground rounded-bl-sm',
                   )}>
                     {!isOwn && (
                       <p className={cn('text-xs font-medium mb-0.5', isOwn ? 'text-blue-200' : 'text-blue-600')}>
@@ -229,7 +237,7 @@ export default function MessagesPage() {
                       </p>
                     )}
                     <p className="text-sm leading-relaxed">{msg.content}</p>
-                    <p className={cn('text-xs mt-1', isOwn ? 'text-blue-200' : 'text-gray-400')}>
+                    <p className={cn('text-xs mt-1', isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
                       {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
                     </p>
                   </div>
@@ -240,15 +248,15 @@ export default function MessagesPage() {
           </div>
 
           {/* Input */}
-          <div className="px-4 py-3 border-t border-gray-100">
-            <div className="flex items-center gap-2 bg-gray-50 rounded-2xl px-4 py-2">
+          <div className="px-4 py-3 border-t border-border">
+            <div className="flex items-center gap-2 bg-muted rounded-2xl px-4 py-2">
               <input
                 type="text"
                 value={draft}
                 onChange={e => setDraft(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
                 placeholder="Type a message..."
-                className="flex-1 bg-transparent text-sm text-gray-900 placeholder-gray-400 focus:outline-none"
+                className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
               />
               <button
                 onClick={handleSend}
@@ -256,8 +264,8 @@ export default function MessagesPage() {
                 className={cn(
                   'p-1.5 rounded-xl transition-colors',
                   draft.trim()
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
-                    : 'bg-gray-200 text-gray-400',
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    : 'bg-muted text-muted-foreground',
                 )}
               >
                 <Send className="h-4 w-4" />

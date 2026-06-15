@@ -193,7 +193,7 @@ export default function CoursesPage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-gray-200">
+      <div className="flex gap-1 border-b border-border">
         {TABS.map(tab => (
           <button
             key={tab.id}
@@ -201,15 +201,15 @@ export default function CoursesPage() {
             className={cn(
               'px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors',
               activeTab === tab.id
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground hover:border-border'
             )}
           >
             {tab.label}
             {!isLoading && (
               <span className={cn(
                 'ml-1.5 text-xs px-1.5 py-0.5 rounded-full',
-                activeTab === tab.id ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-500'
+                activeTab === tab.id ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
               )}>
                 {tab.id === 'all'
                   ? enrollments.length
