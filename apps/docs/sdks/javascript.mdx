@@ -1,0 +1,29 @@
+---
+title: JavaScript / TypeScript SDK
+description: Official JavaScript SDK reference
+---
+
+# JavaScript / TypeScript SDK
+
+```bash
+npm install @eduai/sdk
+```
+
+```typescript
+import { EduAIClient } from '@eduai/sdk';
+
+const client = new EduAIClient({
+  tenantId: process.env.EDUAI_TENANT_ID,
+  apiKey: process.env.EDUAI_API_KEY,
+});
+
+// List courses
+const courses = await client.courses.list({ page: 1, limit: 20 });
+
+// Enroll a student
+await client.courses.enroll(courseId);
+
+// AI tutor
+const response = await client.ai.chat({ message: 'Explain Newton\'s laws', subject: 'physics' });
+console.log(response.message);
+```

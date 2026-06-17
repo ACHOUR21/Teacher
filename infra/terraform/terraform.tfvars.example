@@ -1,0 +1,52 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# EduAI Ultimate — Terraform variable examples
+# Copy this file to terraform.tfvars and fill in real values.
+# Never commit terraform.tfvars to version control.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# AWS
+aws_region = "us-east-1"
+
+# Environment
+environment  = "production"
+project_name = "eduai"
+cluster_name = "eduai-production"
+
+# Kubernetes
+kubernetes_version = "1.29"
+
+# ── VPC ───────────────────────────────────────────────────────────────────────
+vpc_cidr             = "10.0.0.0/16"
+availability_zones   = ["us-east-1a", "us-east-1b", "us-east-1c"]
+public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+private_subnet_cidrs = ["10.0.11.0/24", "10.0.12.0/24", "10.0.13.0/24"]
+
+# ── EKS ───────────────────────────────────────────────────────────────────────
+instance_types   = ["t3.medium"]
+desired_capacity = 3
+min_size         = 2
+max_size         = 10
+
+# ── RDS ───────────────────────────────────────────────────────────────────────
+db_instance_class        = "db.t3.medium"
+db_engine_version        = "16.1"
+db_name                  = "eduai"
+db_username              = "eduai"        # override with a secure value
+db_multi_az              = true
+db_backup_retention_days = 7
+
+# ── ElastiCache ───────────────────────────────────────────────────────────────
+redis_node_type       = "cache.t3.micro"
+redis_engine_version  = "7.1"
+redis_num_cache_nodes = 2
+
+# ── S3 / CloudFront ───────────────────────────────────────────────────────────
+cloudfront_price_class = "PriceClass_100"
+
+# ── S3 lifecycle backup config (optional) ─────────────────────────────────────
+# s3_bucket_name                  = "eduai-backups-production"
+# enable_cross_region_replication = false
+# s3_replica_bucket_arn           = ""
+
+# ── Alerting ──────────────────────────────────────────────────────────────────
+alert_email = "devops@yourdomain.com"

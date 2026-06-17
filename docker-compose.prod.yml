@@ -1,0 +1,291 @@
+version: '3.9'
+
+# ─── Networks ──────────────────────────────────────────────────────────────────
+networks:
+  eduai_prod_network:
+    driver: bridge
+    name: eduai_prod_network
+
+# ─── Volumes ───────────────────────────────────────────────────────────────────
+volumes:
+  prod_postgres_data:
+    name: eduai_prod_postgres_data
+  prod_redis_data:
+    name: eduai_prod_redis_data
+  prod_es_data:
+    name: eduai_prod_es_data
+  prod_minio_data:
+    name: eduai_prod_minio_data
+  prod_prometheus_data:
+    name: eduai_prod_prometheus_data
+  prod_grafana_data:
+    name: eduai_prod_grafana_data
+  prod_loki_data:
+    name: eduai_prod_loki_data
+
+# ─── Services ──────────────────────────────────────────────────────────────────
+services:
+
+  # ── PostgreSQL 16 ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: eduai_prod_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: eduai
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: eduai_db
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+    volumes:
+      - prod_postgres_data:/var/lib/postgresql/data
+    networks:
+      - eduai_prod_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eduai -d eduai_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    command: >
+      postgres
+        -c max_connections=200
+        -c shared_buffers=256MB
+        -c effective_cache_size=768MB
+        -c maintenance_work_mem=64MB
+        -c checkpoint_completion_target=0.9
+        -c wal_buffers=16MB
+        -c default_statistics_target=100
+        -c random_page_cost=1.1
+        -c effective_io_concurrency=200
+        -c work_mem=4MB
+        -c min_wal_size=1GB
+        -c max_wal_size=4GB
+        -c log_statement=none
+        -c log_duration=off
+
+  # ── Redis 7 ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: eduai_prod_redis
+    restart: unless-stopped
+    volumes:
+      - prod_redis_data:/data
+    networks:
+      - eduai_prod_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    command: >
+      redis-server
+        --appendonly yes
+        --appendfsync everysec
+        --maxmemory 512mb
+        --maxmemory-policy allkeys-lru
+        --save 900 1
+        --save 300 10
+        --save 60 10000
+        --loglevel warning
+
+  # ── Elasticsearch 8.13.0 ──────────────────────────────────────────────────────
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: eduai_prod_elasticsearch
+    restart: unless-stopped
+    environment:
+      - node.name=eduai-es01
+      - cluster.name=eduai-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - ELASTIC_PASSWORD=
+      - network.host=0.0.0.0
+      - http.cors.enabled=true
+      - http.cors.allow-origin=*
+    volumes:
+      - prod_es_data:/usr/share/elasticsearch/data
+    networks:
+      - eduai_prod_network
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsSL http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # ── MinIO (S3-compatible Object Storage) ─────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: eduai_prod_minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_CONSOLE_ADDRESS: ":9001"
+    volumes:
+      - prod_minio_data:/data
+    networks:
+      - eduai_prod_network
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 20s
+      retries: 5
+      start_period: 30s
+
+  # ── OpenTelemetry Collector ───────────────────────────────────────────────────
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.102.0
+    container_name: eduai_prod_otel_collector
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./infra/monitoring/opentelemetry/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    networks:
+      - eduai_prod_network
+    depends_on:
+      - prometheus
+      - loki
+      - jaeger
+
+  # ── Jaeger (distributed tracing) ─────────────────────────────────────────────
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: eduai_prod_jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    networks:
+      - eduai_prod_network
+
+  # ── Prometheus ────────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: eduai_prod_prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./infra/monitoring/prometheus:/etc/prometheus:ro
+      - prod_prometheus_data:/prometheus
+    networks:
+      - eduai_prod_network
+
+  # ── Grafana ───────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: eduai_prod_grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+      - loki
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_FEATURE_TOGGLES_ENABLE: traceqlEditor
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3333}
+    volumes:
+      - prod_grafana_data:/var/lib/grafana
+      - ./infra/monitoring/grafana:/etc/grafana/provisioning:ro
+    networks:
+      - eduai_prod_network
+
+  # ── Loki (log aggregation) ────────────────────────────────────────────────────
+  loki:
+    image: grafana/loki:2.9.5
+    container_name: eduai_prod_loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki-config.yaml
+    volumes:
+      - ./infra/monitoring/loki:/etc/loki:ro
+      - prod_loki_data:/loki
+    networks:
+      - eduai_prod_network
+
+  # ── NestJS API ────────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+      target: production
+    container_name: eduai_prod_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+      OTEL_ENABLED: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    ports:
+      - "4000:4000"
+    networks:
+      - eduai_prod_network
+
+  # ── Next.js Web App ───────────────────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+      target: production
+    container_name: eduai_prod_web
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    networks:
+      - eduai_prod_network
+
+  # ── BullMQ Worker ─────────────────────────────────────────────────────────────
+  worker:
+    build:
+      context: .
+      dockerfile: infra/docker/worker.Dockerfile
+      target: production
+    container_name: eduai_prod_worker
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    env_file:
+      - .env.production
+    environment:
+      NODE_ENV: production
+      OTEL_ENABLED: "true"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+    networks:
+      - eduai_prod_network

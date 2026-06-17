@@ -1,0 +1,15 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "apps/api/Dockerfile"
+# Build context must be the monorepo root so pnpm-lock.yaml is reachable
+buildContext = "."
+
+[deploy]
+startCommand = "sh -c 'npx prisma migrate deploy && node dist/src/main.js'"
+healthcheckPath = "/health"
+healthcheckTimeout = 120
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+[[services]]
+name = "eduai-api"

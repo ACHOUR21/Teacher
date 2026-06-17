@@ -1,0 +1,332 @@
+import {
+  Controller,
+  Post,
+  Get,
+  Delete,
+  Body,
+  Param,
+  Request,
+  Res,
+  HttpCode,
+  HttpStatus,
+  UseGuards,
+  Ip,
+  Headers,
+  Query,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+} from '@nestjs/swagger';
+import { AuthGuard } from '@nestjs/passport';
+import { Request as ExpressRequest, Response } from 'express';
+
+import { CurrentUser, CurrentUserPayload } from '../../../core/decorators/current-user.decorator';
+import { Public } from '../../../core/decorators/public.decorator';
+import { TenantId } from '../../../core/decorators/tenant.decorator';
+import { JwtAuthGuard } from '../../../core/guards/jwt-auth.guard';
+import { TenantsService } from '../../../tenants/tenants.service';
+import { LoginDto, ForgotPasswordDto, ResetPasswordDto } from '../../application/dtos/login.dto';
+import { RefreshTokenDto } from '../../application/dtos/refresh-token.dto';
+import { RegisterDto, CreateTenantRegisterDto } from '../../application/dtos/register.dto';
+import { VerifyMfaDto, DisableMfaDto } from '../../application/dtos/verify-mfa.dto';
+import { AuthService } from '../../auth.service';
+
+@ApiTags('Auth')
+@Controller('auth')
+export class AuthController {
+  constructor(
+    private readonly authService: AuthService,
+    private readonly tenantsService: TenantsService,
+  ) {}
+
+  @Public()
+  @Post('tenant/register')
+  @ApiOperation({ summary: 'Create new tenant and admin account' })
+  @ApiResponse({ status: 201, description: 'Tenant and admin created successfully' })
+  async createTenant(
+    @Body() dto: CreateTenantRegisterDto,
+    @Ip() ip: string,
+    @Headers('user-agent') userAgent: string,
+  ) {
+    return this.authService.createTenantAndAdmin({
+      tenantName: dto.tenantName,
+      tenantSlug: dto.tenantSlug,
+      tenantType: dto.tenantType ?? 'SCHOOL',
+      adminFirstName: dto.firstName,
+      adminLastName: dto.lastName,
+      adminEmail: dto.email,
+      adminPassword: dto.password,
+      adminPhone: dto.phone,
+      ipAddress: ip,
+      userAgent,
+    });
+  }
+
+  @Public()
+  @Get('tenant/lookup')
+  @ApiOperation({ summary: 'Look up a tenant by slug (for student join flow)' })
+  @ApiResponse({ status: 200, description: 'Tenant public info' })
+  async lookupTenant(@Query('slug') slug: string) {
+    return this.tenantsService.findBySlug(slug);
+  }
+
+  @Public()
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Register a new user in an existing tenant' })
+  async register(
+    @Body() dto: RegisterDto,
+    @TenantId() tenantId: string,
+    @Ip() ip: string,
+    @Headers('user-agent') userAgent: string,
+  ) {
+    return this.authService.register({
+      tenantId,
+      email: dto.email,
+      password: dto.password,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
+      phone: dto.phone,
+      role: dto.role,
+      ipAddress: ip,
+      userAgent,
+    });
+  }
+
+  @Public()
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login with email and password' })
+  async login(
+    @Body() dto: LoginDto,
+    @TenantId() tenantId: string,
+    @Ip() ip: string,
+    @Headers('user-agent') userAgent: string,
+  ) {
+    return this.authService.login({
+      email: dto.email,
+      password: dto.password,
+      tenantId,
+      deviceId: dto.deviceId,
+      deviceName: dto.deviceName,
+      ipAddress: ip,
+      userAgent,
+    });
+  }
+
+  @Public()
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Refresh access token' })
+  async refresh(@Body() dto: RefreshTokenDto) {
+    return this.authService.refreshTokens(dto.refreshToken);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Logout and invalidate refresh tokens' })
+  async logout(
+    @CurrentUser() user: CurrentUserPayload,
+    @Request() req: ExpressRequest & { body: { refreshToken?: string } },
+  ) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
+    await this.authService.logout(user.id, (req as any).body.refreshToken);
+    return { message: 'Logged out successfully' };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('me')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get current authenticated user' })
+  me(@CurrentUser() user: CurrentUserPayload) {
+    return user;
+  }
+
+  // ── MFA ────────────────────────────────────────────────────────────────────
+
+  @UseGuards(JwtAuthGuard)
+  @Post('mfa/setup')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Initialize MFA setup, returns QR code and backup codes' })
+  async setupMfa(@CurrentUser('id') userId: string) {
+    return this.authService.setupMfa(userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('mfa/verify')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Verify TOTP token to enable MFA; returns final backup codes' })
+  async verifyMfa(
+    @CurrentUser('id') userId: string,
+    @Body() dto: VerifyMfaDto,
+  ) {
+    return this.authService.verifyAndEnableMfa(userId, dto.token);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('mfa/disable')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Disable MFA for current user' })
+  async disableMfa(
+    @CurrentUser('id') userId: string,
+    @Body() dto: DisableMfaDto,
+  ) {
+    await this.authService.disableMfa(userId, dto.token, dto.password);
+    return { message: 'MFA disabled successfully' };
+  }
+
+  @Public()
+  @Post('mfa/challenge')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Complete MFA challenge after login (TOTP or backup code)' })
+  async mfaChallenge(
+    @Body() body: { challengeToken: string; code: string; trustDevice?: boolean; deviceId?: string; deviceName?: string },
+  ) {
+    return this.authService.verifyMfaLogin(body.challengeToken, body.code, {
+      trustDevice: body.trustDevice,
+      deviceId: body.deviceId,
+      deviceName: body.deviceName,
+    });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('mfa/backup-codes/regenerate')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Regenerate MFA backup codes (invalidates old codes)' })
+  async regenerateBackupCodes(
+    @CurrentUser('id') userId: string,
+    @Body() body: { password: string },
+  ) {
+    return this.authService.regenerateBackupCodes(userId, body.password);
+  }
+
+  // ── Devices ────────────────────────────────────────────────────────────────
+
+  @UseGuards(JwtAuthGuard)
+  @Get('devices')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'List all devices for the current user' })
+  async listDevices(@CurrentUser('id') userId: string) {
+    return this.authService.getUserDevices(userId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('devices/:deviceId/trust')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Revoke MFA trust for a device' })
+  async revokeTrust(
+    @CurrentUser('id') userId: string,
+    @Param('deviceId') deviceId: string,
+  ) {
+    await this.authService.revokeTrustedDevice(userId, deviceId);
+    return { message: 'Device trust revoked' };
+  }
+
+  // ── Password & Email ───────────────────────────────────────────────────────
+
+  @Public()
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Request password reset email' })
+  async forgotPassword(
+    @Body() dto: ForgotPasswordDto,
+    @TenantId() tenantId: string,
+  ) {
+    await this.authService.forgotPassword(dto.email, tenantId);
+    return { message: 'If an account exists with this email, a reset link has been sent' };
+  }
+
+  @Public()
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Reset password with token' })
+  async resetPassword(@Body() dto: ResetPasswordDto) {
+    await this.authService.resetPassword(dto.token, dto.newPassword);
+    return { message: 'Password reset successfully' };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Change password for authenticated user' })
+  async changePassword(
+    @CurrentUser('id') userId: string,
+    @Body() body: { currentPassword: string; newPassword: string },
+  ) {
+    await this.authService.changePassword(userId, body.currentPassword, body.newPassword);
+    return { message: 'Password changed successfully' };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('send-verification')
+  @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Resend email verification link' })
+  async sendVerification(@CurrentUser('id') userId: string) {
+    await this.authService.sendVerificationEmail(userId);
+    return { message: 'Verification email sent' };
+  }
+
+  @Public()
+  @Get('verify-email')
+  @ApiOperation({ summary: 'Verify email address with token' })
+  async verifyEmail(@Query('token') token: string) {
+    return this.authService.verifyEmail(token);
+  }
+
+  // ── SSO ────────────────────────────────────────────────────────────────────
+
+  @Public()
+  @Get('google')
+  @UseGuards(AuthGuard('google'))
+  @ApiOperation({ summary: 'Initiate Google OAuth login' })
+  googleAuth() {
+    // Passport redirects automatically
+  }
+
+  @Public()
+  @Get('google/callback')
+  @UseGuards(AuthGuard('google'))
+  @ApiOperation({ summary: 'Google OAuth callback' })
+  async googleCallback(
+    @Request() req: ExpressRequest & { user: any },
+    @Res() res: Response,
+  ) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const tokens = await this.authService.generateTokensForUser(req.user);
+    const redirectUrl = `${process.env['APP_URL'] ?? 'http://localhost:3000'}/auth/sso-callback?token=${tokens.accessToken}`;
+    res.redirect(redirectUrl);
+  }
+
+  @Public()
+  @Get('microsoft')
+  @UseGuards(AuthGuard('microsoft'))
+  @ApiOperation({ summary: 'Initiate Microsoft OAuth login' })
+  microsoftAuth() {
+    // Passport redirects automatically
+  }
+
+  @Public()
+  @Get('microsoft/callback')
+  @UseGuards(AuthGuard('microsoft'))
+  @ApiOperation({ summary: 'Microsoft OAuth callback' })
+  async microsoftCallback(
+    @Request() req: ExpressRequest & { user: any },
+    @Res() res: Response,
+  ) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+    const tokens = await this.authService.generateTokensForUser(req.user);
+    const redirectUrl = `${process.env['APP_URL'] ?? 'http://localhost:3000'}/auth/sso-callback?token=${tokens.accessToken}`;
+    res.redirect(redirectUrl);
+  }
+}

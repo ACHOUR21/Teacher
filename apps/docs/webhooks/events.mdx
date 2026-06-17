@@ -1,0 +1,49 @@
+---
+title: Webhook Events
+description: Catalog of all events EduAI can deliver
+---
+
+# Webhook Events
+
+| Event | When triggered |
+|-------|---------------|
+| `user.created` | New user registered |
+| `user.enrolled` | Student enrolled in a course |
+| `course.published` | Course published by a teacher |
+| `payment.succeeded` | Subscription payment processed |
+| `payment.failed` | Payment failed (starts dunning) |
+| `certificate.issued` | Course completion certificate issued |
+| `ai.usage.threshold` | AI cost exceeded configured threshold |
+| `scim.user.provisioned` | User created via SCIM |
+| `scim.user.deprovisioned` | User disabled via SCIM |
+
+### `user.enrolled` payload
+
+```json
+{
+  "event": "user.enrolled",
+  "payload": {
+    "userId": "clx...",
+    "courseId": "clx...",
+    "courseName": "Introduction to Python",
+    "enrolledAt": "2026-06-11T10:00:00.000Z"
+  },
+  "timestamp": "2026-06-11T10:00:00.000Z"
+}
+```
+
+### `payment.succeeded` payload
+
+```json
+{
+  "event": "payment.succeeded",
+  "payload": {
+    "subscriptionId": "sub_...",
+    "plan": "PROFESSIONAL",
+    "amount": 9900,
+    "currency": "usd",
+    "invoiceId": "in_..."
+  },
+  "timestamp": "2026-06-11T10:00:00.000Z"
+}
+```

@@ -1,0 +1,77 @@
+name: Load Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      scenario:
+        description: 'Load test scenario to run'
+        required: true
+        default: 'auth'
+        type: choice
+        options:
+          - auth
+          - courses
+          - ai
+          - billing
+          - full-journey
+
+jobs:
+  load-test:
+    name: k6 Load Test — ${{ inputs.scenario }} @ ${{ inputs.environment }}
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Resolve environment URL
+        id: env-url
+        run: |
+          if [ "${{ inputs.environment }}" = "production" ]; then
+            echo "base_url=${{ vars.PRODUCTION_API_URL }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base_url=${{ vars.STAGING_API_URL }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run k6 load test — ${{ inputs.scenario }}
+        uses: grafana/k6-action@v0.3.0
+        with:
+          filename: tests/load/${{ inputs.scenario }}.load.js
+          flags: >-
+            --out json=k6-summary-${{ inputs.scenario }}-${{ inputs.environment }}.json
+        env:
+          BASE_URL: ${{ steps.env-url.outputs.base_url }}
+          TENANT_ID: ${{ secrets.LOAD_TEST_TENANT_ID }}
+          SEED_USER_EMAIL: ${{ secrets.LOAD_TEST_SEED_EMAIL }}
+          SEED_USER_PASSWORD: ${{ secrets.LOAD_TEST_SEED_PASSWORD }}
+
+      - name: Upload k6 summary artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-summary-${{ inputs.scenario }}-${{ inputs.environment }}-${{ github.run_id }}
+          path: k6-summary-${{ inputs.scenario }}-${{ inputs.environment }}.json
+          retention-days: 30
+
+      - name: Post summary to job output
+        if: always()
+        run: |
+          echo "## k6 Load Test Results" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Field       | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Scenario    | \`${{ inputs.scenario }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Environment | \`${{ inputs.environment }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Base URL    | \`${{ steps.env-url.outputs.base_url }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Run ID      | \`${{ github.run_id }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Download the artifact \`k6-summary-${{ inputs.scenario }}-${{ inputs.environment }}-${{ github.run_id }}\` for full JSON results." >> "$GITHUB_STEP_SUMMARY"

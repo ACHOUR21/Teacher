@@ -1,0 +1,150 @@
+{
+  "uid": "eduai-api-overview",
+  "title": "EduAI API Overview",
+  "tags": ["eduai", "api"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "30s",
+  "time": { "from": "now-1h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Request Rate (req/s)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "sum(rate(http_requests_total[1m])) by (method)",
+        "legendFormat": "{{method}}"
+      }],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "id": 2,
+      "title": "Error Rate (%)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "100 * sum(rate(http_requests_total{status=~\"5..\"}[1m])) / sum(rate(http_requests_total[1m]))",
+        "legendFormat": "5xx error %"
+      }],
+      "fieldConfig": { "defaults": { "unit": "percent", "thresholds": { "steps": [{"color": "green", "value": 0}, {"color": "yellow", "value": 1}, {"color": "red", "value": 5}] } } }
+    },
+    {
+      "id": 3,
+      "title": "P95 Latency (s)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, path))",
+        "legendFormat": "p95 {{path}}"
+      }],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 4,
+      "title": "P99 Latency (s)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+        "legendFormat": "p99"
+      }],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 5,
+      "title": "AI Calls / min",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 16 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "sum(rate(eduai_ai_calls_total[1m])) by (feature)",
+        "legendFormat": "{{feature}}"
+      }],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "id": 6,
+      "title": "Exams Created / hour",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 16 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "sum(increase(eduai_exams_created_total[1h]))"
+      }],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "id": 7,
+      "title": "Certs Issued / hour",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 16 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "sum(increase(eduai_certificates_issued_total[1h]))"
+      }],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "id": 8,
+      "title": "Active WebSocket Connections",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 16 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "eduai_active_websocket_connections"
+      }],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "id": 9,
+      "title": "Heap Memory Usage",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "targets": [
+        { "datasource": "Prometheus", "expr": "eduai_nodejs_heap_size_used_bytes / 1024 / 1024", "legendFormat": "Heap Used (MB)" },
+        { "datasource": "Prometheus", "expr": "eduai_nodejs_heap_size_total_bytes / 1024 / 1024", "legendFormat": "Heap Total (MB)" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "MB" } }
+    },
+    {
+      "id": 10,
+      "title": "Event Loop Lag",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "eduai_nodejs_eventloop_lag_seconds * 1000",
+        "legendFormat": "Event Loop Lag (ms)"
+      }],
+      "fieldConfig": { "defaults": { "unit": "ms", "thresholds": { "steps": [{"color": "green", "value": 0}, {"color": "yellow", "value": 50}, {"color": "red", "value": 200}] } } }
+    },
+    {
+      "id": 11,
+      "title": "Login Activity",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 32 },
+      "targets": [
+        { "datasource": "Prometheus", "expr": "rate(eduai_auth_logins_total[5m]) * 60", "legendFormat": "Successful Logins/min" },
+        { "datasource": "Prometheus", "expr": "rate(eduai_auth_login_failures_total[5m]) * 60", "legendFormat": "Failed Logins/min" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "id": 12,
+      "title": "Queue Jobs",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 32 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "sum(rate(eduai_queue_jobs_total[1m])) by (queue, status)",
+        "legendFormat": "{{queue}} - {{status}}"
+      }],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    }
+  ]
+}

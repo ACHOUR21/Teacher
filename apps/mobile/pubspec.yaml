@@ -1,0 +1,88 @@
+name: eduai_mobile
+description: EduAI Ultimate - AI-Powered Education Platform
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+  flutter: '>=3.19.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Navigation
+  go_router: ^13.2.1
+
+  # State management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+  flutter_bloc: ^8.1.3
+  equatable: ^2.0.5
+
+  # HTTP & API
+  dio: ^5.4.3
+  retrofit: ^4.1.0
+
+  # Local storage
+  shared_preferences: ^2.2.3
+  flutter_secure_storage: ^9.0.0
+
+  # UI
+  google_fonts: ^6.2.1
+  cached_network_image: ^3.3.1
+  shimmer: ^3.0.0
+  fl_chart: ^0.68.0
+
+  # Media
+  video_player: ^2.8.6
+  chewie: ^1.8.1
+
+  # Notifications
+  firebase_core: ^3.1.1
+  firebase_messaging: ^15.1.0
+  flutter_local_notifications: ^17.2.3
+
+  # WebSocket
+  socket_io_client: ^2.0.3+1
+
+  # Utils
+  intl: ^0.19.0
+  timeago: ^3.6.1
+  image_picker: ^1.1.2
+  file_picker: ^8.0.3
+  url_launcher: ^6.3.0
+
+  # Offline support
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  connectivity_plus: ^6.0.3
+  path_provider: ^2.1.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  mocktail: ^1.0.4
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.9
+  riverpod_generator: ^2.4.0
+  retrofit_generator: ^8.1.0
+  json_serializable: ^6.7.1
+  json_annotation: ^4.9.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/animations/
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700

@@ -1,0 +1,17 @@
+apiVersion: v2
+name: eduai-ultimate
+description: EduAI Ultimate Platform Helm Chart
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - eduai
+  - education
+  - ai
+  - learning
+home: https://eduai.io
+maintainers:
+  - name: EduAI Platform Team
+    email: platform@eduai.io
+sources:
+  - https://github.com/eduai/eduai-ultimate

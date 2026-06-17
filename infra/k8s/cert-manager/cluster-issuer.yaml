@@ -1,0 +1,56 @@
+# cert-manager ClusterIssuer — Let's Encrypt Production
+#
+# Prerequisites:
+#   kubectl apply -f https://github.com/cert-manager/cert-manager/releases/latest/download/cert-manager.yaml
+#
+# This ClusterIssuer handles HTTP-01 challenges via the nginx Ingress controller
+# for all standard *.eduai.example.com subdomains.
+#
+# For wildcard certificates (*.eduai.example.com), use the DNS-01 ClusterIssuer
+# defined in wildcard-cert.yaml instead.
+
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+  labels:
+    app.kubernetes.io/name: letsencrypt-prod
+    app.kubernetes.io/component: cert-manager
+    app.kubernetes.io/part-of: eduai
+spec:
+  acme:
+    # Let's Encrypt production ACME endpoint
+    server: https://acme-v02.api.letsencrypt.org/directory
+    # Email used for expiry notifications and recovery
+    email: admin@eduai.example.com
+    # Secret to store the ACME account private key
+    privateKeySecretRef:
+      name: letsencrypt-prod-key
+    solvers:
+      # HTTP-01 solver — handles all non-wildcard domains automatically
+      # via the nginx Ingress controller
+      - http01:
+          ingress:
+            class: nginx
+---
+# Staging ClusterIssuer for testing without hitting rate limits.
+# Use cert-manager.io/cluster-issuer: "letsencrypt-staging" on Ingress resources
+# during development/CI to avoid Let's Encrypt production rate limits.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-staging
+  labels:
+    app.kubernetes.io/name: letsencrypt-staging
+    app.kubernetes.io/component: cert-manager
+    app.kubernetes.io/part-of: eduai
+spec:
+  acme:
+    server: https://acme-staging-v02.api.letsencrypt.org/directory
+    email: admin@eduai.example.com
+    privateKeySecretRef:
+      name: letsencrypt-staging-key
+    solvers:
+      - http01:
+          ingress:
+            class: nginx

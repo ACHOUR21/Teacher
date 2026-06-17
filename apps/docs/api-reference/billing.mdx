@@ -1,0 +1,26 @@
+---
+title: Billing API
+description: Subscription plans, payments, and invoices
+---
+
+# Billing API
+
+## GET /billing/plans
+
+List all available subscription plans with pricing.
+
+## GET /billing/subscription
+
+Get the current tenant subscription status.
+
+## POST /billing/subscription/upgrade
+
+Upgrade to a higher plan via Stripe.
+
+## GET /billing/invoices
+
+List all past invoices.
+
+## POST /billing/webhook
+
+Stripe webhook endpoint (used internally by Stripe).

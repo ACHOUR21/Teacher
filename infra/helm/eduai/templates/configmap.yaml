@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "eduai.fullname" . }}-config
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "eduai.labels" . | nindent 4 }}
+data:
+  # Runtime environment
+  NODE_ENV: {{ .Values.configmap.NODE_ENV | quote }}
+  LOG_LEVEL: {{ .Values.configmap.LOG_LEVEL | quote }}
+
+  # API
+  PORT: {{ .Values.api.service.port | quote }}
+
+  # Web / Next.js
+  NEXT_TELEMETRY_DISABLED: "1"
+  NEXT_PUBLIC_API_URL: {{ .Values.configmap.NEXT_PUBLIC_API_URL | quote }}
+  NEXT_PUBLIC_WS_URL: {{ .Values.configmap.NEXT_PUBLIC_WS_URL | quote }}
+  NEXT_PUBLIC_APP_URL: {{ .Values.configmap.NEXT_PUBLIC_APP_URL | quote }}
+
+  # Storage
+  S3_BUCKET: {{ .Values.configmap.S3_BUCKET | quote }}
+  S3_REGION: {{ .Values.configmap.S3_REGION | default "us-east-1" | quote }}
+  CDN_URL: {{ .Values.configmap.CDN_URL | quote }}
+
+  # Database (non-secret connection params)
+  DB_HOST: {{ .Values.configmap.DB_HOST | quote }}
+  DB_PORT: {{ .Values.configmap.DB_PORT | default "5432" | quote }}
+  DB_NAME: {{ .Values.configmap.DB_NAME | quote }}
+
+  # Redis
+  REDIS_HOST: {{ .Values.configmap.REDIS_HOST | quote }}
+  REDIS_PORT: {{ .Values.configmap.REDIS_PORT | default "6379" | quote }}
+
+  # Elasticsearch
+  ELASTICSEARCH_URL: {{ .Values.configmap.ELASTICSEARCH_URL | quote }}
+
+  # Feature flags
+  ENABLE_SWAGGER: {{ .Values.configmap.ENABLE_SWAGGER | default "false" | quote }}
+  ENABLE_GRAPHQL_PLAYGROUND: {{ .Values.configmap.ENABLE_GRAPHQL_PLAYGROUND | default "false" | quote }}
+
+  {{- with .Values.configmap.extra }}
+  {{- toYaml . | nindent 2 }}
+  {{- end }}

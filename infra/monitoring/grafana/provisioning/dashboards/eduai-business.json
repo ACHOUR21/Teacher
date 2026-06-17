@@ -1,0 +1,83 @@
+{
+  "uid": "eduai-business-metrics",
+  "title": "EduAI Business Metrics",
+  "tags": ["eduai", "business"],
+  "timezone": "browser",
+  "schemaVersion": 38,
+  "refresh": "1m",
+  "time": { "from": "now-24h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "AI Feature Usage (last 24h)",
+      "type": "barchart",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 0 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "sum(increase(eduai_ai_calls_total[24h])) by (feature)",
+        "legendFormat": "{{feature}}"
+      }],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "id": 2,
+      "title": "Exams Created (7d)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
+      "targets": [
+        { "datasource": "Prometheus", "expr": "sum(increase(eduai_exams_created_total[1h])) by (difficulty)", "legendFormat": "Created ({{difficulty}})" },
+        { "datasource": "Prometheus", "expr": "sum(increase(eduai_exam_attempts_total{passed=\"true\"}[1h]))", "legendFormat": "Passed" },
+        { "datasource": "Prometheus", "expr": "sum(increase(eduai_exam_attempts_total{passed=\"false\"}[1h]))", "legendFormat": "Failed" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "id": 3,
+      "title": "Certificates Issued (7d)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "sum(increase(eduai_certificates_issued_total[1h])) by (source)",
+        "legendFormat": "{{source}}"
+      }],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "id": 4,
+      "title": "Flashcard Study Sessions",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "sum(rate(eduai_flashcard_reviews_total[1h]) * 3600) by (rating)",
+        "legendFormat": "Rating {{rating}}"
+      }],
+      "fieldConfig": { "defaults": { "unit": "short" } }
+    },
+    {
+      "id": 5,
+      "title": "Search Queries",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "sum(rate(eduai_search_queries_total[5m])) by (index)",
+        "legendFormat": "{{index}}"
+      }],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "id": 6,
+      "title": "AI Call Latency P95 by Feature",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 26 },
+      "targets": [{
+        "datasource": "Prometheus",
+        "expr": "histogram_quantile(0.95, sum(rate(eduai_ai_call_duration_seconds_bucket[5m])) by (le, feature))",
+        "legendFormat": "p95 {{feature}}"
+      }],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    }
+  ]
+}

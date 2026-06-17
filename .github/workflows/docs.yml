@@ -1,0 +1,29 @@
+name: Deploy API Docs
+
+on:
+  push:
+    branches: [main]
+    paths: ['apps/docs/**', 'apps/api/src/**']
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate mint.json
+        run: |
+          node -e "JSON.parse(require('fs').readFileSync('apps/docs/mint.json','utf8'))"
+          echo "mint.json is valid JSON"
+      - name: Check all MDX files exist
+        run: |
+          node -e "
+            const nav = JSON.parse(require('fs').readFileSync('apps/docs/mint.json','utf8')).navigation;
+            const pages = nav.flatMap(g => g.pages);
+            const fs = require('fs');
+            const missing = pages.filter(p => !fs.existsSync(\`apps/docs/\${p}.mdx\`));
+            if (missing.length) { console.error('Missing pages:', missing); process.exit(1); }
+            console.log('All', pages.length, 'pages found');
+          "
+      - name: Mintlify auto-deploys from GitHub
+        run: echo "Mintlify is configured to auto-deploy from this repository on push to main."

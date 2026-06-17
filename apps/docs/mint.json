@@ -1,0 +1,14 @@
+{
+  "name": "EduAI Ultimate",
+  "logo": { "light": "/logo/light.svg", "dark": "/logo/dark.svg" },
+  "favicon": "/favicon.ico",
+  "colors": { "primary": "#6366f1", "light": "#8b5cf6", "dark": "#4f46e5" },
+  "navigation": [
+    { "group": "Getting Started", "pages": ["introduction", "quickstart", "authentication"] },
+    { "group": "Core APIs", "pages": ["api-reference/auth", "api-reference/courses", "api-reference/ai", "api-reference/billing"] },
+    { "group": "Enterprise", "pages": ["enterprise/scim", "enterprise/sso", "enterprise/white-label"] },
+    { "group": "Webhooks", "pages": ["webhooks/overview", "webhooks/events", "webhooks/security"] },
+    { "group": "SDKs", "pages": ["sdks/javascript", "sdks/python"] }
+  ],
+  "api": { "baseUrl": "https://api.eduai.example.com", "auth": { "method": "bearer" } }
+}

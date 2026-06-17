@@ -1,0 +1,34 @@
+---
+title: Introduction
+description: EduAI Ultimate — AI-powered education platform API
+---
+
+# EduAI Ultimate API
+
+EduAI Ultimate is a global, multi-tenant education SaaS platform combining LMS, School ERP, University ERP, AI tutoring, live classrooms, and a course marketplace.
+
+## Key capabilities
+
+- **Multi-tenant** — every request is scoped to a tenant via `X-Tenant-ID` header
+- **AI-powered** — 17 AI features including tutor, homework solver, flashcard generator, exam builder
+- **Real-time** — Socket.IO for live classrooms, notifications, and collaboration
+- **Enterprise-ready** — SCIM 2.0 provisioning, SSO (Google, Microsoft), FERPA/COPPA compliance
+
+## Base URL
+
+```
+https://api.eduai.example.com
+```
+
+All endpoints are prefixed with `/api/v1` unless otherwise noted. SCIM endpoints use `/scim/v2`.
+
+## Rate limits
+
+| Plan | Requests/minute |
+|------|----------------|
+| Free Trial | 60 |
+| Starter | 300 |
+| Professional | 1000 |
+| Enterprise | Unlimited |
+
+Exceeded limits return `429 Too Many Requests` with a `Retry-After` header.

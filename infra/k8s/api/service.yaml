@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: eduai-api
+  namespace: eduai
+  labels:
+    app.kubernetes.io/name: eduai-api
+    app.kubernetes.io/component: api
+    app.kubernetes.io/part-of: eduai
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: eduai-api
+  ports:
+    - name: http
+      protocol: TCP
+      port: 4000
+      targetPort: http

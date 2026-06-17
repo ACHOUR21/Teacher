@@ -1,0 +1,105 @@
+import {
+  ExceptionFilter,
+  Catch,
+  ArgumentsHost,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
+import { Prisma } from '@prisma/client';
+import { Request, Response } from 'express';
+
+export interface ApiErrorResponse {
+  success: false;
+  statusCode: number;
+  message: string;
+  errors: string[] | Record<string, string[]>;
+  timestamp: string;
+  path: string;
+  requestId?: string;
+}
+
+@Catch()
+export class AllExceptionsFilter implements ExceptionFilter {
+  private readonly logger = new Logger(AllExceptionsFilter.name);
+
+  catch(exception: unknown, host: ArgumentsHost): void {
+    const ctx = host.switchToHttp();
+    const response = ctx.getResponse<Response>();
+    const request = ctx.getRequest<Request>();
+
+    let statusCode = HttpStatus.INTERNAL_SERVER_ERROR;
+    let message = 'Internal server error';
+    let errors: string[] | Record<string, string[]> = [];
+
+    if (exception instanceof HttpException) {
+      statusCode = exception.getStatus();
+      const exceptionResponse = exception.getResponse();
+      if (typeof exceptionResponse === 'string') {
+        message = exceptionResponse;
+      } else if (typeof exceptionResponse === 'object' && exceptionResponse !== null) {
+        const resp = exceptionResponse as Record<string, unknown>;
+        message = (resp['message'] as string) || message;
+        if (Array.isArray(resp['message'])) {
+          errors = resp['message'] as string[];
+          message = 'Validation failed';
+        }
+      }
+    } else if (exception instanceof Prisma.PrismaClientKnownRequestError) {
+      statusCode = HttpStatus.CONFLICT;
+      if (exception.code === 'P2002') {
+        message = 'A record with this data already exists';
+        errors = [`Duplicate value on field: ${(exception.meta?.['target'] as string[])?.join(', ')}`];
+      } else if (exception.code === 'P2025') {
+        statusCode = HttpStatus.NOT_FOUND;
+        message = 'Record not found';
+      } else {
+        message = 'Database operation failed';
+        errors = [exception.message];
+      }
+    } else if (exception instanceof Prisma.PrismaClientValidationError) {
+      statusCode = HttpStatus.BAD_REQUEST;
+      message = 'Invalid data provided';
+      errors = ['Database validation failed'];
+    } else if (exception instanceof Error) {
+      // Never leak raw internal error details to clients in production
+      if (process.env['NODE_ENV'] === 'production') {
+        message = 'Internal server error';
+        errors = [];
+      } else {
+        message = exception.message;
+        errors = [exception.message];
+      }
+    }
+
+    const errorResponse: ApiErrorResponse = {
+      success: false,
+      statusCode,
+      message,
+      errors,
+      timestamp: new Date().toISOString(),
+      path: request.url,
+      requestId: request.headers['x-request-id'] as string,
+    };
+
+    if (Number(statusCode) >= 500) {
+      const detail = process.env['NODE_ENV'] === 'production'
+        ? (exception instanceof Error ? exception.message : String(exception))
+        : (exception instanceof Error ? exception.stack : String(exception));
+      this.logger.error(`${request.method} ${request.url} - ${statusCode}`, detail);
+
+      // Report unhandled server errors to Sentry (production only)
+      if (process.env['SENTRY_DSN'] && process.env['NODE_ENV'] === 'production') {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
+          const Sentry = require('@sentry/node');
+          Sentry.captureException(exception);
+        } catch (_) { /* Sentry not installed — skip silently */ }
+      }
+    } else {
+      this.logger.warn(`${request.method} ${request.url} - ${statusCode}: ${message}`);
+    }
+
+    response.status(statusCode).json(errorResponse);
+  }
+}

@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Action required: Payment failed</title>
+  <span style="display:none;max-height:0;overflow:hidden;mso-hide:all">Your payment for the {{plan}} plan could not be processed. Please update your payment method.</span>
+</head>
+<body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
+  <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="background:#f9fafb;padding:40px 16px">
+    <tr>
+      <td align="center">
+        <table width="100%" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.08)">
+
+          <!-- Header — orange/red accent for urgency -->
+          <tr>
+            <td style="background:#ea580c;padding:28px 40px">
+              <p style="margin:0;font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.3px">EduAI</p>
+              <p style="margin:4px 0 0;font-size:13px;color:rgba(255,255,255,0.75)">Payment Issue</p>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:40px 40px 32px">
+              <!-- Urgent badge -->
+              <div style="display:inline-block;padding:6px 14px;background:#fef2f2;border-radius:20px;margin-bottom:16px;border:1px solid #fca5a5">
+                <span style="font-size:13px;font-weight:600;color:#b91c1c">&#9888; Action required</span>
+              </div>
+
+              <h1 style="margin:0 0 8px;font-size:24px;font-weight:700;color:#111827;letter-spacing:-0.5px">Payment failed, {{name}}</h1>
+              <p style="margin:0 0 24px;font-size:16px;line-height:1.6;color:#374151">
+                We were unable to process your payment for the <strong>{{plan}}</strong> plan. To avoid any interruption to your service, please update your payment method as soon as possible.
+              </p>
+
+              <!-- Retry notice -->
+              <div style="padding:16px 20px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;margin:0 0 28px">
+                <p style="margin:0;font-size:14px;color:#c2410c">
+                  We will automatically retry your payment on <strong>{{retryDate}}</strong>. If the payment fails again, your account access may be restricted.
+                </p>
+              </div>
+
+              <!-- CTA -->
+              <table cellpadding="0" cellspacing="0" role="presentation">
+                <tr>
+                  <td style="border-radius:12px;background:#ea580c">
+                    <a href="{{updatePaymentUrl}}" target="_blank" style="display:inline-block;padding:16px 32px;font-size:15px;font-weight:600;color:#ffffff;text-decoration:none;border-radius:12px;letter-spacing:0.1px">
+                      Update Payment Method
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:20px 0 0;font-size:14px;color:#6b7280">
+                Need help? Contact our support team at <a href="mailto:support@eduai.example.com" style="color:#6366f1">support@eduai.example.com</a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 40px;background:#f9fafb;border-top:1px solid #e5e7eb">
+              <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center">
+                &copy; 2025 EduAI Ultimate &middot; <a href="#" style="color:#6b7280;text-decoration:none">Unsubscribe</a>
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

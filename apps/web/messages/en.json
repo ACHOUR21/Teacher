@@ -1,0 +1,267 @@
+{
+  "common": {
+    "save": "Save Changes",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "update": "Update",
+    "confirm": "Confirm",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "submit": "Submit",
+    "loading": "Loading...",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import",
+    "view": "View",
+    "viewAll": "View All",
+    "noResults": "No results found",
+    "error": "An error occurred",
+    "success": "Success",
+    "required": "This field is required",
+    "optional": "optional",
+    "yes": "Yes",
+    "no": "No",
+    "or": "or",
+    "and": "and",
+    "actions": "Actions",
+    "status": "Status",
+    "date": "Date",
+    "name": "Name",
+    "email": "Email",
+    "role": "Role",
+    "active": "Active",
+    "inactive": "Inactive"
+  },
+  "nav": {
+    "sections": {
+      "overview": "Overview",
+      "learning": "Learning",
+      "community": "Community",
+      "management": "Management",
+      "admin": "Admin",
+      "account": "Account"
+    },
+    "items": {
+      "dashboard": "Dashboard",
+      "myLearning": "My Learning",
+      "courses": "Courses",
+      "assignments": "Assignments",
+      "liveClasses": "Live Classes",
+      "aiTutor": "AI Tutor",
+      "aiTools": "AI Tools",
+      "aiAgents": "AI Agents",
+      "exams": "Exams",
+      "flashcards": "Flashcards",
+      "certificates": "Certificates",
+      "messages": "Messages",
+      "notifications": "Notifications",
+      "gamification": "Gamification",
+      "marketplace": "Marketplace",
+      "students": "Students",
+      "teachers": "Teachers",
+      "parents": "Parents",
+      "schoolErp": "School ERP",
+      "universityErp": "University ERP",
+      "analytics": "Analytics",
+      "auditLogs": "Audit Logs",
+      "billing": "Billing",
+      "whiteLabel": "White Label",
+      "plugins": "Plugins",
+      "apiKeys": "API Keys",
+      "superAdmin": "Super Admin",
+      "settings": "Settings",
+      "profile": "Profile",
+      "search": "Search"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to your account",
+      "email": "Email address",
+      "password": "Password",
+      "submit": "Sign in",
+      "forgotPassword": "Forgot password?",
+      "noAccount": "Don't have an account?",
+      "register": "Sign up",
+      "error": "Invalid email or password"
+    },
+    "register": {
+      "title": "Create an account",
+      "subtitle": "Start your free trial today",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email address",
+      "password": "Password",
+      "confirmPassword": "Confirm password",
+      "submit": "Create account",
+      "hasAccount": "Already have an account?",
+      "login": "Sign in",
+      "terms": "By creating an account, you agree to our Terms of Service and Privacy Policy"
+    },
+    "forgotPassword": {
+      "title": "Forgot password?",
+      "subtitle": "Enter your email to receive a reset link",
+      "email": "Email address",
+      "submit": "Send reset link",
+      "backToLogin": "Back to sign in",
+      "sent": "Check your email for a reset link"
+    },
+    "resetPassword": {
+      "title": "Reset your password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "submit": "Reset password",
+      "success": "Password reset successfully"
+    },
+    "mfa": {
+      "title": "Two-factor authentication",
+      "subtitle": "Enter the 6-digit code from your authenticator app",
+      "code": "Authentication code",
+      "submit": "Verify",
+      "backupCode": "Use a backup code"
+    },
+    "logout": "Sign out"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome back, {name}",
+    "stats": {
+      "totalStudents": "Total Students",
+      "totalCourses": "Total Courses",
+      "totalTeachers": "Total Teachers",
+      "activeEnrollments": "Active Enrollments",
+      "completionRate": "Completion Rate",
+      "revenue": "Revenue"
+    }
+  },
+  "courses": {
+    "title": "Courses",
+    "create": "New Course",
+    "search": "Search courses...",
+    "filter": {
+      "all": "All Levels",
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced"
+    },
+    "fields": {
+      "title": "Course Title",
+      "description": "Description",
+      "category": "Category",
+      "level": "Level",
+      "language": "Language",
+      "price": "Price",
+      "thumbnail": "Thumbnail URL"
+    },
+    "status": {
+      "published": "Published",
+      "draft": "Draft"
+    },
+    "actions": {
+      "enroll": "Enroll Now",
+      "continue": "Continue Learning",
+      "publish": "Publish",
+      "unpublish": "Unpublish",
+      "edit": "Edit Course",
+      "delete": "Delete Course"
+    },
+    "empty": "No courses found",
+    "students": "{count} students",
+    "lessons": "{count} lessons"
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": {
+      "profile": "My Profile",
+      "general": "General",
+      "security": "Security",
+      "notifications": "Notifications",
+      "branding": "White Label",
+      "api": "API Keys"
+    },
+    "profile": {
+      "title": "Profile Information",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email address",
+      "phone": "Phone number",
+      "bio": "Bio",
+      "avatar": "Profile picture",
+      "save": "Save profile"
+    },
+    "general": {
+      "title": "General Preferences",
+      "language": "Language",
+      "timezone": "Timezone",
+      "save": "Save preferences",
+      "downloadData": "Download My Data",
+      "downloadDataDesc": "Export all your personal data in JSON format (GDPR)"
+    },
+    "security": {
+      "title": "Security Settings",
+      "changePassword": "Change Password",
+      "currentPassword": "Current password",
+      "newPassword": "New password",
+      "confirmPassword": "Confirm new password",
+      "mfaTitle": "Two-Factor Authentication",
+      "mfaEnabled": "2FA is enabled",
+      "mfaDisabled": "2FA is disabled",
+      "enableMfa": "Enable 2FA",
+      "disableMfa": "Disable 2FA",
+      "sessions": "Active Sessions",
+      "revokeAll": "Revoke all sessions"
+    },
+    "notifications": {
+      "title": "Notification Preferences",
+      "email": "Email notifications",
+      "push": "Push notifications",
+      "sms": "SMS notifications",
+      "enablePush": "Enable push notifications",
+      "disablePush": "Disable push notifications"
+    },
+    "api": {
+      "title": "API Keys",
+      "create": "Create API Key",
+      "name": "Key name",
+      "key": "API Key",
+      "created": "Created",
+      "lastUsed": "Last used",
+      "revoke": "Revoke"
+    }
+  },
+  "assignments": {
+    "title": "Assignments",
+    "create": "New Assignment",
+    "fields": {
+      "title": "Title",
+      "description": "Description",
+      "dueDate": "Due Date",
+      "maxScore": "Maximum Score"
+    },
+    "status": {
+      "pending": "Pending",
+      "submitted": "Submitted",
+      "graded": "Graded",
+      "late": "Late",
+      "overdue": "Overdue"
+    },
+    "actions": {
+      "submit": "Submit Assignment",
+      "grade": "Grade",
+      "viewSubmissions": "View Submissions"
+    }
+  },
+  "errors": {
+    "notFound": "Page not found",
+    "unauthorized": "You are not authorized to view this page",
+    "serverError": "Something went wrong. Please try again.",
+    "networkError": "Network error. Please check your connection.",
+    "rateLimited": "Too many requests. Please slow down.",
+    "sessionExpired": "Your session has expired. Please sign in again."
+  }
+}

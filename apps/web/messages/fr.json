@@ -1,0 +1,267 @@
+{
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "create": "Créer",
+    "update": "Mettre à jour",
+    "confirm": "Confirmer",
+    "close": "Fermer",
+    "back": "Retour",
+    "next": "Suivant",
+    "submit": "Soumettre",
+    "loading": "Chargement...",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "export": "Exporter",
+    "import": "Importer",
+    "view": "Voir",
+    "viewAll": "Tout voir",
+    "noResults": "Aucun résultat",
+    "error": "Une erreur s'est produite",
+    "success": "Succès",
+    "required": "Ce champ est obligatoire",
+    "optional": "optionnel",
+    "yes": "Oui",
+    "no": "Non",
+    "or": "ou",
+    "and": "et",
+    "actions": "Actions",
+    "status": "Statut",
+    "date": "Date",
+    "name": "Nom",
+    "email": "E-mail",
+    "role": "Rôle",
+    "active": "Actif",
+    "inactive": "Inactif"
+  },
+  "nav": {
+    "sections": {
+      "overview": "Vue d'ensemble",
+      "learning": "Apprentissage",
+      "community": "Communauté",
+      "management": "Gestion",
+      "admin": "Administration",
+      "account": "Compte"
+    },
+    "items": {
+      "dashboard": "Tableau de bord",
+      "myLearning": "Mon apprentissage",
+      "courses": "Cours",
+      "assignments": "Devoirs",
+      "liveClasses": "Cours en direct",
+      "aiTutor": "IA Tuteur",
+      "aiTools": "Outils IA",
+      "aiAgents": "Agents IA",
+      "exams": "Examens",
+      "flashcards": "Fiches",
+      "certificates": "Certificats",
+      "messages": "Messages",
+      "notifications": "Notifications",
+      "gamification": "Gamification",
+      "marketplace": "Marché",
+      "students": "Étudiants",
+      "teachers": "Enseignants",
+      "parents": "Parents",
+      "schoolErp": "ERP Scolaire",
+      "universityErp": "ERP Universitaire",
+      "analytics": "Analytique",
+      "auditLogs": "Journaux d'audit",
+      "billing": "Facturation",
+      "whiteLabel": "Marque blanche",
+      "plugins": "Extensions",
+      "apiKeys": "Clés API",
+      "superAdmin": "Super Admin",
+      "settings": "Paramètres",
+      "profile": "Profil",
+      "search": "Rechercher"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Bon retour",
+      "subtitle": "Connectez-vous à votre compte",
+      "email": "Adresse e-mail",
+      "password": "Mot de passe",
+      "submit": "Se connecter",
+      "forgotPassword": "Mot de passe oublié ?",
+      "noAccount": "Vous n'avez pas de compte ?",
+      "register": "S'inscrire",
+      "error": "E-mail ou mot de passe invalide"
+    },
+    "register": {
+      "title": "Créer un compte",
+      "subtitle": "Commencez votre essai gratuit aujourd'hui",
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "email": "Adresse e-mail",
+      "password": "Mot de passe",
+      "confirmPassword": "Confirmer le mot de passe",
+      "submit": "Créer un compte",
+      "hasAccount": "Vous avez déjà un compte ?",
+      "login": "Se connecter",
+      "terms": "En créant un compte, vous acceptez nos Conditions d'utilisation et notre Politique de confidentialité"
+    },
+    "forgotPassword": {
+      "title": "Mot de passe oublié ?",
+      "subtitle": "Entrez votre e-mail pour recevoir un lien de réinitialisation",
+      "email": "Adresse e-mail",
+      "submit": "Envoyer le lien",
+      "backToLogin": "Retour à la connexion",
+      "sent": "Vérifiez votre e-mail pour un lien de réinitialisation"
+    },
+    "resetPassword": {
+      "title": "Réinitialiser votre mot de passe",
+      "newPassword": "Nouveau mot de passe",
+      "confirmPassword": "Confirmer le nouveau mot de passe",
+      "submit": "Réinitialiser le mot de passe",
+      "success": "Mot de passe réinitialisé avec succès"
+    },
+    "mfa": {
+      "title": "Authentification à deux facteurs",
+      "subtitle": "Entrez le code à 6 chiffres de votre application d'authentification",
+      "code": "Code d'authentification",
+      "submit": "Vérifier",
+      "backupCode": "Utiliser un code de secours"
+    },
+    "logout": "Se déconnecter"
+  },
+  "dashboard": {
+    "title": "Tableau de bord",
+    "welcome": "Bon retour, {name}",
+    "stats": {
+      "totalStudents": "Total Étudiants",
+      "totalCourses": "Total Cours",
+      "totalTeachers": "Total Enseignants",
+      "activeEnrollments": "Inscriptions actives",
+      "completionRate": "Taux de complétion",
+      "revenue": "Revenus"
+    }
+  },
+  "courses": {
+    "title": "Cours",
+    "create": "Nouveau cours",
+    "search": "Rechercher des cours...",
+    "filter": {
+      "all": "Tous les niveaux",
+      "beginner": "Débutant",
+      "intermediate": "Intermédiaire",
+      "advanced": "Avancé"
+    },
+    "fields": {
+      "title": "Titre du cours",
+      "description": "Description",
+      "category": "Catégorie",
+      "level": "Niveau",
+      "language": "Langue",
+      "price": "Prix",
+      "thumbnail": "URL de la miniature"
+    },
+    "status": {
+      "published": "Publié",
+      "draft": "Brouillon"
+    },
+    "actions": {
+      "enroll": "S'inscrire",
+      "continue": "Continuer l'apprentissage",
+      "publish": "Publier",
+      "unpublish": "Dépublier",
+      "edit": "Modifier le cours",
+      "delete": "Supprimer le cours"
+    },
+    "empty": "Aucun cours trouvé",
+    "students": "{count} étudiants",
+    "lessons": "{count} leçons"
+  },
+  "settings": {
+    "title": "Paramètres",
+    "tabs": {
+      "profile": "Mon profil",
+      "general": "Général",
+      "security": "Sécurité",
+      "notifications": "Notifications",
+      "branding": "Marque blanche",
+      "api": "Clés API"
+    },
+    "profile": {
+      "title": "Informations du profil",
+      "firstName": "Prénom",
+      "lastName": "Nom",
+      "email": "Adresse e-mail",
+      "phone": "Numéro de téléphone",
+      "bio": "Biographie",
+      "avatar": "Photo de profil",
+      "save": "Enregistrer le profil"
+    },
+    "general": {
+      "title": "Préférences générales",
+      "language": "Langue",
+      "timezone": "Fuseau horaire",
+      "save": "Enregistrer les préférences",
+      "downloadData": "Télécharger mes données",
+      "downloadDataDesc": "Exportez toutes vos données personnelles au format JSON (RGPD)"
+    },
+    "security": {
+      "title": "Paramètres de sécurité",
+      "changePassword": "Changer le mot de passe",
+      "currentPassword": "Mot de passe actuel",
+      "newPassword": "Nouveau mot de passe",
+      "confirmPassword": "Confirmer le nouveau mot de passe",
+      "mfaTitle": "Authentification à deux facteurs",
+      "mfaEnabled": "La 2FA est activée",
+      "mfaDisabled": "La 2FA est désactivée",
+      "enableMfa": "Activer la 2FA",
+      "disableMfa": "Désactiver la 2FA",
+      "sessions": "Sessions actives",
+      "revokeAll": "Révoquer toutes les sessions"
+    },
+    "notifications": {
+      "title": "Préférences de notification",
+      "email": "Notifications par e-mail",
+      "push": "Notifications push",
+      "sms": "Notifications SMS",
+      "enablePush": "Activer les notifications push",
+      "disablePush": "Désactiver les notifications push"
+    },
+    "api": {
+      "title": "Clés API",
+      "create": "Créer une clé API",
+      "name": "Nom de la clé",
+      "key": "Clé API",
+      "created": "Créée le",
+      "lastUsed": "Dernière utilisation",
+      "revoke": "Révoquer"
+    }
+  },
+  "assignments": {
+    "title": "Devoirs",
+    "create": "Nouveau devoir",
+    "fields": {
+      "title": "Titre",
+      "description": "Description",
+      "dueDate": "Date limite",
+      "maxScore": "Score maximum"
+    },
+    "status": {
+      "pending": "En attente",
+      "submitted": "Soumis",
+      "graded": "Noté",
+      "late": "En retard",
+      "overdue": "Dépassé"
+    },
+    "actions": {
+      "submit": "Soumettre le devoir",
+      "grade": "Noter",
+      "viewSubmissions": "Voir les soumissions"
+    }
+  },
+  "errors": {
+    "notFound": "Page introuvable",
+    "unauthorized": "Vous n'êtes pas autorisé à voir cette page",
+    "serverError": "Une erreur s'est produite. Veuillez réessayer.",
+    "networkError": "Erreur réseau. Vérifiez votre connexion.",
+    "rateLimited": "Trop de requêtes. Veuillez ralentir.",
+    "sessionExpired": "Votre session a expiré. Veuillez vous reconnecter."
+  }
+}

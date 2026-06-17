@@ -1,0 +1,54 @@
+---
+title: Quickstart
+description: Make your first API call in under 5 minutes
+---
+
+# Quickstart
+
+## 1. Get your credentials
+
+After signing up, your tenant ID and API credentials are available in **Settings → API**.
+
+## 2. Authenticate
+
+```bash
+curl -X POST https://api.eduai.example.com/auth/login \
+  -H "Content-Type: application/json" \
+  -H "X-Tenant-ID: your-tenant-id" \
+  -d '{"email": "admin@yourschool.com", "password": "your-password"}'
+```
+
+Response:
+```json
+{
+  "accessToken": "eyJhbGc...",
+  "refreshToken": "eyJhbGc...",
+  "user": { "id": "...", "email": "...", "role": "ADMIN" }
+}
+```
+
+## 3. List courses
+
+```bash
+curl https://api.eduai.example.com/courses \
+  -H "Authorization: Bearer eyJhbGc..." \
+  -H "X-Tenant-ID: your-tenant-id"
+```
+
+## 4. Enroll a student
+
+```bash
+curl -X POST https://api.eduai.example.com/courses/COURSE_ID/enroll \
+  -H "Authorization: Bearer eyJhbGc..." \
+  -H "X-Tenant-ID: your-tenant-id"
+```
+
+## 5. Ask the AI tutor
+
+```bash
+curl -X POST https://api.eduai.example.com/ai/chat \
+  -H "Authorization: Bearer eyJhbGc..." \
+  -H "X-Tenant-ID: your-tenant-id" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Explain photosynthesis in simple terms", "subject": "biology"}'
+```

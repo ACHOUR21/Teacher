@@ -1,0 +1,418 @@
+version: '3.9'
+
+# ─── Networks ──────────────────────────────────────────────────────────────────
+networks:
+  eduai_network:
+    driver: bridge
+    name: eduai_network
+
+# ─── Volumes ───────────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    name: eduai_postgres_data
+  redis_data:
+    name: eduai_redis_data
+  elasticsearch_data:
+    name: eduai_elasticsearch_data
+  minio_data:
+    name: eduai_minio_data
+  pgadmin_data:
+    name: eduai_pgadmin_data
+  prometheus_data:
+    name: eduai_prometheus_data
+  grafana_data:
+    name: eduai_grafana_data
+  loki_data:
+    name: eduai_loki_data
+
+# ─── Services ──────────────────────────────────────────────────────────────────
+services:
+
+  # ── PostgreSQL 16 ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: eduai_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: eduai
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: eduai_db
+      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    networks:
+      - eduai_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eduai -d eduai_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    command: >
+      postgres
+        -c max_connections=200
+        -c shared_buffers=256MB
+        -c effective_cache_size=768MB
+        -c maintenance_work_mem=64MB
+        -c checkpoint_completion_target=0.9
+        -c wal_buffers=16MB
+        -c default_statistics_target=100
+        -c random_page_cost=1.1
+        -c effective_io_concurrency=200
+        -c work_mem=4MB
+        -c min_wal_size=1GB
+        -c max_wal_size=4GB
+        -c log_statement=none
+        -c log_duration=off
+
+  # ── Redis 7 ───────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: eduai_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - eduai_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    command: >
+      redis-server
+        --appendonly yes
+        --appendfsync everysec
+        --maxmemory 512mb
+        --maxmemory-policy allkeys-lru
+        --save 900 1
+        --save 300 10
+        --save 60 10000
+        --loglevel warning
+
+  # ── Elasticsearch 8.13.0 ──────────────────────────────────────────────────────
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.13.0
+    container_name: eduai_elasticsearch
+    restart: unless-stopped
+    environment:
+      - node.name=eduai-es01
+      - cluster.name=eduai-cluster
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - ELASTIC_PASSWORD=
+      - network.host=0.0.0.0
+      - http.cors.enabled=true
+      - http.cors.allow-origin=*
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - eduai_network
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsSL http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # ── Kibana 8.13.0 ─────────────────────────────────────────────────────────────
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.13.0
+    container_name: eduai_kibana
+    restart: unless-stopped
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - SERVER_NAME=eduai-kibana
+      - SERVER_HOST=0.0.0.0
+      - xpack.security.enabled=false
+      - TELEMETRY_ENABLED=false
+    ports:
+      - "5601:5601"
+    networks:
+      - eduai_network
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsSL http://localhost:5601/api/status | grep -q '\"overall\":{\"level\":\"available\"' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+
+  # ── MinIO (S3-compatible Object Storage) ─────────────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: eduai_minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_CONSOLE_ADDRESS: ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - eduai_network
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 20s
+      retries: 5
+      start_period: 30s
+
+  # ── MinIO Init (create default bucket) ────────────────────────────────────────
+  minio-init:
+    image: minio/mc:latest
+    container_name: eduai_minio_init
+    networks:
+      - eduai_network
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 minioadmin minioadmin &&
+        mc mb --ignore-existing local/eduai &&
+        mc mb --ignore-existing local/eduai-public &&
+        mc anonymous set public local/eduai-public &&
+        echo 'MinIO buckets initialized successfully'
+      "
+    restart: on-failure
+
+  # ── pgAdmin 4 ─────────────────────────────────────────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: eduai_pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@eduai.io
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+      PGADMIN_LISTEN_PORT: 5050
+    ports:
+      - "5050:5050"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./scripts/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    networks:
+      - eduai_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-O", "-", "http://localhost:5050/misc/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # ── NestJS API ────────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+      target: development
+    container_name: eduai_api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    env_file:
+      - .env.local
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://eduai:password@postgres:5432/eduai_db
+      DIRECT_URL: postgresql://eduai:password@postgres:5432/eduai_db
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: eduai
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin
+      S3_REGION: us-east-1
+      ELASTICSEARCH_NODE: http://elasticsearch:9200
+      SMTP_HOST: mailhog
+      SMTP_PORT: "1025"
+      PORT: "3001"
+      OTEL_ENABLED: "false"
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_SERVICE_NAME: eduai-api
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./apps/api/src:/app/apps/api/src
+      - ./packages:/app/packages
+    networks:
+      - eduai_network
+    command: >
+      sh -c "pnpm --filter api exec prisma migrate deploy && pnpm --filter api run start:dev"
+
+  # ── Next.js Web App ───────────────────────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: infra/docker/web.Dockerfile
+      target: development
+    container_name: eduai_web
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+      NEXT_PUBLIC_WS_URL: http://localhost:3001
+      NEXT_PUBLIC_GRAPHQL_URL: http://localhost:3001/graphql
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/web/src:/app/apps/web/src
+    networks:
+      - eduai_network
+
+  # ── BullMQ Worker ─────────────────────────────────────────────────────────────
+  worker:
+    build:
+      context: .
+      dockerfile: infra/docker/worker.Dockerfile
+      target: development
+    container_name: eduai_worker
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env.local
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://eduai:password@postgres:5432/eduai_db
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+    networks:
+      - eduai_network
+
+  # ── MailHog (local email capture) ─────────────────────────────────────────────
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: eduai_mailhog
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - eduai_network
+
+  # ── Prometheus ────────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: eduai_prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+      - "--web.enable-lifecycle"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/monitoring/prometheus:/etc/prometheus:ro
+      - prometheus_data:/prometheus
+    networks:
+      - eduai_network
+
+  # ── Grafana ───────────────────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.0
+    container_name: eduai_grafana
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+      - loki
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_FEATURE_TOGGLES_ENABLE: traceqlEditor
+    ports:
+      - "3333:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/monitoring/grafana:/etc/grafana/provisioning:ro
+    networks:
+      - eduai_network
+
+  # ── Loki (log aggregation) ────────────────────────────────────────────────────
+  loki:
+    image: grafana/loki:2.9.5
+    container_name: eduai_loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki-config.yaml
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./infra/monitoring/loki:/etc/loki:ro
+      - loki_data:/loki
+    networks:
+      - eduai_network
+
+  # ── OpenTelemetry Collector ───────────────────────────────────────────────────
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.102.0
+    container_name: eduai_otel
+    restart: unless-stopped
+    command: ["--config=/etc/otelcol/config.yaml"]
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "8889:8889"   # Prometheus metrics exporter
+    volumes:
+      - ./infra/monitoring/opentelemetry/otel-collector.yaml:/etc/otelcol/config.yaml:ro
+    networks:
+      - eduai_network
+    depends_on:
+      - loki
+
+  # ── Jaeger (distributed tracing) ─────────────────────────────────────────────
+  jaeger:
+    image: jaegertracing/all-in-one:1.57
+    container_name: eduai_jaeger
+    restart: unless-stopped
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"  # Jaeger UI → http://localhost:16686
+      - "14317:4317"   # OTLP gRPC (internal to otel-collector)
+    networks:
+      - eduai_network

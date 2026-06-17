@@ -1,0 +1,32 @@
+EduAI Ultimate Platform has been deployed!
+
+Release: {{ .Release.Name }}
+Namespace: {{ .Values.namespace }}
+
+Components running:
+{{- if .Values.api.enabled }}
+  ✓ API:    {{ include "eduai.fullname" . }}-api  (port {{ .Values.api.service.port }})
+{{- end }}
+{{- if .Values.web.enabled }}
+  ✓ Web:    {{ include "eduai.fullname" . }}-web  (port {{ .Values.web.service.port }})
+{{- end }}
+{{- if .Values.worker.enabled }}
+  ✓ Worker: {{ include "eduai.fullname" . }}-worker
+
+{{- end }}
+
+{{- if .Values.ingress.enabled }}
+Access URLs:
+{{- range .Values.ingress.hosts }}
+  {{ if $.Values.ingress.tls.enabled }}https{{ else }}http{{ end }}://{{ .host }}
+{{- end }}
+{{- end }}
+
+To check pod status:
+  kubectl get pods -n {{ .Values.namespace }} -l app.kubernetes.io/instance={{ .Release.Name }}
+
+To view API logs:
+  kubectl logs -n {{ .Values.namespace }} -l app.kubernetes.io/component=api -f
+
+To run a database migration manually:
+  kubectl exec -n {{ .Values.namespace }} deploy/{{ include "eduai.fullname" . }}-api -- npx prisma migrate deploy

@@ -1,0 +1,164 @@
+# ─── Dependencies ──────────────────────────────────────────────────────────────
+node_modules/
+.pnp
+.pnp.js
+.pnp.cjs
+
+# ─── Build Outputs ─────────────────────────────────────────────────────────────
+dist/
+build/
+out/
+.output/
+lib/
+# Flutter source is in apps/mobile/lib/ — not a build output
+!apps/mobile/lib/
+# Next.js source lib directories — not build outputs
+!apps/web/src/lib/
+
+# ─── Next.js ───────────────────────────────────────────────────────────────────
+.next/
+next-env.d.ts
+.vercel/
+
+# ─── NestJS ────────────────────────────────────────────────────────────────────
+dist/
+*.js.map
+
+# ─── TypeScript ────────────────────────────────────────────────────────────────
+*.tsbuildinfo
+tsconfig.tsbuildinfo
+
+# ─── Testing & Coverage ────────────────────────────────────────────────────────
+coverage/
+.nyc_output/
+junit.xml
+test-results/
+playwright-report/
+playwright/.cache/
+
+# ─── Environment Variables ─────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+!.env.test.example
+!.env.production.example
+*.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# ─── Turbo ─────────────────────────────────────────────────────────────────────
+.turbo/
+
+# ─── Logs ──────────────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ─── OS Artifacts ──────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ─── IDE & Editors ─────────────────────────────────────────────────────────────
+.idea/
+.claude/
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.swo
+*~
+
+# ─── Prisma ────────────────────────────────────────────────────────────────────
+# Keep migrations in source control
+# packages/database/prisma/migrations/
+
+# ─── Flutter / Dart ────────────────────────────────────────────────────────────
+# Flutter build output
+apps/mobile/build/
+apps/mobile/.dart_tool/
+apps/mobile/.flutter-plugins
+apps/mobile/.flutter-plugins-dependencies
+apps/mobile/pubspec.lock
+apps/mobile/.packages
+apps/mobile/.pub-cache/
+apps/mobile/.pub/
+apps/mobile/android/.gradle/
+apps/mobile/android/local.properties
+apps/mobile/android/key.properties
+apps/mobile/ios/.symlinks/
+apps/mobile/ios/Pods/
+apps/mobile/ios/Flutter/flutter_export_environment.sh
+apps/mobile/.dart_tool/
+*.g.dart
+*.freezed.dart
+
+# ─── Docker ────────────────────────────────────────────────────────────────────
+.docker/
+docker-compose.override.yml
+
+# ─── Terraform ─────────────────────────────────────────────────────────────────
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+.terraform.lock.hcl
+*.tfvars
+!*.tfvars.example
+*.tfplan
+
+# ─── Kubernetes / Helm ─────────────────────────────────────────────────────────
+*.kubeconfig
+kubeconfig
+
+# ─── Certificates & Keys ───────────────────────────────────────────────────────
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+!certs/.gitkeep
+
+# ─── Temporary Files ───────────────────────────────────────────────────────────
+tmp/
+temp/
+.cache/
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# ─── Package Manager ───────────────────────────────────────────────────────────
+# pnpm lock file is intentionally kept in source control
+# pnpm-lock.yaml  ← DO NOT ignore this
+
+# ─── Storybook ─────────────────────────────────────────────────────────────────
+storybook-static/
+
+# ─── Misc ──────────────────────────────────────────────────────────────────────
+.eslintcache
+.stylelintcache
+.parcel-cache/
+.sass-cache/
+*.pid
+*.seed
+*.pid.lock
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+dump.rdb

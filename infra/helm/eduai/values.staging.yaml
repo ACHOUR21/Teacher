@@ -1,0 +1,85 @@
+# Staging environment overrides — applied on top of values.yaml
+namespace: eduai-staging
+
+api:
+  replicaCount: 2
+  image:
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  autoscaling:
+    minReplicas: 2
+    maxReplicas: 6
+
+web:
+  replicaCount: 2
+  image:
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  autoscaling:
+    minReplicas: 2
+    maxReplicas: 4
+
+worker:
+  replicaCount: 1
+  image:
+    pullPolicy: Always
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+
+configmap:
+  NODE_ENV: production
+  LOG_LEVEL: debug
+  NEXT_PUBLIC_API_URL: https://api-staging.eduai.io/api/v1
+  NEXT_PUBLIC_WS_URL: wss://api-staging.eduai.io
+  NEXT_PUBLIC_APP_URL: https://staging.eduai.io
+  S3_BUCKET: eduai-assets-staging
+  S3_REGION: us-east-1
+  CDN_URL: https://cdn-staging.eduai.io
+  DB_HOST: postgres-staging.eduai.internal
+  DB_PORT: "5432"
+  DB_NAME: eduai_staging
+  REDIS_HOST: redis-staging.eduai.internal
+  REDIS_PORT: "6379"
+  ELASTICSEARCH_URL: http://elasticsearch-staging.eduai.internal:9200
+  ENABLE_SWAGGER: "true"
+  ENABLE_GRAPHQL_PLAYGROUND: "true"
+
+ingress:
+  enabled: true
+  hosts:
+    - host: api-staging.eduai.io
+      service: api
+      port: 4000
+    - host: staging.eduai.io
+      service: web
+      port: 3000
+  tls:
+    enabled: true
+    secretName: eduai-staging-tls
+
+podDisruptionBudget:
+  api:
+    enabled: true
+    minAvailable: 1
+  web:
+    enabled: true
+    minAvailable: 1
+  worker:
+    enabled: false

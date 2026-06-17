@@ -1,0 +1,134 @@
+{{- if .Values.web.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "eduai.fullname" . }}-web
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "eduai.web.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.web.autoscaling.enabled }}
+  replicas: {{ .Values.web.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "eduai.web.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        {{- include "eduai.web.selectorLabels" . | nindent 8 }}
+      {{- with .Values.web.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "eduai.serviceAccountName" . }}-web
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        fsGroup: 1001
+      containers:
+        - name: web
+          image: {{ include "eduai.image" (dict "image" .Values.web.image "global" .Values.global) }}
+          imagePullPolicy: {{ .Values.web.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.web.service.port }}
+              protocol: TCP
+          env:
+            - name: PORT
+              value: {{ .Values.web.service.port | quote }}
+            - name: HOSTNAME
+              value: "0.0.0.0"
+            {{- include "eduai.envVars" .Values.web.env | nindent 12 }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "eduai.fullname" . }}-config
+          resources:
+            {{- toYaml .Values.web.resources | nindent 12 }}
+          {{- with .Values.web.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.web.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: cache
+              mountPath: /app/.next/cache
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: cache
+          emptyDir: {}
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              {{- include "eduai.web.selectorLabels" . | nindent 14 }}
+{{- end }}
+---
+{{- if .Values.web.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "eduai.serviceAccountName" . }}-web
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "eduai.web.labels" . | nindent 4 }}
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+---
+{{- if .Values.web.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "eduai.fullname" . }}-web
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "eduai.web.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.web.service.type }}
+  selector:
+    {{- include "eduai.web.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      protocol: TCP
+      port: {{ .Values.web.service.port }}
+      targetPort: http
+{{- end }}
+{{- if and .Values.web.enabled .Values.podDisruptionBudget.web.enabled }}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "eduai.fullname" . }}-web
+  namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "eduai.web.labels" . | nindent 4 }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.web.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "eduai.web.selectorLabels" . | nindent 6 }}
+{{- end }}
