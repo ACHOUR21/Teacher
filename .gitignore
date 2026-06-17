@@ -71,6 +71,7 @@ Desktop.ini
 
 # ─── IDE & Editors ─────────────────────────────────────────────────────────────
 .idea/
+.claude/
 .vscode/
 !.vscode/extensions.json
 !.vscode/settings.json
