@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@eduai/shared": ["../../packages/shared/src"]
+    }
+  },
+  "exclude": ["node_modules", ".next"]
+}

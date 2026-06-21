@@ -1,0 +1,22 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.ComplianceModule = void 0;
+var _common = require("@nestjs/common");
+var _compliance = require("./compliance.controller");
+var _compliance2 = require("./compliance.service");
+var __decorate = void 0 && (void 0).__decorate || function (decorators, target, key, desc) {
+  var c = arguments.length,
+    r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc,
+    d;
+  if (typeof Reflect === "object" && typeof Reflect.decorate === "function") r = Reflect.decorate(decorators, target, key, desc);else for (var i = decorators.length - 1; i >= 0; i--) if (d = decorators[i]) r = (c < 3 ? d(r) : c > 3 ? d(target, key, r) : d(target, key)) || r;
+  return c > 3 && r && Object.defineProperty(target, key, r), r;
+};
+let ComplianceModule = exports.ComplianceModule = class ComplianceModule {};
+exports.ComplianceModule = ComplianceModule = __decorate([(0, _common.Module)({
+  controllers: [_compliance.ComplianceController],
+  providers: [_compliance2.ComplianceService],
+  exports: [_compliance2.ComplianceService]
+})], ComplianceModule);

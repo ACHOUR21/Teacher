@@ -4,41 +4,39 @@
   "description": "Shared types, enums, constants, and utilities for EduAI Ultimate platform",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.js"
     },
     "./enums": {
       "import": "./dist/enums/index.mjs",
-      "require": "./dist/enums/index.js",
-      "types": "./dist/enums/index.d.ts"
+      "require": "./dist/enums/index.js"
     },
     "./types": {
       "import": "./dist/types/index.mjs",
-      "require": "./dist/types/index.js",
-      "types": "./dist/types/index.d.ts"
+      "require": "./dist/types/index.js"
     },
     "./constants": {
       "import": "./dist/constants/index.mjs",
-      "require": "./dist/constants/index.js",
-      "types": "./dist/constants/index.d.ts"
+      "require": "./dist/constants/index.js"
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
-    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
-    "lint": "eslint src --ext .ts",
-    "typecheck": "tsc --noEmit",
+    "build": "tsup src/index.js --format cjs,esm --clean",
+    "dev": "tsup src/index.js --format cjs,esm --watch",
+    "lint": "eslint src --ext .js",
     "clean": "rm -rf dist .turbo"
   },
   "devDependencies": {
-    "tsup": "^8.0.0",
-    "typescript": "^5.4.0"
+    "tsup": "^8.0.0"
   },
-  "keywords": ["eduai", "shared", "types", "enums"],
+  "keywords": [
+    "eduai",
+    "shared",
+    "types",
+    "enums"
+  ],
   "license": "UNLICENSED",
   "private": true
 }

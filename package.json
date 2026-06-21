@@ -2,13 +2,16 @@
   "name": "eduai-ultimate",
   "version": "1.0.0",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
     "test": "turbo run test",
     "lint": "turbo run lint",
-    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
+    "format": "prettier --write \"**/*.{js,jsx,json,md}\"",
     "db:migrate": "pnpm --filter api prisma migrate dev",
     "db:seed": "pnpm --filter api prisma db seed",
     "db:studio": "pnpm --filter api prisma studio",
@@ -16,13 +19,11 @@
     "playwright:install": "pnpm --filter @eduai/web playwright:install"
   },
   "devDependencies": {
-    "turbo": "^2.0.0",
-    "typescript": "^5.4.0",
-    "prettier": "^3.2.0",
-    "@typescript-eslint/eslint-plugin": "^7.0.0",
-    "@typescript-eslint/parser": "^7.0.0",
     "eslint": "^8.57.0",
-    "eslint-plugin-import": "^2.29.0"
+    "eslint-plugin-import": "^2.29.0",
+    "eslint-plugin-react": "^7.34.0",
+    "prettier": "^3.2.0",
+    "turbo": "^2.0.0"
   },
   "engines": {
     "node": ">=20.0.0",

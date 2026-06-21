@@ -14,7 +14,7 @@ COPY packages/ ./packages/
 RUN pnpm install --frozen-lockfile
 
 # ─────────────────────────────────────────────
-# Stage 2: builder — compile TypeScript
+# Stage 2: builder — assemble dist/
 # ─────────────────────────────────────────────
 FROM node:22-alpine AS builder
 WORKDIR /app

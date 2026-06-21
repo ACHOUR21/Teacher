@@ -1,87 +1,138 @@
 {
   "root": true,
-  "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "ecmaVersion": 2022,
     "sourceType": "module",
     "ecmaFeatures": {
       "jsx": true
-    },
-    "project": true
+    }
   },
-  "plugins": ["@typescript-eslint", "import"],
+  "env": {
+    "node": true,
+    "es2022": true
+  },
+  "plugins": [
+    "import"
+  ],
   "extends": [
     "eslint:recommended",
-    "plugin:@typescript-eslint/recommended",
-    "plugin:@typescript-eslint/recommended-requiring-type-checking",
-    "plugin:import/recommended",
-    "plugin:import/typescript"
+    "plugin:import/recommended"
   ],
   "settings": {
     "import/resolver": {
-      "typescript": {
-        "alwaysTryTypes": true,
-        "project": ["./tsconfig.base.json", "./apps/*/tsconfig.json", "./packages/*/tsconfig.json"]
+      "node": {
+        "extensions": [
+          ".js",
+          ".jsx"
+        ]
       }
     }
   },
   "rules": {
-    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_" }],
-    "@typescript-eslint/no-explicit-any": "warn",
-    "@typescript-eslint/explicit-function-return-type": "off",
-    "@typescript-eslint/explicit-module-boundary-types": "off",
-    "@typescript-eslint/no-non-null-assertion": "warn",
-    "@typescript-eslint/no-floating-promises": "error",
-    "@typescript-eslint/await-thenable": "error",
-    "@typescript-eslint/no-misused-promises": "error",
-    "@typescript-eslint/consistent-type-imports": ["error", { "prefer": "type-imports", "fixStyle": "inline-type-imports" }],
-    "@typescript-eslint/consistent-type-exports": "error",
-    "@typescript-eslint/no-unsafe-assignment": "warn",
-    "@typescript-eslint/no-unsafe-member-access": "warn",
-    "@typescript-eslint/no-unsafe-call": "warn",
-    "@typescript-eslint/no-unsafe-return": "warn",
-    "@typescript-eslint/no-unsafe-argument": "warn",
+    "no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_"
+      }
+    ],
     "import/order": [
       "error",
       {
-        "groups": ["builtin", "external", "internal", "parent", "sibling", "index", "object", "type"],
+        "groups": [
+          "builtin",
+          "external",
+          "internal",
+          "parent",
+          "sibling",
+          "index",
+          "object"
+        ],
         "newlines-between": "always",
-        "alphabetize": { "order": "asc", "caseInsensitive": true }
+        "alphabetize": {
+          "order": "asc",
+          "caseInsensitive": true
+        }
       }
     ],
     "import/no-duplicates": "error",
-    "import/no-unresolved": "error",
+    "import/no-unresolved": "off",
     "import/no-cycle": "error",
-    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    "no-console": [
+      "warn",
+      {
+        "allow": [
+          "warn",
+          "error"
+        ]
+      }
+    ],
     "no-debugger": "error",
-    "eqeqeq": ["error", "always"],
-    "curly": ["error", "all"],
+    "eqeqeq": [
+      "error",
+      "always"
+    ],
+    "curly": [
+      "error",
+      "all"
+    ],
     "prefer-const": "error",
-    "no-var": "error"
+    "import/named": "off"
   },
   "overrides": [
     {
-      "files": ["*.spec.ts", "*.test.ts", "*.e2e-spec.ts"],
-      "parserOptions": {
-        "project": ["./tsconfig.eslint.json"]
+      "files": [
+        "*.spec.js",
+        "*.test.js",
+        "*.e2e-spec.js"
+      ],
+      "env": {
+        "jest": true
       },
       "rules": {
-        "@typescript-eslint/no-explicit-any": "off",
         "no-console": "off"
       }
     },
     {
-      "files": ["*.tsx", "*.jsx"],
+      "files": [
+        "packages/ui/**/*.js",
+        "packages/ui/**/*.jsx"
+      ],
+      "env": {
+        "browser": true,
+        "node": true
+      },
+      "plugins": [
+        "react"
+      ],
+      "extends": [
+        "plugin:react/recommended"
+      ],
+      "settings": {
+        "react": {
+          "version": "detect"
+        }
+      },
       "rules": {
-        "@typescript-eslint/explicit-function-return-type": "off",
-        "@typescript-eslint/no-floating-promises": "off",
-        "@typescript-eslint/await-thenable": "off",
-        "@typescript-eslint/no-misused-promises": "off",
-        "@typescript-eslint/no-unsafe-assignment": "off",
-        "@typescript-eslint/no-unsafe-member-access": "off",
-        "@typescript-eslint/no-unsafe-call": "off",
-        "@typescript-eslint/no-unsafe-return": "off",
-        "@typescript-eslint/no-unsafe-argument": "off"
+        "react/prop-types": "off",
+        "react/react-in-jsx-scope": "off"
+      }
+    },
+    {
+      "files": [
+        "apps/web/**/*.js",
+        "apps/web/**/*.jsx"
+      ],
+      "env": {
+        "browser": true,
+        "node": true
+      },
+      "extends": [
+        "next/core-web-vitals"
+      ],
+      "rules": {
+        "react/prop-types": "off",
+        "react/react-in-jsx-scope": "off"
       }
     }
   ],
@@ -91,8 +142,7 @@
     "build/",
     ".next/",
     "coverage/",
-    "*.js",
-    "*.mjs",
-    "*.cjs"
+    "**/*.mjs",
+    "**/*.cjs"
   ]
 }

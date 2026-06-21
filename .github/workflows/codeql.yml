@@ -39,8 +39,8 @@ jobs:
           config: |
             paths-ignore:
               - node_modules
-              - '**/*.spec.ts'
-              - '**/*.test.ts'
+              - '**/*.spec.js'
+              - '**/*.test.js'
               - 'apps/web/e2e/**'
 
       - name: Setup pnpm

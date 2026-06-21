@@ -3,8 +3,13 @@
   "ui": "tui",
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        ".env*"
+      ],
       "outputs": [
         ".next/**",
         "!.next/cache/**",
@@ -16,12 +21,20 @@
     "dev": {
       "cache": false,
       "persistent": true,
-      "dependsOn": ["^build"]
+      "dependsOn": [
+        "^build"
+      ]
     },
     "test": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$"],
-      "outputs": ["coverage/**"],
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$"
+      ],
+      "outputs": [
+        "coverage/**"
+      ],
       "env": [
         "NODE_ENV",
         "DATABASE_URL",
@@ -35,17 +48,16 @@
       "persistent": true
     },
     "lint": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$"],
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$"
+      ],
       "outputs": []
     },
     "lint:fix": {
       "cache": false
-    },
-    "typecheck": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$"],
-      "outputs": []
     },
     "clean": {
       "cache": false
@@ -68,7 +80,6 @@
     "NEXT_PUBLIC_FIREBASE_CONFIG"
   ],
   "globalDependencies": [
-    "tsconfig.base.json",
     ".env",
     ".env.local"
   ]

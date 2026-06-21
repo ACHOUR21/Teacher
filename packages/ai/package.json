@@ -4,19 +4,16 @@
   "description": "AI client utilities, RAG pipeline, and education-domain system prompts for EduAI Ultimate",
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts"
+      "require": "./dist/index.js"
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format cjs,esm --dts --clean",
-    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
-    "lint": "eslint src --ext .ts",
-    "typecheck": "tsc --noEmit",
+    "build": "tsup src/index.js --format cjs,esm --clean",
+    "dev": "tsup src/index.js --format cjs,esm --watch",
+    "lint": "eslint src --ext .js",
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {
@@ -26,10 +23,16 @@
     "tiktoken": "^1.0.15"
   },
   "devDependencies": {
-    "tsup": "^8.0.0",
-    "typescript": "^5.4.0"
+    "tsup": "^8.0.0"
   },
-  "keywords": ["eduai", "ai", "openai", "anthropic", "rag", "embeddings"],
+  "keywords": [
+    "eduai",
+    "ai",
+    "openai",
+    "anthropic",
+    "rag",
+    "embeddings"
+  ],
   "license": "UNLICENSED",
   "private": true
 }
